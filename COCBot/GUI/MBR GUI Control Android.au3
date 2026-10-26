@@ -132,10 +132,12 @@ EndFunc   ;==>sldAdditionalClickDelay
 Func cmbAndroidEmulator()
 	getAllEmulatorsInstances()
 	Local $Emulator = GUICtrlRead($g_hCmbAndroidEmulator)
-	If MsgBox($MB_YESNO, "Emulator Selection", $Emulator & ", Is correct?" & @CRLF & "Any mistake and your profile will be not useful!" & @CRLF & "If 'yes' and your instance is OK, is necessary " & @CRLF & "REBOOT the 'bot'.", 10) = $IDYES Then
-		SetLog("Emulator " & $Emulator & " Selected. Please select an Instance.")
-		$g_sAndroidEmulator = $Emulator
-		$g_sAndroidInstance = GUICtrlRead($g_hCmbAndroidInstance)
+	If MsgBox($MB_YESNO, "Emulator Selection", $Emulator & ", Is correct?" & @CRLF & "Any mistake and your profile will be not useful!", 10) = $IDYES Then
+		SetLog("Emulator " & $Emulator & " selected, please select an Instance")
+		Local $Instance = GUICtrlRead($g_hCmbAndroidInstance)
+		UpdateHWnD(0)
+		$g_bInitAndroid = True
+		UpdateAndroidConfig($Instance, $Emulator)
 		BtnSaveprofile()
 	Else
 		_GUICtrlComboBox_SelectString($g_hCmbAndroidEmulator, $g_sAndroidEmulator)
@@ -145,9 +147,11 @@ EndFunc   ;==>cmbAndroidEmulator
 
 Func cmbAndroidInstance()
 	Local $Instance = GUICtrlRead($g_hCmbAndroidInstance)
-	If MsgBox($MB_YESNO, "Instance Selection", $Instance & ", Is correct?" & @CRLF & "If 'yes' is necessary REBOOT the 'bot'.", 10) = $IDYES Then
-		SetLog("Instance " & $Instance & " Selected.")
-		$g_sAndroidInstance = $Instance
+	If MsgBox($MB_YESNO, "Instance Selection", $Instance & ", Is correct?", 10) = $IDYES Then
+		SetLog("Instance " & $Instance & " Selected")
+		UpdateHWnD(0)
+		$g_bInitAndroid = True
+		UpdateAndroidConfig($Instance, $g_sAndroidEmulator)
 		BtnSaveprofile()
 	Else
 		getAllEmulatorsInstances()
@@ -168,10 +172,6 @@ Func getAllEmulators()
         If GetVersionNormalized($__BlueStacks5_Version) > GetVersionNormalized("5.0") Then $sEmulatorString &= "BlueStacks5|"
     EndIf
 
-	; Nox :
-	Local $NoxEmulator = GetNoxPath()
-	If FileExists($NoxEmulator) Then $sEmulatorString &= "Nox|"
-
 	; Memu :
 	Local $MEmuEmulator = GetMEmuPath()
 	If FileExists($MEmuEmulator) Then $sEmulatorString &= "MEmu|"
@@ -181,16 +181,15 @@ Func getAllEmulators()
 
 	Local $aEmulator = StringSplit($sEmulatorString, "|", $STR_NOCOUNT)
 	If $sEmulatorString <> "" Then
-		SetLog("Emulator" & (UBound($aEmulator) > 1 ? "s" : "") & " Found In Your Machine :")
+		SetLog("Emulator" & (UBound($aEmulator) > 1 ? "s" : "") & " detected on your system:")
 		For $i = 0 To UBound($aEmulator) - 1
 			Local $emuVer = ""
 			If StringInStr($aEmulator[$i], "BlueStacks5") Then $emuVer = $__BlueStacks5_Version
 			If StringInStr($aEmulator[$i], "Memu") Then $emuVer = $__MEmu_Version
-			If StringInStr($aEmulator[$i], "nox") Then $emuVer = $__Nox_Version
-			SetLog("  - " & $aEmulator[$i] & " version: " & $emuVer, $COLOR_SUCCESS)
+			SetLog("  - " & $aEmulator[$i] & " v" & $emuVer, $COLOR_SUCCESS)
 		Next
 	Else
-		SetLog("No Emulator found in your machine")
+		SetLog("No emulator detected on your system", $COLOR_DEBUG)
 		Return
 	EndIf
 
@@ -216,8 +215,6 @@ Func getAllEmulatorsInstances()
 		Case "BlueStacks5"
             Local $VMsBlueStacks = RegRead($g_sHKLM & "\SOFTWARE\BlueStacks_nxt\", "DataDir")
             $sEmulatorPath = $VMsBlueStacks ; C:\ProgramData\BlueStacks\Engine
-		Case "Nox"
-			$sEmulatorPath = GetNoxPath() & "\BignoxVMS"
 		Case "MEmu"
 			$sEmulatorPath = GetMEmuPath() & "\MemuHyperv VMs"
 		Case Else
@@ -229,7 +226,7 @@ Func getAllEmulatorsInstances()
 	$sEmulatorPath = StringReplace($sEmulatorPath, "\\", "\")
 
 	; BS Multi Instance
-	Local $sBlueStacksFolder = ($Emulator = "BlueStacks5") ? ("Pie*;Oreo*;Nougat*;Android*") : ("*")
+	Local $sBlueStacksFolder = ($Emulator = "BlueStacks5") ? ("Pie*;Oreo*;Nougat*;Android*") : "*"
 
 	; Getting all VM Folders
 	Local $eError = 0

@@ -93,7 +93,7 @@ EndFunc   ;==>displayWeakBaseLog
 Func getTHDefenseMax($levelTownHall, $iDefenseType)
 
 	; replace orginal weak base code with dictionary function used by any attack method
-	If $levelTownHall = 0 Or $levelTownHall = "-" Then $levelTownHall = 17 ; ; If something went wrong with TH search and returned 0, set to max TH level
+	If $levelTownHall = 0 Or $levelTownHall = "-" Then $levelTownHall = $g_iMaxTHLevel ; If something went wrong with TH search, use max TH level
 
 	Local $maxLevel = _ObjGetValue($g_oBldgLevels, $iDefenseType + 7)[$levelTownHall - 1] ; add 6 to weakbase enum to equal building enum
 	If @error Then
@@ -221,7 +221,7 @@ Func defenseSearch(ByRef $aResult, $directory, $townHallLevel, $settingArray, $i
 	Return $aDefenseResult
 EndFunc   ;==>defenseSearch
 
-Func weakBaseCheck($townHallLevel = 17, $redlines = "", $bForceCaptureRegion = True)
+Func weakBaseCheck($townHallLevel = $g_iMaxTHLevel, $redlines = "", $bForceCaptureRegion = True)
 	; Setup default return coords of 0,0
 	Local $defaultCoords[1][2] = [[0, 0]]
 	; Setup Empty Results in case to avoid errors, levels are set to max level of each type
@@ -398,7 +398,7 @@ Func DefenseSearchMultiMatch($iDefenseType, $directory, $redlines = "DCD", $stat
 	If $redlines = "" Or $redlines = "DCD" Then
 		If _ObjSearch($g_oBldgAttackInfo, $eBldgRedLine & "_OBJECTPOINTS") = True Then
 			If _ObjGetValue($g_oBldgAttackInfo, $eBldgRedLine & "_COUNT") > 50 Then ; if count is less 50, try again to more red line locations
-				$redlines = $g_oBldgAttackInfo.item($eBldgRedLine & "_LOCATION")
+				$redlines = $g_oBldgAttackInfo.item($eBldgRedLine & "_OBJECTPOINTS")
 				If IsString($redlines) And $redlines <> "" And $redlines <> "DCD" Then ; error check for null red line data in dictionary
 					$bRedLineExists = True
 				Else
@@ -556,9 +556,11 @@ Func DefenseSearchMultiMatch($iDefenseType, $directory, $redlines = "DCD", $stat
 			SetLog($g_sBldgNames[$iDefenseType + 7] & " Coordinates: " & $sLocCoord, $COLOR_DEBUG)
 			Local $sText
 			Select
+				Case Not IsArray($aBldgCoord) Or UBound($aBldgCoord) = 0
+					$sText = "No coordinates"
 				Case UBound($aBldgCoord, 1) > 1 And IsArray($aBldgCoord[1]) ; if we have array of arrays, separate and list
 					$sText = PixelArrayToString($aBldgCoord, ",")
-				Case UBound($aBldgCoord) > 0 And UBound($aBldgCoord[0]) = 2 ; single row with array
+				Case IsArray($aBldgCoord[0]) And UBound($aBldgCoord[0]) = 2 ; single row with array
 					Local $aPixelb = $aBldgCoord[0]
 					$sText = PixelToString($aPixelb, ":")
 				Case UBound($aBldgCoord) = 2 And IsArray($aBldgCoord[0]) = 0 ; Check if $aBldCoord has 2 rows otherwise PixelToString throws an error
@@ -612,10 +614,7 @@ Func DefenseSearchMultiMatch($iDefenseType, $directory, $redlines = "DCD", $stat
 EndFunc   ;==>DefenseSearchMultiMatch
 
 Func isScriptedAttackActive()
-	If ($g_abAttackTypeEnable[$DB] And $g_aiAttackAlgorithm[$DB] = 1) Or ($g_abAttackTypeEnable[$LB] And $g_aiAttackAlgorithm[$LB] = 1) Then Return True
+	If ($g_abAttackTypeEnable[$DB] And GetEffectiveAttackAlgorithm($DB) = 1) Or ($g_abAttackTypeEnable[$LB] And GetEffectiveAttackAlgorithm($LB) = 1) Then Return True
 	Return False
 EndFunc   ;==>isScriptedAttackActive
-
-
-
 

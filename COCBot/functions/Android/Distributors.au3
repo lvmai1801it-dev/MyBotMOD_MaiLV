@@ -64,7 +64,7 @@ Func GetCOCDistributors()
 		If @error = 6 Then ; not found
 			$wasSilentSetLog = $g_bSilentSetLog
 			$g_bSilentSetLog = True
-			SetLog("Unrecognized COC Package: " & $aPkgList[$i])
+			SetLog("Unrecognized Clash of Clans Package: " & $aPkgList[$i])
 			$g_bSilentSetLog = $wasSilentSetLog
 			If $aPkgList[$i] = $g_sUserGamePackage Then _ArrayAdd($aDList, $g_sUserGameDistributor, 0, "|", @CRLF, $ARRAYFILL_FORCE_STRING) ;add unknown installed apk info here when matched users ini
 		Else

@@ -1,7 +1,7 @@
-; #FUNCTION# ====================================================================================================================
+﻿; #FUNCTION# ====================================================================================================================
 ; Name ..........: CloseCoC
 ; Description ...: Kill then restart CoC
-; Syntax ........: CloseCoC($ReOpenCoC = False)
+; Syntax ........: CloseCoC($ReOpenCoC = False, $bCheckRunState = True, $iReopenDelay = $DELAYCLOSEOPEN3000)
 ; Parameters ....:
 ; Return values .: None
 ; Author ........: The Master (06-2015)
@@ -13,7 +13,7 @@
 ; Example .......: No
 ; ===============================================================================================================================
 
-Func CloseCoC($ReOpenCoC = False, $bCheckRunState = True)
+Func CloseCoC($ReOpenCoC = False, $bCheckRunState = True, $iReopenDelay = $DELAYCLOSEOPEN3000)
 	FuncEnter(CloseCoC)
 	$g_bSkipFirstZoomout = False
 	ResumeAndroid()
@@ -21,20 +21,21 @@ Func CloseCoC($ReOpenCoC = False, $bCheckRunState = True)
 
 	Local $Adb = ""
 	If $ReOpenCoC Then
-		SetLog("Please wait for CoC restart......", $COLOR_ERROR) ; Let user know we need time...
+		SetLog("Restarting Game Instance", $COLOR_ACTION)
 	Else
-		SetLog("Closing CoC......", $COLOR_ERROR) ; Let user know what we do...
+		SetLog("Closing Clash of Clans...", $COLOR_ACTION) ; Let user know what we do...
 	EndIf
 	WinGetAndroidHandle()
 	If $bCheckRunState And Not $g_bRunState Then Return FuncReturn()
-	;SendAdbCommand("shell am force-stop " & $g_sAndroidGamePackage)
 	;AndroidHomeButton()
 	AndroidAdbSendShellCommand("am force-stop " & $g_sAndroidGamePackage, Default, Default, False)
 	ResetAndroidProcess()
-	If _Sleep($DELAYCLOSEOPEN3000) Then Return
+	If $ReOpenCoC And $iReopenDelay > $DELAYCLOSEOPEN3000 Then _
+		SetLog("Awaiting " & Round($iReopenDelay / 1000) & " seconds before reopening", $COLOR_ACTION)
+	If _Sleep($iReopenDelay) Then Return
 	If $bCheckRunState And Not $g_bRunState Then Return FuncReturn()
 	If $ReOpenCoC Then
-		OpenCoC()
+		OpenCoC(False)
 		$g_bRestart = True
 	EndIf
 	FuncReturn()
@@ -55,7 +56,7 @@ EndFunc   ;==>CloseCoC
 ; Example .......: No
 ; ===============================================================================================================================
 
-Func OpenCoC()
+Func OpenCoC($bSetLaunchLog = True)
 	FuncEnter(OpenCoC)
 	ResumeAndroid()
 	If Not $g_bRunState Then Return FuncReturn()
@@ -65,8 +66,11 @@ Func OpenCoC()
 	;AndroidHomeButton()
 	If _Sleep($DELAYCLOSEOPEN500) Then Return FuncReturn()
 	If Not $g_bRunState Then Return FuncReturn()
-	If Not StartAndroidCoC() Then Return FuncReturn()
-	waitMainScreenMini()
+	If Not StartAndroidCoC($bSetLaunchLog) Then Return FuncReturn()
+
+	; Use the lightweight startup wait after a CoC restart.
+	; It checks obstacles while waiting and returns naturally to CloseCoC/RunBot.
+	waitMainScreenSimple()
 	FuncReturn()
 EndFunc   ;==>OpenCoC
 
@@ -108,7 +112,7 @@ Func _WaitnOpenCoC($iWaitTime, $bFullRestart = False, $bSuspendComputer = False,
 	If $iHour > 0 Then $sWaitTime &= $iHour & " hours "
 	If $iMin > 0 Then $sWaitTime &= $iMin & " minutes "
 	If $iSec > 0 Then $sWaitTime &= $iSec & " seconds "
-	SetLog("Waiting " & $sWaitTime & "before starting CoC", $COLOR_SUCCESS)
+	SetLog("Awaiting " & $sWaitTime & "before starting", $COLOR_SUCCESS)
 	ReduceBotMemory()
 	Local $hTimer = __TimerInit()
 	If $bSuspendComputer Then SuspendComputer($iWaitTime)
@@ -159,7 +163,7 @@ Func PoliteCloseCoC($sSource = "Unknown_", $bPoliteCloseCoC = $g_bPoliteCloseCoC
 				If _Sleep($DELAYCLOSEOPEN1000) Then Return ; wait for window to open
 				If ClickOkay("ExitOkay_" & $sSource, True) = True Then ExitLoop ; Confirm okay to exit
 				If $i > 10 Then
-					SetLog("Can not find Okay button to exit CoC, Forcefully Closing CoC", $COLOR_ERROR)
+					SetLog("Can not find Okay button to exit Clash of Clans, Forcefully Closing Clash of Clans", $COLOR_ERROR)
 					If $g_bDebugImageSave Then SaveDebugImage($sSource)
 					CloseCoC()
 					ExitLoop
@@ -209,13 +213,13 @@ Func PoliteCloseCoC($sSource = "Unknown_", $bPoliteCloseCoC = $g_bPoliteCloseCoC
 					Case "Wandoujia/Downjoy", "Haimawan", "Leshi", "Tencent"
 						ContinueCase
 					Case Else
-						SetLog("Polite Close Unsupported - " & $g_sAndroidGameDistributor & ", Forcefully Closing CoC", $COLOR_ERROR)
+						SetLog("Polite Close Unsupported - " & $g_sAndroidGameDistributor & ", Forcefully Closing Clash of Clans", $COLOR_ERROR)
 						If $g_bDebugImageSave Then SaveDebugImage($sSource)
 						CloseCoC()
 						ExitLoop
 				EndSwitch
 				If $i > 10 Then
-					SetLog("Can not find exit button: " & $g_sAndroidGameDistributor & ", Forcefully Closing CoC", $COLOR_ERROR)
+					SetLog("Cannot find exit button: " & $g_sAndroidGameDistributor & ", Forcefully Closing Clash of Clans", $COLOR_ERROR)
 					If $g_bDebugImageSave Then SaveDebugImage($sSource)
 					CloseCoC()
 					ExitLoop

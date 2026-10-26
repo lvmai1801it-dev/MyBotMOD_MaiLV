@@ -1,4 +1,4 @@
-
+﻿
 ; #FUNCTION# ====================================================================================================================
 ; Name ..........: LocateClanCastle
 ; Description ...: Locates Clan Castle manually (Temporary)
@@ -16,11 +16,22 @@
 Func LocateClanCastle($bCollect = True)
 	Local $stext, $MsgBox, $iSilly = 0, $iStupid = 0, $sErrorText = "", $sInfo
 
-	SetLog("Locating Clan Castle", $COLOR_INFO)
-
 	WinGetAndroidHandle()
-	checkMainScreen()
-	If $bCollect Then Collect(False)
+	checkMainScreen(False)
+
+	Local $aPreviousClanCastlePos[2] = [$g_aiClanCastlePos[0], $g_aiClanCastlePos[1]]
+	Local $iPreviousClanCastleTroopsCap = $g_aiClanCastleTroopsCap
+	Local $iPreviousClanCastleSpellsCap = $g_aiClanCastleSpellsCap
+	$g_aiClanCastlePos[0] = -1
+	$g_aiClanCastlePos[1] = -1
+
+	If ImgLocateClanCastle($aPreviousClanCastlePos) Then Return True
+
+	$g_aiClanCastlePos[0] = $aPreviousClanCastlePos[0]
+	$g_aiClanCastlePos[1] = $aPreviousClanCastlePos[1]
+	$g_aiClanCastleTroopsCap = $iPreviousClanCastleTroopsCap
+	$g_aiClanCastleSpellsCap = $iPreviousClanCastleSpellsCap
+	If Not isInsideDiamond($aPreviousClanCastlePos) Then LogUnknownBuildingPosition("Clan Castle")
 
 	While 1
 		_ExtMsgBoxSet(1 + 64, $SS_CENTER, 0x004080, 0xFFFF00, 12, "Comic Sans MS", 500)
@@ -38,7 +49,7 @@ Func LocateClanCastle($bCollect = True)
 				Select
 					Case $iStupid = 1
 						$sErrorText = "Clan Castle Location Not Valid!" & @CRLF
-						SetLog("Location not valid, try again", $COLOR_ERROR)
+						SetDebugLog("Location not valid, try again", $COLOR_DEBUG)
 						ContinueLoop
 					Case $iStupid = 2
 						$sErrorText = "Please try to click inside the grass field!" & @CRLF
@@ -50,22 +61,24 @@ Func LocateClanCastle($bCollect = True)
 						$sErrorText = "Last Chance, DO NOT MAKE ME ANGRY, or" & @CRLF & "I will give ALL of your gold to Barbarian King," & @CRLF & "And ALL of your Gems to the Archer Queen!" & @CRLF
 						ContinueLoop
 					Case $iStupid > 4
-						SetLog(" Operator Error - Bad Clan Castle Location: " & "(" & $g_aiClanCastlePos[0] & "," & $g_aiClanCastlePos[1] & ")", $COLOR_ERROR)
+						SetDebugLog(" Operator Error - Bad Clan Castle Location: " & "(" & $g_aiClanCastlePos[0] & "," & $g_aiClanCastlePos[1] & ")", $COLOR_DEBUG)
+						$g_aiClanCastlePos[0] = -1
+						$g_aiClanCastlePos[1] = -1
 						ClearScreen()
 						Return False
 					Case Else
-						SetLog(" Operator Error - Bad Clan Castle Location: " & "(" & $g_aiClanCastlePos[0] & "," & $g_aiClanCastlePos[1] & ")", $COLOR_ERROR)
+						SetDebugLog(" Operator Error - Bad Clan Castle Location: " & "(" & $g_aiClanCastlePos[0] & "," & $g_aiClanCastlePos[1] & ")", $COLOR_DEBUG)
 						$g_aiClanCastlePos[0] = -1
 						$g_aiClanCastlePos[1] = -1
 						ClearScreen()
 						Return False
 				EndSelect
 			EndIf
-			SetLog("Clan Castle: " & "(" & $g_aiClanCastlePos[0] & "," & $g_aiClanCastlePos[1] & ")", $COLOR_SUCCESS)
+
 		Else
 			SetLog("Locate Clan Castle Cancelled", $COLOR_INFO)
 			ClearScreen()
-			Return
+			Return False
 		EndIf
 		$sInfo = BuildingInfo(242, 475 + $g_iBottomOffsetY) ; 860x780
 		If IsArray($sInfo) And ($sInfo[0] > 1 Or $sInfo[0] = "") Then
@@ -87,7 +100,7 @@ Func LocateClanCastle($bCollect = True)
 						$sErrorText = $sLocMsg & " ?!?!?!" & @CRLF & @CRLF & "Last Chance, DO NOT MAKE ME ANGRY, or" & @CRLF & "I will give ALL of your gold to Barbarian King," & @CRLF & "And ALL of your Gems to the Archer Queen!" & @CRLF
 						ContinueLoop
 					Case $iSilly > 4
-						SetLog("Quit joking, Click the Clan Castle, or restart bot and try again", $COLOR_ERROR)
+						SetDebugLog("Quit joking, click the Clan Castle or restart bot and try again", $COLOR_DEBUG)
 						$g_aiClanCastlePos[0] = -1
 						$g_aiClanCastlePos[1] = -1
 						ClearScreen()
@@ -97,48 +110,11 @@ Func LocateClanCastle($bCollect = True)
 			If $sInfo[2] = "Broken" Then
 				SetLog("You did not rebuild your Clan Castle yet", $COLOR_ACTION)
 			Else
-				SetLog("Your Clan Castle is at level: " & $sInfo[2], $COLOR_SUCCESS)
-				Switch $sInfo[2]
-					Case 1
-						$g_aiClanCastleTroopsCap = 10
-						$g_aiClanCastleSpellsCap = 0
-					Case 2
-						$g_aiClanCastleTroopsCap = 15
-						$g_aiClanCastleSpellsCap = 0
-					Case 3
-						$g_aiClanCastleTroopsCap = 20
-						$g_aiClanCastleSpellsCap = 0
-					Case 4
-						$g_aiClanCastleTroopsCap = 25
-						$g_aiClanCastleSpellsCap = 1
-					Case 5
-						$g_aiClanCastleTroopsCap = 30
-						$g_aiClanCastleSpellsCap = 1
-					Case 6
-						$g_aiClanCastleTroopsCap = 35
-						$g_aiClanCastleSpellsCap = 1
-					Case 7
-						$g_aiClanCastleTroopsCap = 35
-						$g_aiClanCastleSpellsCap = 2
-					Case 8
-						$g_aiClanCastleTroopsCap = 40
-						$g_aiClanCastleSpellsCap = 2
-					Case 9
-						$g_aiClanCastleTroopsCap = 45
-						$g_aiClanCastleSpellsCap = 2
-					Case 10
-						$g_aiClanCastleTroopsCap = 45
-						$g_aiClanCastleSpellsCap = 3
-					Case 11, 12
-						$g_aiClanCastleTroopsCap = 50
-						$g_aiClanCastleSpellsCap = 3
-					Case 13
-						$g_aiClanCastleTroopsCap = 55
-						$g_aiClanCastleSpellsCap = 3
-				EndSwitch
+				SetLog("Clan Castle Detected: (" & $g_aiClanCastlePos[0] & "," & $g_aiClanCastlePos[1] & "), Level: " & $sInfo[2], $COLOR_SUCCESS)
+				SetClanCastleCapacity($sInfo[2])
 			EndIf
 		Else
-			SetLog(" Operator Error - Bad Clan Castle Location: " & "(" & $g_aiClanCastlePos[0] & "," & $g_aiClanCastlePos[1] & ")", $COLOR_ERROR)
+			SetDebugLog(" Operator Error - Bad Clan Castle Location: " & "(" & $g_aiClanCastlePos[0] & "," & $g_aiClanCastlePos[1] & ")", $COLOR_DEBUG)
 			$g_aiClanCastlePos[0] = -1
 			$g_aiClanCastlePos[1] = -1
 			ClearScreen()
@@ -148,4 +124,115 @@ Func LocateClanCastle($bCollect = True)
 	WEnd
 
 	ClearScreen()
+	Return True
 EndFunc   ;==>LocateClanCastle
+
+Func ImgLocateClanCastle($aPreviousPos = Default)
+	ZoomOut()
+
+	Local $sImgDir = @ScriptDir & "\imgxml\Buildings\ClanCastle\"
+	Local $sSearchArea = "FV"
+	Local $avClanCastle, $bLocalSearch = False
+
+	; Fast path: search around the last known position first.
+	If IsArray($aPreviousPos) And UBound($aPreviousPos) >= 2 And $aPreviousPos[0] > 0 And $aPreviousPos[1] > 0 Then
+		Local $iLeft = $aPreviousPos[0] - 90
+		Local $iTop = $aPreviousPos[1] - 90
+		Local $iRight = $aPreviousPos[0] + 90
+		Local $iBottom = $aPreviousPos[1] + 90
+		If $iLeft < 0 Then $iLeft = 0
+		If $iTop < 0 Then $iTop = 0
+		If $iRight > $g_iGAME_WIDTH Then $iRight = $g_iGAME_WIDTH
+		If $iBottom > $g_iGAME_HEIGHT Then $iBottom = $g_iGAME_HEIGHT
+		Local $sLocalArea = GetDiamondFromRect2($iLeft, $iTop, $iRight, $iBottom)
+		$avClanCastle = findMultiple($sImgDir, $sLocalArea, $sLocalArea, 0, 1000, 1, "objectname,objectpoints", True)
+		$bLocalSearch = True
+	EndIf
+
+	; Fallback: preserve the original full-village search.
+	If Not IsArray($avClanCastle) Or UBound($avClanCastle, $UBOUND_ROWS) <= 0 Then _
+		$avClanCastle = findMultiple($sImgDir, $sSearchArea, $sSearchArea, 0, 1000, 1, "objectname,objectpoints", Not $bLocalSearch)
+
+	If Not IsArray($avClanCastle) Or UBound($avClanCastle, $UBOUND_ROWS) <= 0 Then
+		SetDebugLog("Couldn't find Clan Castle on main village", $COLOR_DEBUG)
+		If $g_bDebugImageSave Then SaveDebugImage("ClanCastle", False)
+		Return False
+	EndIf
+
+	Local $avClanCastleRes, $aiClanCastleCoords
+	For $i = 0 To UBound($avClanCastle, $UBOUND_ROWS) - 1
+		$avClanCastleRes = $avClanCastle[$i]
+		$aiClanCastleCoords = decodeSingleCoord($avClanCastleRes[1])
+	Next
+
+	If IsArray($aiClanCastleCoords) And UBound($aiClanCastleCoords, $UBOUND_ROWS) > 1 Then
+		$g_aiClanCastlePos[0] = $aiClanCastleCoords[0]
+		$g_aiClanCastlePos[1] = $aiClanCastleCoords[1]
+		BuildingClick($g_aiClanCastlePos[0], $g_aiClanCastlePos[1])
+		If _Sleep($DELAYIMGLOCATE1) Then Return False
+		Local $sInfo = BuildingInfo(242, 475 + $g_iBottomOffsetY)
+		If IsArray($sInfo) And StringInStr($sInfo[1], "clan") Then
+			If $sInfo[2] = "Broken" Then
+				SetLog("You did not rebuild your Clan Castle yet", $COLOR_ACTION)
+			Else
+				SetLog("Clan Castle Detected: (" & $g_aiClanCastlePos[0] & "," & $g_aiClanCastlePos[1] & "), Level: " & $sInfo[2], $COLOR_SUCCESS)
+				SetClanCastleCapacity($sInfo[2])
+			EndIf
+			If _Sleep($DELAYIMGLOCATE1) Then Return False
+			ClearScreen()
+			Return True
+		Else
+			SetDebugLog("Wrong click position, please manually locate", $COLOR_DEBUG)
+			If _Sleep($DELAYIMGLOCATE1) Then Return False
+			ClearScreen()
+		EndIf
+	EndIf
+
+	Return False
+EndFunc   ;==>ImgLocateClanCastle
+
+Func SetClanCastleCapacity($iClanCastleLevel)
+	Switch $iClanCastleLevel
+		Case 1
+			$g_aiClanCastleTroopsCap = 10
+			$g_aiClanCastleSpellsCap = 0
+		Case 2
+			$g_aiClanCastleTroopsCap = 15
+			$g_aiClanCastleSpellsCap = 0
+		Case 3
+			$g_aiClanCastleTroopsCap = 20
+			$g_aiClanCastleSpellsCap = 0
+		Case 4
+			$g_aiClanCastleTroopsCap = 25
+			$g_aiClanCastleSpellsCap = 1
+		Case 5
+			$g_aiClanCastleTroopsCap = 30
+			$g_aiClanCastleSpellsCap = 1
+		Case 6
+			$g_aiClanCastleTroopsCap = 35
+			$g_aiClanCastleSpellsCap = 1
+		Case 7
+			$g_aiClanCastleTroopsCap = 35
+			$g_aiClanCastleSpellsCap = 2
+		Case 8
+			$g_aiClanCastleTroopsCap = 40
+			$g_aiClanCastleSpellsCap = 2
+		Case 9
+			$g_aiClanCastleTroopsCap = 45
+			$g_aiClanCastleSpellsCap = 2
+		Case 10
+			$g_aiClanCastleTroopsCap = 45
+			$g_aiClanCastleSpellsCap = 3
+		Case 11, 12
+			$g_aiClanCastleTroopsCap = 50
+			$g_aiClanCastleSpellsCap = 3
+		Case 13
+			$g_aiClanCastleTroopsCap = 55
+			$g_aiClanCastleSpellsCap = 3
+		Case 14
+			$g_aiClanCastleTroopsCap = 55
+			$g_aiClanCastleSpellsCap = 4
+		Case Else
+			SetLog("Unknown Clan Castle Level: " & $iClanCastleLevel, $COLOR_WARNING)
+	EndSwitch
+EndFunc   ;==>SetClanCastleCapacity

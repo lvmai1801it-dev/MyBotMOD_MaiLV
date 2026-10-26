@@ -30,7 +30,8 @@ Func DropOnPixel($troop, $listArrPixel, $number, $slotsPerEdge = 0)
 	debugRedArea($nameFunc & " IN ")
 	debugRedArea("troop : [" & $troop & "] / size arrPixel [" & UBound($listArrPixel) & "] / number [" & $number & "]/ $slotsPerEdge [" & $slotsPerEdge & "] ")
 	If ($number = 0 Or UBound($listArrPixel) = 0) Then Return
-	KeepClicks()
+	Local $bFastBatch = IsFastAttackDropTiming()
+	If $bFastBatch Then KeepClicks()
 
 	For $i = 0 To UBound($listArrPixel) - 1
 		debugRedArea("$listArrPixel $i : [" & $i & "] ")
@@ -79,7 +80,7 @@ Func DropOnPixel($troop, $listArrPixel, $number, $slotsPerEdge = 0)
 		WEnd
 	Next
 
-	ReleaseClicks()
+	If $bFastBatch Then ReleaseClicks()
 	debugRedArea($nameFunc & " OUT ")
 EndFunc   ;==>DropOnPixel
 

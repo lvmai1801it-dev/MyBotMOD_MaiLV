@@ -47,7 +47,7 @@ Func getArmySiegeMachines($bOpenArmyWindow = False, $bCloseArmyWindow = False, $
 	Local $aTempSiegeArray, $aSiegeCoords
 	Local $sSiegeName = ""
 	Local $iSiegeIndex = -1
-	Local $aCurrentTroopsEmpty[$eSiegeMachineCount] = [0, 0, 0, 0, 0, 0, 0, 0] ; Local Copy to reset Siege Machine Array
+	Local $aCurrentTroopsEmpty[$eSiegeMachineCount] ; Local Copy to reset Siege Machine Array
 
 	; Get Siege Capacities
 	Local $sSiegeInfo = getSiegeCampCap(673, 321 + $g_iMidOffsetY, $bNeedCapture) ; OCR read Siege built and total
@@ -55,7 +55,7 @@ Func getArmySiegeMachines($bOpenArmyWindow = False, $bCloseArmyWindow = False, $
 	Local $aGetSiegeCap = StringSplit($sSiegeInfo, "#", $STR_NOCOUNT) ; split the built Siege number from the total Siege number
 	If UBound($aGetSiegeCap) = 2 Then
 		If $aGetSiegeCap[1] >= 10 Then $aGetSiegeCap[1] = StringTrimRight($aGetSiegeCap[1], 1)
-		If $bSetLog Then SetLog("Total Siege Workshop Capacity: " & $aGetSiegeCap[0] & "/" & $aGetSiegeCap[1])
+		If $bSetLog Then SetLog("Total Siege Workshop Capacity: " & $aGetSiegeCap[0] & "/" & $aGetSiegeCap[1], $COLOR_INFO)
 		$g_aiCurrentSiegeMachines = $aCurrentTroopsEmpty ; Reset Current Siege Machine Array
 		If Number($aGetSiegeCap[0]) = 0 Then Return
 	Else
@@ -83,7 +83,7 @@ Func getArmySiegeMachines($bOpenArmyWindow = False, $bCloseArmyWindow = False, $
 			If $g_bDebugSetLogTrain Then SetLog($sSiegeName & " Coord: (" & $aSiegeCoords[0] & "," & $aSiegeCoords[1] & ") Quant :" & $g_aiCurrentSiegeMachines[$iSiegeIndex])
 			If $g_bDebugSetLogTrain Then SetLog($sSiegeName & " Slot (" & Slot($aSiegeCoords[0], $aSiegeCoords[1]) & "," & 346 + $g_iMidOffsetY & ")")
 
-			If $bSetLog Then SetLog(" - " & $g_aiCurrentSiegeMachines[$iSiegeIndex] & " " & $sSiegeName & " Available", $COLOR_SUCCESS)
+			If $bSetLog Then SetLog(" - " & $g_aiCurrentSiegeMachines[$iSiegeIndex] & " " & $sSiegeName & " Available")
 		Next
 	EndIf
 
@@ -112,7 +112,7 @@ Func getArmySiegeMachines($bOpenArmyWindow = False, $bCloseArmyWindow = False, $
 				If $g_bDebugSetLogTrain Then SetLog($sSiegeName & " Coord: (" & $aSiegeCoords[0] & "," & $aSiegeCoords[1] & ") Quant :" & $g_aiCurrentSiegeMachines[$iSiegeIndex])
 				If $g_bDebugSetLogTrain Then SetLog($sSiegeName & " Slot (" & Slot($aSiegeCoords[0], $aSiegeCoords[1]) & "," & 346 + $g_iMidOffsetY & ")")
 
-				If $bSetLog Then SetLog(" - " & $g_aiCurrentSiegeMachines[$iSiegeIndex] & " " & $sSiegeName & " Available", $COLOR_SUCCESS)
+				If $bSetLog Then SetLog(" - " & $g_aiCurrentSiegeMachines[$iSiegeIndex] & " " & $sSiegeName & " Available")
 			Next
 		EndIf
 	EndIf

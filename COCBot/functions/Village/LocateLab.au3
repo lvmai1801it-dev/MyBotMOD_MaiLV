@@ -1,4 +1,4 @@
-; #FUNCTION# ====================================================================================================================
+﻿; #FUNCTION# ====================================================================================================================
 ; Name ..........: LocateLab
 ; Description ...:
 ; Syntax ........: LocateLab()
@@ -13,21 +13,37 @@
 ; Example .......: No
 ; ===============================================================================================================================
 Func LocateLab($bCollect = True)
-	; reset position
-	$g_aiLaboratoryPos[0] = -1
-	$g_aiLaboratoryPos[1] = -1
-
 	If $g_iTownHallLevel < 3 Then
 		SetLog("Townhall Lvl " & $g_iTownHallLevel & " has no Lab, so skip locating.", $COLOR_DEBUG)
-		Return
+		Return False
 	EndIf
 
+	Local $aPreviousLaboratoryPos[3] = [$g_aiLaboratoryPos[0], $g_aiLaboratoryPos[1], $g_aiLaboratoryPos[2]]
+	$g_aiLaboratoryPos[0] = -1
+	$g_aiLaboratoryPos[1] = -1
+	$g_aiLaboratoryPos[2] = -1
+
 	; auto locate
-	ImgLocateLab()
+	If ImgLocateLab(False, False, $aPreviousLaboratoryPos) Then
+		SetLog("Laboratory Detected: (" & $g_aiLaboratoryPos[0] & "," & $g_aiLaboratoryPos[1] & "), Level: " & $g_aiLaboratoryPos[2], $COLOR_SUCCESS)
+		Return True
+	EndIf
 
-	SetLog("Laboratory: (" & $g_aiLaboratoryPos[0] & "," & $g_aiLaboratoryPos[1] & ")", $COLOR_DEBUG)
+	If $g_aiLaboratoryPos[1] <> "" And $g_aiLaboratoryPos[1] <> -1 Then
+		SetLog("Laboratory Detected: (" & $g_aiLaboratoryPos[0] & "," & $g_aiLaboratoryPos[1] & "), Level: " & $g_aiLaboratoryPos[2], $COLOR_SUCCESS)
+		Return True
+	EndIf
 
-	If $g_aiLaboratoryPos[1] = "" Or $g_aiLaboratoryPos[1] = -1 Then _LocateLab($bCollect) ; manual locate
+	If Not isInsideDiamond($aPreviousLaboratoryPos) Then LogUnknownBuildingPosition("Laboratory")
+
+	If Not _LocateLab($bCollect) Then
+		$g_aiLaboratoryPos[0] = $aPreviousLaboratoryPos[0]
+		$g_aiLaboratoryPos[1] = $aPreviousLaboratoryPos[1]
+		$g_aiLaboratoryPos[2] = $aPreviousLaboratoryPos[2]
+		Return False
+	EndIf
+
+	Return True
 EndFunc   ;==>LocateLab
 
 Func _LocateLab($bCollect = True)
@@ -38,11 +54,8 @@ Func _LocateLab($bCollect = True)
 		Return
 	EndIf
 
-	SetLog("Locating Laboratory", $COLOR_INFO)
-
 	WinGetAndroidHandle()
-	checkMainScreen()
-	If $bCollect Then Collect(False)
+	checkMainScreen(False)
 
 	While 1
 		_ExtMsgBoxSet(1 + 64, $SS_CENTER, 0x004080, 0xFFFF00, 12, "Comic Sans MS", 600)
@@ -60,7 +73,7 @@ Func _LocateLab($bCollect = True)
 				Select
 					Case $iStupid = 1
 						$sErrorText = "Laboratory Location Not Valid!" & @CRLF
-						SetLog("Location not valid, try again", $COLOR_ERROR)
+						SetDebugLog("Location not valid, try again", $COLOR_DEBUG)
 						ContinueLoop
 					Case $iStupid = 2
 						$sErrorText = "Please try to click inside the grass field!" & @CRLF
@@ -72,7 +85,7 @@ Func _LocateLab($bCollect = True)
 						$sErrorText = "Last Chance, DO NOT MAKE ME ANGRY, or" & @CRLF & "I will give ALL of your gold to Barbarian King," & @CRLF & "And ALL of your Gems to the Archer Queen!" & @CRLF
 						ContinueLoop
 					Case $iStupid > 4
-						SetLog(" Operator Error - Bad Laboratory Location.", $COLOR_ERROR)
+						SetDebugLog("Operator Error - Bad Laboratory Location.", $COLOR_DEBUG)
 						ClearScreen()
 						Return False
 				EndSelect
@@ -80,7 +93,7 @@ Func _LocateLab($bCollect = True)
 		Else
 			SetLog("Locate Laboratory Cancelled", $COLOR_INFO)
 			ClearScreen()
-			Return
+			Return False
 		EndIf
 		Local $sLabInfo = BuildingInfo(242, 475 + $g_iBottomOffsetY) ; 860x780
 		If $sLabInfo[0] > 1 Or $sLabInfo[0] = "" Then
@@ -102,34 +115,55 @@ Func _LocateLab($bCollect = True)
 						$sErrorText = $sLocMsg & " ?!?!?!" & @CRLF & @CRLF & "Last Chance, DO NOT MAKE ME ANGRY, or" & @CRLF & "I will give ALL of your gold to Barbarian King," & @CRLF & "And ALL of your Gems to the Archer Queen!" & @CRLF
 						ContinueLoop
 					Case $iSilly > 4
-						SetLog("Ok, you really think that's a Laboratory?" & @CRLF & "I don't care anymore, go ahead with it!", $COLOR_ERROR)
+						SetDebugLog("Ok, you really think that's a Laboratory?" & @CRLF & "I don't care anymore, go ahead with it!", $COLOR_DEBUG)
 						ClearScreen()
 						ExitLoop
 				EndSelect
 			EndIf
 		Else
-			SetLog(" Operator Error - Bad Laboratory Location: " & "(" & $g_aiLaboratoryPos[0] & "," & $g_aiLaboratoryPos[1] & ")", $COLOR_ERROR)
+			SetDebugLog("Operator Error - Bad Laboratory Location: " & "(" & $g_aiLaboratoryPos[0] & "," & $g_aiLaboratoryPos[1] & ")", $COLOR_DEBUG)
 			$g_aiLaboratoryPos[0] = -1
 			$g_aiLaboratoryPos[1] = -1
 			ClearScreen()
 			Return False
 		EndIf
-		SetLog("Locate Laboratory Success: " & "(" & $g_aiLaboratoryPos[0] & "," & $g_aiLaboratoryPos[1] & ")", $COLOR_SUCCESS)
+		$g_aiLaboratoryPos[2] = $sLabInfo[2]
+		SetLog("Laboratory Detected: (" & $g_aiLaboratoryPos[0] & "," & $g_aiLaboratoryPos[1] & "), Level: " & $g_aiLaboratoryPos[2], $COLOR_SUCCESS)
 		ExitLoop
 	WEnd
 	ClearScreen()
+	Return True
 
 EndFunc   ;==>_LocateLab
 
 ; Image Search for Pet House
-Func ImgLocateLab()
+Func ImgLocateLab($bSilent = False, $bKeepSelected = False, $aPreviousPos = Default)
 	Local $sImgDir = @ScriptDir & "\imgxml\Buildings\Laboratory\"
 
 	Local $sSearchArea = "FV"
-	Local $avLab = findMultiple($sImgDir, $sSearchArea, $sSearchArea, 0, 1000, 1, "objectname,objectpoints", True)
+	Local $avLab, $bLocalSearch = False
+
+	; Fast path: search around the last known position first.
+	If IsArray($aPreviousPos) And UBound($aPreviousPos) >= 2 And $aPreviousPos[0] > 0 And $aPreviousPos[1] > 0 Then
+		Local $iLeft = $aPreviousPos[0] - 90
+		Local $iTop = $aPreviousPos[1] - 90
+		Local $iRight = $aPreviousPos[0] + 90
+		Local $iBottom = $aPreviousPos[1] + 90
+		If $iLeft < 0 Then $iLeft = 0
+		If $iTop < 0 Then $iTop = 0
+		If $iRight > $g_iGAME_WIDTH Then $iRight = $g_iGAME_WIDTH
+		If $iBottom > $g_iGAME_HEIGHT Then $iBottom = $g_iGAME_HEIGHT
+		Local $sLocalArea = GetDiamondFromRect2($iLeft, $iTop, $iRight, $iBottom)
+		$avLab = findMultiple($sImgDir, $sLocalArea, $sLocalArea, 0, 1000, 1, "objectname,objectpoints", True)
+		$bLocalSearch = True
+	EndIf
+
+	; Fallback: preserve the original full-village search.
+	If Not IsArray($avLab) Or UBound($avLab, $UBOUND_ROWS) <= 0 Then _
+		$avLab = findMultiple($sImgDir, $sSearchArea, $sSearchArea, 0, 1000, 1, "objectname,objectpoints", Not $bLocalSearch)
 
 	If Not IsArray($avLab) Or UBound($avLab, $UBOUND_ROWS) <= 0 Then
-		SetLog("Couldn't find Laboratory on main village", $COLOR_ERROR)
+		If Not $bSilent Then SetDebugLog("Couldn't find Laboratory on main village", $COLOR_DEBUG)
 		If $g_bDebugImageSave Then SaveDebugImage("Laboratory", False)
 		Return False
 	EndIf
@@ -140,14 +174,26 @@ Func ImgLocateLab()
 	; loop thro the detected images
 	For $i = 0 To UBound($avLab, $UBOUND_ROWS) - 1
 		$avLabRes = $avLab[$i]
-		SetLog("Laboratory Search find : " & $avLabRes[0])
 		$aiLabCoords = decodeSingleCoord($avLabRes[1])
 	Next
 
 	If IsArray($aiLabCoords) And UBound($aiLabCoords, $UBOUND_ROWS) > 1 Then
 		$g_aiLaboratoryPos[0] = $aiLabCoords[0]
 		$g_aiLaboratoryPos[1] = $aiLabCoords[1]
-		Return True
+		BuildingClick($g_aiLaboratoryPos[0], $g_aiLaboratoryPos[1])
+		If _Sleep($DELAYIMGLOCATE1) Then Return
+		Local $sLabInfo = BuildingInfo(242, 475 + $g_iBottomOffsetY)
+		If StringInStr($sLabInfo[1], "Lab") Then
+			$g_aiLaboratoryPos[2] = $sLabInfo[2]
+			If $bSilent Then SetLog("Laboratory Detected: (" & $g_aiLaboratoryPos[0] & "," & $g_aiLaboratoryPos[1] & ")", $COLOR_SUCCESS)
+			If _Sleep($DELAYIMGLOCATE1) Then Return
+			If Not $bKeepSelected Then ClearScreen()
+			Return True
+		Else
+			If Not $bSilent Then SetDebugLog("Wrong click position, please manually locate", $COLOR_DEBUG)
+			If _Sleep($DELAYIMGLOCATE1) Then Return
+			ClearScreen()
+		EndIf
 	EndIf
 
 	Return False

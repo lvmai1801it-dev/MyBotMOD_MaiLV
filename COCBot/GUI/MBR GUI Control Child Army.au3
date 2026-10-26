@@ -14,6 +14,9 @@
 ; ===============================================================================================================================
 #include-once
 
+Global $g_sTrainPageGroup = "ElixirTroops", $g_sTrainPageKind = "Troop", $g_iTrainPage = 0
+Global $g_aiTrainPageItems[0]
+
 Func radSelectTrainType()
 	; If GUICtrlRead($g_hRadCustomTrain) = $GUI_CHECKED Then
 	_GUICtrlTab_ClickTab($g_hGUI_TRAINARMY_ARMY_TAB, 0)
@@ -54,9 +57,9 @@ EndFunc   ;==>chkQuickTrainArmy
 Func chkQuickTrainCombo()
 	If GUICtrlRead($g_ahChkArmy[0]) = $GUI_UNCHECKED And GUICtrlRead($g_ahChkArmy[1]) = $GUI_UNCHECKED And GUICtrlRead($g_ahChkArmy[2]) = $GUI_UNCHECKED Then
 		GUICtrlSetState($g_ahChkArmy[0], $GUI_CHECKED)
-		ToolTip("QuickTrainCombo: " & @CRLF & "At least 1 Army Check is required! Default Army 1.")
+		_BotToolTip("QuickTrainCombo: " & @CRLF & "At least 1 Army Check is required! Default Army 1.")
 		Sleep(2000)
-		ToolTip('')
+		_BotToolTip('')
 		_chkQuickTrainArmy(0)
 	EndIf
 EndFunc   ;==>chkQuickTrainCombo
@@ -112,9 +115,7 @@ Func SetComboTroopComp()
 	Local $TotalTroopsToTrain = 0
 
 	lblTotalCountTroop1()
-	HideSpellsFctTH()
 	lblTotalCountSpell()
-	HideSiegesFctTH()
 	lblTotalCountSiege()
 	SetRedrawBotWindow($bWasRedraw, Default, Default, Default, "SetComboTroopComp")
 EndFunc   ;==>SetComboTroopComp
@@ -136,7 +137,9 @@ Func lblTotalCountTroop1()
 
 	RemoveAllTmpTrain("Troop")
 	Local $iTmpTroops = 0
-	For $i = 0 To $eTroopCount - 1
+	Local $aiTroopDisplayOrder = TrainGetTroopDisplayOrder()
+	For $iOrder = 0 To UBound($aiTroopDisplayOrder) - 1
+		Local $i = $aiTroopDisplayOrder[$iOrder]
 		Local $iCount = GUICtrlRead($g_ahTxtTrainArmyTroopCount[$i])
 		If $iCount > 0 Then
 			$TotalTroopsToTrain += $iCount * $g_aiTroopSpace[$i]
@@ -190,6 +193,37 @@ Func lblTotalCountTroop1()
 	EndIf
 	; lblTotalCountTroop2()
 EndFunc   ;==>lblTotalCountTroop1
+
+Func TrainGetTroopDisplayOrder()
+	Local $aiOrder[$eTroopCount]
+	Local $iSlot = 0
+
+	For $i = $eTroopBarbarian To $eTroopMeteorGolem
+		If Not TrainIsSuperTroop($i) Then
+			$aiOrder[$iSlot] = $i
+			$iSlot += 1
+		EndIf
+	Next
+
+	For $i = $eTroopMinion To $eTroopRuinWitch
+		If Not TrainIsSuperTroop($i) Then
+			$aiOrder[$iSlot] = $i
+			$iSlot += 1
+		EndIf
+	Next
+
+	For $i = $eTroopDebtCollector To $eTroopGoldenDragon
+		$aiOrder[$iSlot] = $i
+		$iSlot += 1
+	Next
+
+	For $i = 0 To $iSuperTroopsCount - 1
+		$aiOrder[$iSlot] = $g_asSuperTroopIndex[$i]
+		$iSlot += 1
+	Next
+
+	Return $aiOrder
+EndFunc   ;==>TrainGetTroopDisplayOrder
 
 Func lblTotalCountTroop2()
 	; Calculate time for troops
@@ -296,175 +330,6 @@ Func lblTotalCountSiege()
 	Next
 EndFunc   ;==>lblTotalCountSiege
 
-Func HideSiegesFctTH()
-	$g_iTownHallLevel = Int($g_iTownHallLevel)
-	$g_iTotalTrainSpaceSiege = 0
-	_GUI_Value_STATE("DISABLE", $groupListSieges)
-
-	If $g_iTownHallLevel > 11 Or $g_iTownHallLevel = 0 Then
-		_GUI_Value_STATE("ENABLE", $groupWallWrecker)
-		_GUI_Value_STATE("ENABLE", $groupBattleBlimp)
-		_GUI_Value_STATE("ENABLE", $groupStoneSlammer)
-	Else
-		For $i = 0 To $eSiegeMachineCount - 1
-			GUICtrlSetData($g_ahTxtTrainArmySiegeCount[$i], 0)
-		Next
-		$g_iTotalTrainSpaceSiege = 0
-	EndIf
-
-	If $g_iTownHallLevel > 12 Or $g_iTownHallLevel = 0 Then
-		_GUI_Value_STATE("ENABLE", $groupSiegeBarracks)
-		_GUI_Value_STATE("ENABLE", $groupLogLauncher)
-	Else
-		GUICtrlSetData($g_ahTxtTrainArmySiegeCount[$eSiegeFlameFlinger], 0)
-		GUICtrlSetData($g_ahTxtTrainArmySiegeCount[$eSiegeBattleDrill], 0)
-		GUICtrlSetData($g_ahTxtTrainArmySiegeCount[$eSiegeTroopLauncher], 0)
-	EndIf
-
-	If $g_iTownHallLevel > 13 Or $g_iTownHallLevel = 0 Then
-		_GUI_Value_STATE("ENABLE", $groupFlameFlinger)
-	Else
-		GUICtrlSetData($g_ahTxtTrainArmySiegeCount[$eSiegeBattleDrill], 0)
-		GUICtrlSetData($g_ahTxtTrainArmySiegeCount[$eSiegeTroopLauncher], 0)
-	EndIf
-
-	If $g_iTownHallLevel > 14 Or $g_iTownHallLevel = 0 Then
-		_GUI_Value_STATE("ENABLE", $groupBattleDrill)
-	Else
-		GUICtrlSetData($g_ahTxtTrainArmySiegeCount[$eSiegeTroopLauncher], 0)
-	EndIf
-
-	If $g_iTownHallLevel > 15 Or $g_iTownHallLevel = 0 Then
-		_GUI_Value_STATE("ENABLE", $groupTroopLauncher)
-	EndIf
-
-	For $i = 0 To $eSiegeMachineCount - 1
-		GUICtrlSetData($g_aiArmyCompSiegeMachines[$i], GUICtrlRead($g_ahTxtTrainArmySiegeCount[$i]))
-	Next
-
-EndFunc   ;==>HideSiegesFctTH
-
-Func HideSpellsFctTH()
-	_GUI_Value_STATE("DISABLE", $groupListSpells)
-	$g_iTownHallLevel = Int($g_iTownHallLevel)
-
-	If $g_iTownHallLevel > 4 Or $g_iTownHallLevel = 0 Then
-		_GUI_Value_STATE("ENABLE", $groupLightning)
-	Else
-		For $i = 0 To $eSpellCount - 1
-			GUICtrlSetData($g_ahTxtTrainArmySpellCount[$i], 0)
-		Next
-		GUICtrlSetData($g_hTxtTotalCountSpell, 0)
-	EndIf
-
-	If $g_iTownHallLevel > 5 Or $g_iTownHallLevel = 0 Then
-		_GUI_Value_STATE("ENABLE", $groupHeal)
-	Else
-		For $i = $eSpellRage To $eSpellOvergrowth
-			GUICtrlSetData($g_ahTxtTrainArmySpellCount[$i], 0)
-		Next
-	EndIf
-
-	If $g_iTownHallLevel > 6 Or $g_iTownHallLevel = 0 Then
-		_GUI_Value_STATE("ENABLE", $groupRage)
-	Else
-		For $i = $eSpellJump To $eSpellOvergrowth
-			GUICtrlSetData($g_ahTxtTrainArmySpellCount[$i], 0)
-		Next
-	EndIf
-
-	If $g_iTownHallLevel > 7 Or $g_iTownHallLevel = 0 Then
-		_GUI_Value_STATE("ENABLE", $groupPoison)
-		_GUI_Value_STATE("ENABLE", $groupEarthquake)
-	Else
-		GUICtrlSetData($g_ahTxtTrainArmySpellCount[$eSpellJump], 0)
-		GUICtrlSetData($g_ahTxtTrainArmySpellCount[$eSpellFreeze], 0)
-		GUICtrlSetData($g_ahTxtTrainArmySpellCount[$eSpellClone], 0)
-		GUICtrlSetData($g_ahTxtTrainArmySpellCount[$eSpellInvisibility], 0)
-		GUICtrlSetData($g_ahTxtTrainArmySpellCount[$eSpellRecall], 0)
-		GUICtrlSetData($g_ahTxtTrainArmySpellCount[$eSpellRevive], 0)
-		GUICtrlSetData($g_ahTxtTrainArmySpellCount[$eSpellHaste], 0)
-		GUICtrlSetData($g_ahTxtTrainArmySpellCount[$eSpellSkeleton], 0)
-		GUICtrlSetData($g_ahTxtTrainArmySpellCount[$eSpellBat], 0)
-		GUICtrlSetData($g_ahTxtTrainArmySpellCount[$eSpellOvergrowth], 0)
-	EndIf
-
-	If $g_iTownHallLevel > 8 Or $g_iTownHallLevel = 0 Then
-		_GUI_Value_STATE("ENABLE", $groupJump)
-		_GUI_Value_STATE("ENABLE", $groupFreeze)
-		_GUI_Value_STATE("ENABLE", $groupHaste)
-		_GUI_Value_STATE("ENABLE", $groupSkeleton)
-	Else
-		GUICtrlSetData($g_ahTxtTrainArmySpellCount[$eSpellClone], 0)
-		GUICtrlSetData($g_ahTxtTrainArmySpellCount[$eSpellBat], 0)
-		GUICtrlSetData($g_ahTxtTrainArmySpellCount[$eSpellInvisibility], 0)
-		GUICtrlSetData($g_ahTxtTrainArmySpellCount[$eSpellRecall], 0)
-		GUICtrlSetData($g_ahTxtTrainArmySpellCount[$eSpellRevive], 0)
-		GUICtrlSetData($g_ahTxtTrainArmySpellCount[$eSpellOvergrowth], 0)
-	EndIf
-
-	If $g_iTownHallLevel > 9 Or $g_iTownHallLevel = 0 Then
-		_GUI_Value_STATE("ENABLE", $groupClone)
-		_GUI_Value_STATE("ENABLE", $groupBat)
-	Else
-		GUICtrlSetData($g_ahTxtTrainArmySpellCount[$eSpellInvisibility], 0)
-		GUICtrlSetData($g_ahTxtTrainArmySpellCount[$eSpellRecall], 0)
-		GUICtrlSetData($g_ahTxtTrainArmySpellCount[$eSpellRevive], 0)
-		GUICtrlSetData($g_ahTxtTrainArmySpellCount[$eSpellOvergrowth], 0)
-	EndIf
-
-	If $g_iTownHallLevel > 10 Or $g_iTownHallLevel = 0 Then
-		_GUI_Value_STATE("ENABLE", $groupInvisibility)
-	Else
-		GUICtrlSetData($g_ahTxtTrainArmySpellCount[$eSpellRecall], 0)
-		GUICtrlSetData($g_ahTxtTrainArmySpellCount[$eSpellRevive], 0)
-		GUICtrlSetData($g_ahTxtTrainArmySpellCount[$eSpellOvergrowth], 0)
-	EndIf
-
-	If $g_iTownHallLevel > 11 Or $g_iTownHallLevel = 0 Then
-		_GUI_Value_STATE("ENABLE", $groupOvergrowth)
-	Else
-		GUICtrlSetData($g_ahTxtTrainArmySpellCount[$eSpellRecall], 0)
-		GUICtrlSetData($g_ahTxtTrainArmySpellCount[$eSpellRevive], 0)
-	EndIf
-
-	If $g_iTownHallLevel > 12 Or $g_iTownHallLevel = 0 Then
-		_GUI_Value_STATE("ENABLE", $groupRecall)
-	Else
-		GUICtrlSetData($g_ahTxtTrainArmySpellCount[$eSpellRevive], 0)
-	EndIf
-
-	If $g_iTownHallLevel > 14 Or $g_iTownHallLevel = 0 Then _GUI_Value_STATE("ENABLE", $groupRevive)
-
-EndFunc   ;==>HideSpellsFctTH
-
-Func chkBoostBarracksHoursE1()
-	If GUICtrlRead($g_hChkBoostBarracksHoursE1) = $GUI_CHECKED And GUICtrlRead($g_hChkBoostBarracksHours[0]) = $GUI_CHECKED Then
-		For $i = 0 To 11
-			GUICtrlSetState($g_hChkBoostBarracksHours[$i], $GUI_UNCHECKED)
-		Next
-	Else
-		For $i = 0 To 11
-			GUICtrlSetState($g_hChkBoostBarracksHours[$i], $GUI_CHECKED)
-		Next
-	EndIf
-	Sleep(300)
-	GUICtrlSetState($g_hChkBoostBarracksHoursE1, $GUI_UNCHECKED)
-EndFunc   ;==>chkBoostBarracksHoursE1
-
-Func chkBoostBarracksHoursE2()
-	If GUICtrlRead($g_hChkBoostBarracksHoursE2) = $GUI_CHECKED And GUICtrlRead($g_hChkBoostBarracksHours[12]) = $GUI_CHECKED Then
-		For $i = 12 To 23
-			GUICtrlSetState($g_hChkBoostBarracksHours[$i], $GUI_UNCHECKED)
-		Next
-	Else
-		For $i = 12 To 23
-			GUICtrlSetState($g_hChkBoostBarracksHours[$i], $GUI_CHECKED)
-		Next
-	EndIf
-	Sleep(300)
-	GUICtrlSetState($g_hChkBoostBarracksHoursE2, $GUI_UNCHECKED)
-EndFunc   ;==>chkBoostBarracksHoursE2
 
 Func chkCloseWaitEnable()
 	If GUICtrlRead($g_hChkCloseWhileTraining) = $GUI_CHECKED Then
@@ -584,6 +449,34 @@ Func sldTrainITDelay()
 	$g_iTrainClickDelay = GUICtrlRead($g_hSldTrainITDelay)
 	GUICtrlSetData($g_hLblTrainITDelayTime, $g_iTrainClickDelay & " ms")
 EndFunc   ;==>sldTrainITDelay
+
+Func radDirectAttackMode()
+	$g_iDirectAttackMode = (GUICtrlRead($g_hRadDirectAttackDead) = $GUI_CHECKED) ? $DB : $LB
+EndFunc   ;==>radDirectAttackMode
+
+Func txtCCSpamDelayMin()
+	If Int(GUICtrlRead($g_hTxtCCSpamDelayMax)) < Int(GUICtrlRead($g_hTxtCCSpamDelayMin)) Then
+		GUICtrlSetData($g_hTxtCCSpamDelayMin, GUICtrlRead($g_hTxtCCSpamDelayMax))
+	EndIf
+	$g_iCCSpamDelayMin = Int(GUICtrlRead($g_hTxtCCSpamDelayMin))
+EndFunc   ;==>txtCCSpamDelayMin
+
+Func txtCCSpamDelayMax()
+	If Int(GUICtrlRead($g_hTxtCCSpamDelayMax)) < Int(GUICtrlRead($g_hTxtCCSpamDelayMin)) Then
+		GUICtrlSetData($g_hTxtCCSpamDelayMax, GUICtrlRead($g_hTxtCCSpamDelayMin))
+	EndIf
+	$g_iCCSpamDelayMax = Int(GUICtrlRead($g_hTxtCCSpamDelayMax))
+EndFunc   ;==>txtCCSpamDelayMax
+
+Func radTagTeamMode()
+	If GUICtrlRead($g_hRadTagOff) = $GUI_CHECKED Then
+		$g_iTagTeamMode = $eTagTeamOff
+	ElseIf GUICtrlRead($g_hRadTagEventTroops) = $GUI_CHECKED Then
+		$g_iTagTeamMode = $eTagTeamEventTroops
+	Else
+		$g_iTagTeamMode = $eTagTeamResources
+	EndIf
+EndFunc   ;==>radTagTeamMode
 
 Func chkTroopOrder2()
 	;GUI OnEvent functions cannot have parameters, so below call is used for the default parameter
@@ -733,12 +626,12 @@ Func BtnSpellsOrderSet()
 	Local $sNewTrainList = ""
 
 	Local $bMissingTroop = False ; flag for when troops are not assigned by user
-	Local $aiBrewOrder[$eSpellCount] = [ _
-			$eSpellLightning, $eSpellHeal, $eSpellRage, $eSpellJump, $eSpellFreeze, $eSpellClone, _
-			$eSpellInvisibility, $eSpellRecall, $eSpellRevive, $eSpellPoison, $eSpellEarthquake, $eSpellHaste, $eSpellSkeleton, $eSpellBat, $eSpellOvergrowth]
-
-	; check for duplicate combobox index and take action
-	For $i = 0 To UBound($g_ahCmbSpellsOrder) - 1
+ 	Local $aiBrewOrder[$eSpellCount] = [ _
+ 			$eSpellLightning, $eSpellHeal, $eSpellRage, $eSpellJump, $eSpellFreeze, $eSpellClone, _
+			$eSpellInvisibility, $eSpellRecall, $eSpellRevive, $eSpellTotem, $eSpellPoison, $eSpellEarthquake, $eSpellHaste, $eSpellSkeleton, $eSpellBat, $eSpellOvergrowth, $eSpellIBSpell, $eSpellAngrySpell]
+ 
+ 	; check for duplicate combobox index and take action
+ 	For $i = 0 To UBound($g_ahCmbSpellsOrder) - 1
 		For $j = 0 To UBound($g_ahCmbSpellsOrder) - 1
 			If $i = $j Then ContinueLoop ; skip if index are same
 			If _GUICtrlComboBox_GetCurSel($g_ahCmbSpellsOrder[$i]) <> -1 And _
@@ -982,11 +875,11 @@ EndFunc   ;==>IsUseCustomSpellsOrder
 Func IsUseCustomTroopOrder()
 	For $i = 0 To UBound($g_aiCmbCustomTrainOrder) - 1 ; Check if custom train order has been used, to select log message
 		If $g_aiCmbCustomTrainOrder[$i] = -1 Then
-			If $g_bDebugSetLogTrain And $g_bCustomTrainOrderEnable Then SetLog("Custom train order not used...", $COLOR_DEBUG) ;Debug
+			If $g_bDebugSetLogTrain And $g_bCustomTrainOrderEnable Then SetLog("Custom train order not used", $COLOR_DEBUG) ;Debug
 			Return False
 		EndIf
 	Next
-	If $g_bDebugSetLogTrain And $g_bCustomTrainOrderEnable Then SetLog("Custom train order used...", $COLOR_DEBUG) ;Debug
+	If $g_bDebugSetLogTrain And $g_bCustomTrainOrderEnable Then SetLog("Custom train order used", $COLOR_DEBUG) ;Debug
 	Return True
 EndFunc   ;==>IsUseCustomTroopOrder
 
@@ -1087,9 +980,9 @@ Func EditQuickTrainArmy()
 	If $g_bRunState Then Return
 	If $g_bRunState Or $g_iQuickTrainEdit > -1 Then
 		Local $sMessage = $g_bRunState ? ("Bot is running" & @CRLF & "Please stop the bot completely and try again") : ("Edit window for Army " & $g_iQuickTrainEdit + 1 & " is currently open" & @CRLF & "Please exit and try again")
-		ToolTip("EditQuickTrainArmy: " & @CRLF & $sMessage)
+		_BotToolTip("EditQuickTrainArmy: " & @CRLF & $sMessage)
 		Sleep(2000)
-		ToolTip('')
+		_BotToolTip('')
 		Return
 	EndIf
 	For $i = 0 To 2
@@ -1112,13 +1005,13 @@ Func _EditQuickTrainArmy($i)
 			_GUICtrlSetImage($g_ahPicQTEdit_Troop[$j], $g_sLibIconPath, $g_aQuickTroopIcon[$g_aiQTEdit_TroopType[$j]])
 			GUICtrlSetData($g_ahTxtQTEdit_Troop[$j], $g_aiQuickTroopQty[$i][$j])
 			_GUI_Value_STATE("SHOW", $g_ahPicQTEdit_Troop[$j] & "#" & $g_ahTxtQTEdit_Troop[$j])
-			GUICtrlSetTip($g_ahPicQTEdit_Troop[$j], $g_asTroopNames[$g_aiQTEdit_TroopType[$j]])
+			_GUICtrlSetTip($g_ahPicQTEdit_Troop[$j], $g_asTroopNames[$g_aiQTEdit_TroopType[$j]])
 		EndIf
 		If $g_aiQTEdit_SpellType[$j] > -1 Then
 			_GUICtrlSetImage($g_ahPicQTEdit_Spell[$j], $g_sLibIconPath, $g_aQuickSpellIcon[$g_aiQTEdit_SpellType[$j]])
 			GUICtrlSetData($g_ahTxtQTEdit_Spell[$j], $g_aiQuickSpellQty[$i][$j])
 			_GUI_Value_STATE("SHOW", $g_ahPicQTEdit_Spell[$j] & "#" & $g_ahTxtQTEdit_Spell[$j])
-			GUICtrlSetTip($g_ahPicQTEdit_Spell[$j], $g_asSpellNames[$g_aiQTEdit_SpellType[$j]])
+			_GUICtrlSetTip($g_ahPicQTEdit_Spell[$j], $g_asSpellNames[$g_aiQTEdit_SpellType[$j]])
 		EndIf
 	Next
 	TotalTroopCount_QTEdit()
@@ -1163,7 +1056,7 @@ Func AddTroop_QTEdit($iTroop)
 				Local $iQty = GUICtrlRead($g_ahTxtQTEdit_Troop[$j]) + 1
 				GUICtrlSetData($g_ahTxtQTEdit_Troop[$j], $iQty)
 				_GUI_Value_STATE("SHOW", $g_ahPicQTEdit_Troop[$j] & "#" & $g_ahTxtQTEdit_Troop[$j])
-				GUICtrlSetTip($g_ahPicQTEdit_Troop[$j], $g_asTroopNames[$g_aiQTEdit_TroopType[$j]])
+				_GUICtrlSetTip($g_ahPicQTEdit_Troop[$j], $g_asTroopNames[$g_aiQTEdit_TroopType[$j]])
 				ExitLoop
 
 			Case $g_aiQTEdit_TroopType[$j] = $iTroop
@@ -1179,13 +1072,13 @@ Func AddTroop_QTEdit($iTroop)
 						_GUICtrlSetImage($g_ahPicQTEdit_Troop[$k], $g_sLibIconPath, $g_aQuickTroopIcon[$g_aiQTEdit_TroopType[$k]])
 						GUICtrlSetData($g_ahTxtQTEdit_Troop[$k], $iQty)
 						_GUI_Value_STATE("SHOW", $g_ahPicQTEdit_Troop[$k] & "#" & $g_ahTxtQTEdit_Troop[$k])
-						GUICtrlSetTip($g_ahPicQTEdit_Troop[$k], $g_asTroopNames[$g_aiQTEdit_TroopType[$k]])
+						_GUICtrlSetTip($g_ahPicQTEdit_Troop[$k], $g_asTroopNames[$g_aiQTEdit_TroopType[$k]])
 					EndIf
 				Next
 				$g_aiQTEdit_TroopType[$j] = $iTroop
 				_GUICtrlSetImage($g_ahPicQTEdit_Troop[$j], $g_sLibIconPath, $g_aQuickTroopIcon[$iTroop])
 				GUICtrlSetData($g_ahTxtQTEdit_Troop[$j], 1)
-				GUICtrlSetTip($g_ahPicQTEdit_Troop[$j], $g_asTroopNames[$g_aiQTEdit_TroopType[$j]])
+				_GUICtrlSetTip($g_ahPicQTEdit_Troop[$j], $g_asTroopNames[$g_aiQTEdit_TroopType[$j]])
 				ExitLoop
 
 		EndSelect
@@ -1193,9 +1086,9 @@ Func AddTroop_QTEdit($iTroop)
 	Next
 
 	If $bOverSpace Or $bOverSlot Then
-		ToolTip($bOverSlot ? "Quick train does not support more than 7 troop slots" : "Total selected troops exceeds possible camp capacity (" & $iTotalCampSpace & ")")
+		_BotToolTip($bOverSlot ? "Quick train does not support more than 7 troop slots" : "Total selected troops exceeds possible camp capacity (" & $iTotalCampSpace & ")")
 		Sleep(2000)
-		ToolTip('')
+		_BotToolTip('')
 	Else
 		Return True
 	EndIf
@@ -1238,12 +1131,12 @@ Func _RemoveTroop_QTEdit($iSlot)
 				_GUICtrlSetImage($g_ahPicQTEdit_Troop[$k], $g_sLibIconPath, $g_aQuickTroopIcon[$g_aiQTEdit_TroopType[$k]])
 				GUICtrlSetData($g_ahTxtQTEdit_Troop[$k], $iQty)
 				_GUI_Value_STATE("SHOW", $g_ahPicQTEdit_Troop[$k] & "#" & $g_ahTxtQTEdit_Troop[$k])
-				GUICtrlSetTip($g_ahPicQTEdit_Troop[$k], $g_asTroopNames[$g_aiQTEdit_TroopType[$k]])
+				_GUICtrlSetTip($g_ahPicQTEdit_Troop[$k], $g_asTroopNames[$g_aiQTEdit_TroopType[$k]])
 			Else
 				_GUICtrlSetImage($g_ahPicQTEdit_Troop[$k], $g_sLibIconPath, $eEmpty3)
 				GUICtrlSetData($g_ahTxtQTEdit_Troop[$k], 0)
 				_GUI_Value_STATE("HIDE", $g_ahPicQTEdit_Troop[$k] & "#" & $g_ahTxtQTEdit_Troop[$k])
-				GUICtrlSetTip($g_ahPicQTEdit_Troop[$k], "Empty")
+				_GUICtrlSetTip($g_ahPicQTEdit_Troop[$k], "Empty")
 			EndIf
 		Next
 	EndIf
@@ -1281,7 +1174,7 @@ Func AddSpell_QTEdit($iSpell)
 				Local $iQty = GUICtrlRead($g_ahTxtQTEdit_Spell[$j]) + 1
 				GUICtrlSetData($g_ahTxtQTEdit_Spell[$j], $iQty)
 				_GUI_Value_STATE("SHOW", $g_ahPicQTEdit_Spell[$j] & "#" & $g_ahTxtQTEdit_Spell[$j])
-				GUICtrlSetTip($g_ahPicQTEdit_Spell[$j], $g_asSpellNames[$g_aiQTEdit_SpellType[$j]])
+				_GUICtrlSetTip($g_ahPicQTEdit_Spell[$j], $g_asSpellNames[$g_aiQTEdit_SpellType[$j]])
 				ExitLoop
 
 			Case $g_aiQTEdit_SpellType[$j] = $iSpell
@@ -1297,13 +1190,13 @@ Func AddSpell_QTEdit($iSpell)
 						_GUICtrlSetImage($g_ahPicQTEdit_Spell[$k], $g_sLibIconPath, $g_aQuickSpellIcon[$g_aiQTEdit_SpellType[$k]])
 						GUICtrlSetData($g_ahTxtQTEdit_Spell[$k], $iQty)
 						_GUI_Value_STATE("SHOW", $g_ahPicQTEdit_Spell[$k] & "#" & $g_ahTxtQTEdit_Spell[$k])
-						GUICtrlSetTip($g_ahPicQTEdit_Spell[$k], $g_asSpellNames[$g_aiQTEdit_SpellType[$k]])
+						_GUICtrlSetTip($g_ahPicQTEdit_Spell[$k], $g_asSpellNames[$g_aiQTEdit_SpellType[$k]])
 					EndIf
 				Next
 				$g_aiQTEdit_SpellType[$j] = $iSpell
 				_GUICtrlSetImage($g_ahPicQTEdit_Spell[$j], $g_sLibIconPath, $g_aQuickSpellIcon[$iSpell])
 				GUICtrlSetData($g_ahTxtQTEdit_Spell[$j], 1)
-				GUICtrlSetTip($g_ahPicQTEdit_Spell[$j], $g_asSpellNames[$g_aiQTEdit_SpellType[$j]])
+				_GUICtrlSetTip($g_ahPicQTEdit_Spell[$j], $g_asSpellNames[$g_aiQTEdit_SpellType[$j]])
 				ExitLoop
 
 		EndSelect
@@ -1311,9 +1204,9 @@ Func AddSpell_QTEdit($iSpell)
 	Next
 
 	If $bOverSpace Or $bOverSlot Then
-		ToolTip($bOverSlot ? "Quick train does not support more than 7 Spell slots" : "Total selected Spells exceeds possible spell camp capacity (" & $iTotalSpellSpace & ")")
+		_BotToolTip($bOverSlot ? "Quick train does not support more than 7 Spell slots" : "Total selected Spells exceeds possible spell camp capacity (" & $iTotalSpellSpace & ")")
 		Sleep(2000)
-		ToolTip('')
+		_BotToolTip('')
 	Else
 		Return True
 	EndIf
@@ -1356,12 +1249,12 @@ Func _RemoveSpell_QTEdit($iSlot)
 				_GUICtrlSetImage($g_ahPicQTEdit_Spell[$k], $g_sLibIconPath, $g_aQuickSpellIcon[$g_aiQTEdit_SpellType[$k]])
 				GUICtrlSetData($g_ahTxtQTEdit_Spell[$k], $iQty)
 				_GUI_Value_STATE("SHOW", $g_ahPicQTEdit_Spell[$k] & "#" & $g_ahTxtQTEdit_Spell[$k])
-				GUICtrlSetTip($g_ahPicQTEdit_Spell[$k], $g_asSpellNames[$g_aiQTEdit_SpellType[$k]])
+				_GUICtrlSetTip($g_ahPicQTEdit_Spell[$k], $g_asSpellNames[$g_aiQTEdit_SpellType[$k]])
 			Else
 				_GUICtrlSetImage($g_ahPicQTEdit_Spell[$k], $g_sLibIconPath, $eEmpty3)
 				GUICtrlSetData($g_ahTxtQTEdit_Spell[$k], 0)
 				_GUI_Value_STATE("HIDE", $g_ahPicQTEdit_Spell[$k] & "#" & $g_ahTxtQTEdit_Spell[$k])
-				GUICtrlSetTip($g_ahPicQTEdit_Spell[$k], "Empty")
+				_GUICtrlSetTip($g_ahPicQTEdit_Spell[$k], "Empty")
 			EndIf
 		Next
 	EndIf
@@ -1376,8 +1269,8 @@ Func RemoveArmy_QTEdit()
 		GUICtrlSetData($g_ahTxtQTEdit_Troop[$j], 0)
 		GUICtrlSetData($g_ahTxtQTEdit_Spell[$j], 0)
 		_GUI_Value_STATE("HIDE", $g_ahPicQTEdit_Troop[$j] & "#" & $g_ahTxtQTEdit_Troop[$j] & "#" & $g_ahPicQTEdit_Spell[$j] & "#" & $g_ahTxtQTEdit_Spell[$j])
-		GUICtrlSetTip($g_ahPicQTEdit_Troop[$j], "Empty")
-		GUICtrlSetTip($g_ahPicQTEdit_Spell[$j], "Empty")
+		_GUICtrlSetTip($g_ahPicQTEdit_Troop[$j], "Empty")
+		_GUICtrlSetTip($g_ahPicQTEdit_Spell[$j], "Empty")
 	Next
 	TotalTroopCount_QTEdit()
 	TotalSpellCount_QTEdit()
@@ -1409,23 +1302,23 @@ Func ApplyQuickTrainArmy($Army)
 				_GUICtrlSetImage($g_ahPicQuickTroop[$i][$j], $g_sLibIconPath, $g_aQuickTroopIcon[$g_aiQuickTroopType[$i][$j]])
 				GUICtrlSetData($g_ahLblQuickTroop[$i][$j], $g_aiQuickTroopQty[$i][$j] & "x")
 				_GUI_Value_STATE("SHOW", $g_ahPicQuickTroop[$i][$j] & "#" & $g_ahLblQuickTroop[$i][$j])
-				GUICtrlSetTip($g_ahPicQuickTroop[$i][$j], $g_asTroopNames[$g_aiQuickTroopType[$i][$j]])
+				_GUICtrlSetTip($g_ahPicQuickTroop[$i][$j], $g_asTroopNames[$g_aiQuickTroopType[$i][$j]])
 				$bNoArmy = False
 			Else
 				_GUICtrlSetImage($g_ahPicQuickTroop[$i][$j], $g_sLibIconPath, $eEmpty3)
 				_GUI_Value_STATE("HIDE", $g_ahPicQuickTroop[$i][$j] & "#" & $g_ahLblQuickTroop[$i][$j])
-				GUICtrlSetTip($g_ahPicQuickTroop[$i][$j], "Empty")
+				_GUICtrlSetTip($g_ahPicQuickTroop[$i][$j], "Empty")
 			EndIf
 			If $g_aiQuickSpellType[$i][$j] > -1 Then
 				_GUICtrlSetImage($g_ahPicQuickSpell[$i][$j], $g_sLibIconPath, $g_aQuickSpellIcon[$g_aiQuickSpellType[$i][$j]])
 				GUICtrlSetData($g_ahLblQuickSpell[$i][$j], $g_aiQuickSpellQty[$i][$j] & "x")
 				_GUI_Value_STATE("SHOW", $g_ahPicQuickSpell[$i][$j] & "#" & $g_ahLblQuickSpell[$i][$j])
-				GUICtrlSetTip($g_ahPicQuickSpell[$i][$j], $g_asSpellNames[$g_aiQuickSpellType[$i][$j]])
+				_GUICtrlSetTip($g_ahPicQuickSpell[$i][$j], $g_asSpellNames[$g_aiQuickSpellType[$i][$j]])
 				$bNoArmy = False
 			Else
 				_GUICtrlSetImage($g_ahPicQuickSpell[$i][$j], $g_sLibIconPath, $eEmpty3)
 				_GUI_Value_STATE("HIDE", $g_ahPicQuickSpell[$i][$j] & "#" & $g_ahLblQuickSpell[$i][$j])
-				GUICtrlSetTip($g_ahPicQuickSpell[$i][$j], "Empty")
+				_GUICtrlSetTip($g_ahPicQuickSpell[$i][$j], "Empty")
 			EndIf
 		Next
 		If $bNoArmy Then GUICtrlSetState($g_ahLblQuickTrainNote[$i], $GUI_SHOW)
@@ -1455,9 +1348,9 @@ Func TxtQTEdit_Troop()
 	If $g_iQTEdit_TotalTroop > $iTotalCampSpace Then
 		Local $iSpaceLeft = $iTotalCampSpace - ($g_iQTEdit_TotalTroop - $iSpace)
 		Local $iMaxQtyLeft = Int($iSpaceLeft / $g_aiTroopSpace[$iTroop])
-		ToolTip("Your input of " & $iQty & "x " & $g_asTroopNames[$iTroop] & " makes total troops to exceed possible camp capacity (" & $iTotalCampSpace & ")." & @CRLF & "Automatically changing to: " & $iMaxQtyLeft & "x " & $g_asTroopNames[$iTroop])
+		_BotToolTip("Your input of " & $iQty & "x " & $g_asTroopNames[$iTroop] & " makes total troops to exceed possible camp capacity (" & $iTotalCampSpace & ")." & @CRLF & "Automatically changing to: " & $iMaxQtyLeft & "x " & $g_asTroopNames[$iTroop])
 		Sleep(2000)
-		ToolTip('')
+		_BotToolTip('')
 		GUICtrlSetData($g_ahTxtQTEdit_Troop[$iSlot], $iMaxQtyLeft)
 		TotalTroopCount_QTEdit()
 	EndIf
@@ -1484,9 +1377,9 @@ Func TxtQTEdit_Spell()
 	If $g_iQTEdit_TotalSpell > $iTotalSpellSpace Then
 		Local $iSpaceLeft = $iTotalSpellSpace - ($g_iQTEdit_TotalSpell - $iSpace)
 		Local $iMaxQtyLeft = Int($iSpaceLeft / $g_aiSpellSpace[$iSpell])
-		ToolTip("Your input of " & $iQty & "x " & $g_asSpellNames[$iSpell] & " makes total Spells to exceed possible camp capacity (" & $iTotalSpellSpace & ")." & @CRLF & "Automatically changing to: " & $iMaxQtyLeft & "x " & $g_asSpellNames[$iSpell])
+		_BotToolTip("Your input of " & $iQty & "x " & $g_asSpellNames[$iSpell] & " makes total Spells to exceed possible camp capacity (" & $iTotalSpellSpace & ")." & @CRLF & "Automatically changing to: " & $iMaxQtyLeft & "x " & $g_asSpellNames[$iSpell])
 		Sleep(2000)
-		ToolTip('')
+		_BotToolTip('')
 		GUICtrlSetData($g_ahTxtQTEdit_Spell[$iSlot], $iMaxQtyLeft)
 		TotalSpellCount_QTEdit()
 	EndIf
@@ -1602,37 +1495,58 @@ Func RemoveAllTmpTrain($sWhat = "All")
 EndFunc   ;==>RemoveAllTmpTrain
 
 Func HideAllTroops()
-	For $i = $g_ahPicTrainArmyTroop[$eTroopMinion] To $g_ahPicTrainArmyTroop[$eTroopFurnace]
-		GUICtrlSetState($i, $GUI_HIDE)
+	For $i = 0 To UBound($g_ahPicTrainArmyTroop) - 1
+		If $g_ahPicTrainArmyTroop[$i] <> 0 Then GUICtrlSetState($g_ahPicTrainArmyTroop[$i], $GUI_HIDE)
+		If $g_ahTxtTrainArmyTroopCount[$i] <> 0 Then GUICtrlSetState($g_ahTxtTrainArmyTroopCount[$i], $GUI_HIDE)
+		$g_abTrainTroopVisible[$i] = False
 	Next
-	For $i = $g_ahTxtTrainArmyTroopCount[$eTroopMinion] To $g_ahTxtTrainArmyTroopCount[$eTroopFurnace]
-		GUICtrlSetState($i, $GUI_HIDE)
+	For $i = 0 To UBound($g_ahPicTrainArmySpell) - 1
+		If $g_ahPicTrainArmySpell[$i] <> 0 Then GUICtrlSetState($g_ahPicTrainArmySpell[$i], $GUI_HIDE)
+		If $g_ahTxtTrainArmySpellCount[$i] <> 0 Then GUICtrlSetState($g_ahTxtTrainArmySpellCount[$i], $GUI_HIDE)
+		$g_abTrainSpellVisible[$i] = False
 	Next
-	For $i = $g_ahPicTrainArmyTroop[$eTroopBarbarian] To $g_ahPicTrainArmyTroop[$eTroopThrower]
-		GUICtrlSetState($i, $GUI_HIDE)
+	For $i = 0 To UBound($g_ahPicTrainArmySiege) - 1
+		If $g_ahPicTrainArmySiege[$i] <> 0 Then GUICtrlSetState($g_ahPicTrainArmySiege[$i], $GUI_HIDE)
+		If $g_ahTxtTrainArmySiegeCount[$i] <> 0 Then GUICtrlSetState($g_ahTxtTrainArmySiegeCount[$i], $GUI_HIDE)
+		$g_abTrainSiegeVisible[$i] = False
 	Next
-	For $i = $g_ahTxtTrainArmyTroopCount[$eTroopBarbarian] To $g_ahTxtTrainArmyTroopCount[$eTroopThrower]
-		GUICtrlSetState($i, $GUI_HIDE)
-	Next
-	For $i = $g_ahPicTrainArmyTroop[$eTroopSuperBarbarian] To $g_ahPicTrainArmyTroop[$eTroopSuperHogRider]
-		GUICtrlSetState($i, $GUI_HIDE)
-	Next
-	For $i = $g_ahTxtTrainArmyTroopCount[$eTroopSuperBarbarian] To $g_ahTxtTrainArmyTroopCount[$eTroopSuperHogRider]
-		GUICtrlSetState($i, $GUI_HIDE)
-	Next
-	For $i = $g_ahPicTrainArmySpell[$eSpellLightning] To $g_ahPicTrainArmySpell[$eSpellOvergrowth]
-		GUICtrlSetState($i, $GUI_HIDE)
-	Next
-	For $i = $g_ahTxtTrainArmySpellCount[$eSpellLightning] To $g_ahTxtTrainArmySpellCount[$eSpellOvergrowth]
-		GUICtrlSetState($i, $GUI_HIDE)
-	Next
-	For $i = $g_ahPicTrainArmySiege[$eSiegeWallWrecker] To $g_ahPicTrainArmySiege[$eSiegeTroopLauncher]
-		GUICtrlSetState($i, $GUI_HIDE)
-	Next
-	For $i = $g_ahTxtTrainArmySiegeCount[$eSiegeWallWrecker] To $g_ahTxtTrainArmySiegeCount[$eSiegeTroopLauncher]
-		GUICtrlSetState($i, $GUI_HIDE)
-	Next
+	If $g_hBtnTrainPagePrev <> 0 Then GUICtrlSetState($g_hBtnTrainPagePrev, $GUI_HIDE)
+	If $g_hBtnTrainPageNext <> 0 Then GUICtrlSetState($g_hBtnTrainPageNext, $GUI_HIDE)
+	$g_bTrainPagePrevVisible = False
+	$g_bTrainPageNextVisible = False
 EndFunc   ;==>HideAllTroops
+
+Func TrainHideVisiblePageItems()
+	For $i = 0 To UBound($g_abTrainTroopVisible) - 1
+		If $g_abTrainTroopVisible[$i] Then
+			If $g_ahPicTrainArmyTroop[$i] <> 0 Then GUICtrlSetState($g_ahPicTrainArmyTroop[$i], $GUI_HIDE)
+			If $g_ahTxtTrainArmyTroopCount[$i] <> 0 Then GUICtrlSetState($g_ahTxtTrainArmyTroopCount[$i], $GUI_HIDE)
+			$g_abTrainTroopVisible[$i] = False
+		EndIf
+	Next
+	For $i = 0 To UBound($g_abTrainSpellVisible) - 1
+		If $g_abTrainSpellVisible[$i] Then
+			If $g_ahPicTrainArmySpell[$i] <> 0 Then GUICtrlSetState($g_ahPicTrainArmySpell[$i], $GUI_HIDE)
+			If $g_ahTxtTrainArmySpellCount[$i] <> 0 Then GUICtrlSetState($g_ahTxtTrainArmySpellCount[$i], $GUI_HIDE)
+			$g_abTrainSpellVisible[$i] = False
+		EndIf
+	Next
+	For $i = 0 To UBound($g_abTrainSiegeVisible) - 1
+		If $g_abTrainSiegeVisible[$i] Then
+			If $g_ahPicTrainArmySiege[$i] <> 0 Then GUICtrlSetState($g_ahPicTrainArmySiege[$i], $GUI_HIDE)
+			If $g_ahTxtTrainArmySiegeCount[$i] <> 0 Then GUICtrlSetState($g_ahTxtTrainArmySiegeCount[$i], $GUI_HIDE)
+			$g_abTrainSiegeVisible[$i] = False
+		EndIf
+	Next
+	TrainSetPageArrowState($g_hBtnTrainPagePrev, $g_bTrainPagePrevVisible, False)
+	TrainSetPageArrowState($g_hBtnTrainPageNext, $g_bTrainPageNextVisible, False)
+EndFunc   ;==>TrainHideVisiblePageItems
+
+Func TrainSetPageArrowState($hButton, ByRef $bVisible, $bShow)
+	If $hButton = 0 Or $bVisible = $bShow Then Return
+	GUICtrlSetState($hButton, $bShow ? $GUI_SHOW : $GUI_HIDE)
+	$bVisible = $bShow
+EndFunc   ;==>TrainSetPageArrowState
 
 Func SetBtnSelector($sType = "All")
 	For $i = $g_hBtnElixirTroops To $g_hBtnSieges
@@ -1645,6 +1559,8 @@ Func SetBtnSelector($sType = "All")
 			GUICtrlSetColor($g_hBtnElixirTroops, $COLOR_YELLOW)
 		Case "DarkElixirTroops"
 			GUICtrlSetColor($g_hBtnDarkElixirTroops, $COLOR_YELLOW)
+		Case "EventTroops"
+			GUICtrlSetColor($g_hBtnEventTroops, $COLOR_YELLOW)
 		Case "SuperTroops"
 			GUICtrlSetColor($g_hBtnSuperTroops, $COLOR_YELLOW)
 		Case "Spells"
@@ -1655,56 +1571,208 @@ Func SetBtnSelector($sType = "All")
 EndFunc   ;==>SetBtnSelector
 
 Func BtnElixirTroops()
-	HideAllTroops()
-	For $i = $g_ahPicTrainArmyTroop[$eTroopBarbarian] To $g_ahPicTrainArmyTroop[$eTroopThrower]
-		GUICtrlSetState($i, $GUI_SHOW)
-	Next
-	For $i = $g_ahTxtTrainArmyTroopCount[$eTroopBarbarian] To $g_ahTxtTrainArmyTroopCount[$eTroopThrower]
-		GUICtrlSetState($i, $GUI_SHOW)
-	Next
+	TrainSetPageGroup("ElixirTroops")
 	SetBtnSelector("ElixirTroops")
 EndFunc   ;==>BtnElixirTroops
 
 Func BtnDarkElixirTroops()
-	HideAllTroops()
-	For $i = $g_ahPicTrainArmyTroop[$eTroopMinion] To $g_ahPicTrainArmyTroop[$eTroopFurnace]
-		GUICtrlSetState($i, $GUI_SHOW)
-	Next
-	For $i = $g_ahTxtTrainArmyTroopCount[$eTroopMinion] To $g_ahTxtTrainArmyTroopCount[$eTroopFurnace]
-		GUICtrlSetState($i, $GUI_SHOW)
-	Next
+	TrainSetPageGroup("DarkElixirTroops")
 	SetBtnSelector("DarkElixirTroops")
 EndFunc   ;==>BtnDarkElixirTroops
 
+Func BtnEventTroops()
+	TrainSetPageGroup("EventTroops")
+	SetBtnSelector("EventTroops")
+EndFunc   ;==>BtnEventTroops
+
 Func BtnSuperTroops()
-	HideAllTroops()
-	For $i = $g_ahPicTrainArmyTroop[$eTroopSuperBarbarian] To $g_ahPicTrainArmyTroop[$eTroopSuperHogRider]
-		GUICtrlSetState($i, $GUI_SHOW)
-	Next
-	For $i = $g_ahTxtTrainArmyTroopCount[$eTroopSuperBarbarian] To $g_ahTxtTrainArmyTroopCount[$eTroopSuperHogRider]
-		GUICtrlSetState($i, $GUI_SHOW)
-	Next
+	TrainSetPageGroup("SuperTroops")
 	SetBtnSelector("SuperTroops")
 EndFunc   ;==>BtnSuperTroops
 
 Func BtnSpells()
-	HideAllTroops()
-	For $i = $g_ahPicTrainArmySpell[$eSpellLightning] To $g_ahPicTrainArmySpell[$eSpellOvergrowth]
-		GUICtrlSetState($i, $GUI_SHOW)
-	Next
-	For $i = $g_ahTxtTrainArmySpellCount[$eSpellLightning] To $g_ahTxtTrainArmySpellCount[$eSpellOvergrowth]
-		GUICtrlSetState($i, $GUI_SHOW)
-	Next
+	TrainSetPageGroup("Spells")
 	SetBtnSelector("Spells")
 EndFunc   ;==>BtnSpells
 
 Func BtnSieges()
-	HideAllTroops()
-	For $i = $g_ahPicTrainArmySiege[$eSiegeWallWrecker] To $g_ahPicTrainArmySiege[$eSiegeTroopLauncher]
-		GUICtrlSetState($i, $GUI_SHOW)
-	Next
-	For $i = $g_ahTxtTrainArmySiegeCount[$eSiegeWallWrecker] To $g_ahTxtTrainArmySiegeCount[$eSiegeTroopLauncher]
-		GUICtrlSetState($i, $GUI_SHOW)
-	Next
+	TrainSetPageGroup("Sieges")
 	SetBtnSelector("Sieges")
 EndFunc   ;==>BtnSieges
+
+Func BtnTrainPagePrev()
+	If $g_iTrainPage = 0 Then Return
+	$g_iTrainPage -= 1
+	TrainShowCurrentPage()
+EndFunc   ;==>BtnTrainPagePrev
+
+Func BtnTrainPageNext()
+	Local $iNextPage = $g_iTrainPage + 1
+	If TrainPageStartIndex($iNextPage) >= UBound($g_aiTrainPageItems) Then Return
+	$g_iTrainPage = $iNextPage
+	TrainShowCurrentPage()
+EndFunc   ;==>BtnTrainPageNext
+
+Func TrainSetPageGroup($sGroup)
+	$g_sTrainPageGroup = $sGroup
+	$g_iTrainPage = 0
+	TrainBuildPageItems()
+	TrainShowCurrentPage()
+EndFunc   ;==>TrainSetPageGroup
+
+Func TrainBuildPageItems()
+	ReDim $g_aiTrainPageItems[0]
+	$g_sTrainPageKind = "Troop"
+
+	Switch $g_sTrainPageGroup
+		Case "ElixirTroops"
+			For $i = $eTroopBarbarian To $eTroopMeteorGolem
+				If Not TrainIsSuperTroop($i) Then TrainAddPageItem($i)
+			Next
+
+		Case "DarkElixirTroops"
+			For $i = $eTroopMinion To $eTroopRuinWitch
+				If Not TrainIsSuperTroop($i) Then TrainAddPageItem($i)
+			Next
+
+		Case "EventTroops"
+			For $i = $eTroopDebtCollector To $eTroopGoldenDragon
+				TrainAddPageItem($i)
+			Next
+
+		Case "SuperTroops"
+			For $i = 0 To $iSuperTroopsCount - 1
+				TrainAddPageItem($g_asSuperTroopIndex[$i])
+			Next
+
+		Case "Spells"
+			$g_sTrainPageKind = "Spell"
+			For $i = 0 To $eSpellCount - 1
+				TrainAddPageItem($i)
+			Next
+
+		Case "Sieges"
+			$g_sTrainPageKind = "Siege"
+			For $i = 0 To $eSiegeMachineCount - 1
+				TrainAddPageItem($i)
+			Next
+	EndSwitch
+EndFunc   ;==>TrainBuildPageItems
+
+Func TrainAddPageItem($iIndex)
+	Local $iSize = UBound($g_aiTrainPageItems)
+	ReDim $g_aiTrainPageItems[$iSize + 1]
+	$g_aiTrainPageItems[$iSize] = $iIndex
+EndFunc   ;==>TrainAddPageItem
+
+Func TrainShowCurrentPage()
+	TrainHideVisiblePageItems()
+
+	Local Const $iGridSlots = 20
+	Local Const $bTestArrowsAlwaysVisible = False
+	Local Const $iTestItemsPerPage = 19
+	Local $iTotal = UBound($g_aiTrainPageItems)
+	Local $iStart = TrainPageStartIndex($g_iTrainPage)
+	If $iStart >= $iTotal Then
+		$g_iTrainPage = 0
+		$iStart = 0
+	EndIf
+
+	Local $bHasPrev = $g_iTrainPage > 0
+	Local $iSlot = $bHasPrev ? 1 : 0
+	Local $iCapacity = $iGridSlots - ($bHasPrev ? 1 : 0)
+	Local $bHasNext = False
+
+	If $bTestArrowsAlwaysVisible Then
+		$iCapacity = $iTestItemsPerPage
+		$bHasNext = True
+	Else
+		$bHasNext = ($iStart + $iCapacity < $iTotal)
+		If $bHasNext Then $iCapacity -= 1
+	EndIf
+
+	Local $iEnd = $iStart + $iCapacity - 1
+	If $iEnd > $iTotal - 1 Then $iEnd = $iTotal - 1
+	For $i = $iStart To $iEnd
+		TrainShowPageItem($g_aiTrainPageItems[$i], $iSlot)
+		$iSlot += 1
+	Next
+
+	If $bHasPrev Then TrainShowPageArrow($g_hBtnTrainPagePrev, 0)
+	If $bHasNext Then TrainShowPageArrow($g_hBtnTrainPageNext, $iGridSlots - 1)
+EndFunc   ;==>TrainShowCurrentPage
+
+Func TrainPageStartIndex($iPage)
+	Local Const $bTestArrowsAlwaysVisible = False
+	Local Const $iTestItemsPerPage = 9
+	If $bTestArrowsAlwaysVisible Then Return $iPage * $iTestItemsPerPage
+	If $iPage <= 0 Then Return 0
+	Return 19 + (($iPage - 1) * 18)
+EndFunc   ;==>TrainPageStartIndex
+
+Func TrainShowPageItem($iIndex, $iSlot)
+	Local $aPos = TrainPageSlotPos($iSlot)
+	Switch $g_sTrainPageKind
+		Case "Troop"
+			If Not $g_abTrainTroopPosReady[$iIndex] Or $g_aiTrainTroopSlot[$iIndex] <> $iSlot Then
+				GUICtrlSetPos($g_ahPicTrainArmyTroop[$iIndex], $aPos[0] + 3, $aPos[1], 36, 36)
+				GUICtrlSetPos($g_ahTxtTrainArmyTroopCount[$iIndex], $aPos[0] + 1, $aPos[1] + 39, 40, 17)
+				$g_aiTrainTroopSlot[$iIndex] = $iSlot
+				$g_abTrainTroopPosReady[$iIndex] = True
+			EndIf
+			If Not $g_abTrainTroopVisible[$iIndex] Then
+				GUICtrlSetState($g_ahPicTrainArmyTroop[$iIndex], $GUI_SHOW)
+				GUICtrlSetState($g_ahTxtTrainArmyTroopCount[$iIndex], $GUI_SHOW)
+				$g_abTrainTroopVisible[$iIndex] = True
+			EndIf
+		Case "Spell"
+			If Not $g_abTrainSpellPosReady[$iIndex] Or $g_aiTrainSpellSlot[$iIndex] <> $iSlot Then
+				GUICtrlSetPos($g_ahPicTrainArmySpell[$iIndex], $aPos[0] + 3, $aPos[1], 36, 36)
+				GUICtrlSetPos($g_ahTxtTrainArmySpellCount[$iIndex], $aPos[0] + 1, $aPos[1] + 39, 40, 17)
+				$g_aiTrainSpellSlot[$iIndex] = $iSlot
+				$g_abTrainSpellPosReady[$iIndex] = True
+			EndIf
+			If Not $g_abTrainSpellVisible[$iIndex] Then
+				GUICtrlSetState($g_ahPicTrainArmySpell[$iIndex], $GUI_SHOW)
+				GUICtrlSetState($g_ahTxtTrainArmySpellCount[$iIndex], $GUI_SHOW)
+				$g_abTrainSpellVisible[$iIndex] = True
+			EndIf
+		Case "Siege"
+			If Not $g_abTrainSiegePosReady[$iIndex] Or $g_aiTrainSiegeSlot[$iIndex] <> $iSlot Then
+				GUICtrlSetPos($g_ahPicTrainArmySiege[$iIndex], $aPos[0] + 3, $aPos[1], 36, 36)
+				GUICtrlSetPos($g_ahTxtTrainArmySiegeCount[$iIndex], $aPos[0] + 1, $aPos[1] + 39, 40, 17)
+				$g_aiTrainSiegeSlot[$iIndex] = $iSlot
+				$g_abTrainSiegePosReady[$iIndex] = True
+			EndIf
+			If Not $g_abTrainSiegeVisible[$iIndex] Then
+				GUICtrlSetState($g_ahPicTrainArmySiege[$iIndex], $GUI_SHOW)
+				GUICtrlSetState($g_ahTxtTrainArmySiegeCount[$iIndex], $GUI_SHOW)
+				$g_abTrainSiegeVisible[$iIndex] = True
+			EndIf
+	EndSwitch
+EndFunc   ;==>TrainShowPageItem
+
+Func TrainShowPageArrow($hButton, $iSlot)
+	Local $aPos = TrainPageSlotPos($iSlot)
+	GUICtrlSetPos($hButton, $aPos[0] + 9, $aPos[1] + 6, 24, 24)
+	If $hButton = $g_hBtnTrainPagePrev Then
+		TrainSetPageArrowState($hButton, $g_bTrainPagePrevVisible, True)
+	ElseIf $hButton = $g_hBtnTrainPageNext Then
+		TrainSetPageArrowState($hButton, $g_bTrainPageNextVisible, True)
+	Else
+		GUICtrlSetState($hButton, $GUI_SHOW)
+	EndIf
+EndFunc   ;==>TrainShowPageArrow
+
+Func TrainPageSlotPos($iSlot)
+	Local Const $iStartX = 4, $iStartY = 255, $iSplitX = 42, $iSplitY = 60, $iPerRow = 10
+	Local $aPos[2] = [$iStartX + Mod($iSlot, $iPerRow) * $iSplitX, $iStartY + Int($iSlot / $iPerRow) * $iSplitY]
+	Return $aPos
+EndFunc   ;==>TrainPageSlotPos
+
+Func TrainIsSuperTroop($iTroopIndex)
+	For $i = 0 To $iSuperTroopsCount - 1
+		If $iTroopIndex = $g_asSuperTroopIndex[$i] Then Return True
+	Next
+	Return False
+EndFunc   ;==>TrainIsSuperTroop

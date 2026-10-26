@@ -2,9 +2,10 @@
 ; Name ..........: checkMainScreen
 ; Description ...: Checks whether the pixel, located in the eyes of the builder in mainscreen, is available
 ;						If it is not available, it calls checkObstacles and also waitMainScreen.
-; Syntax ........: checkMainScreen([$bSetLog = True], [$bBuilderBase = False])
-; Parameters ....: $bCheck: [optional] Sets a Message in Bot Log. Default is True  - $bBuilderBase: [optional] Use CheckMainScreen for Builder Base instead of normal Village. Default is False
-; Return values .: None
+; Syntax ........: checkMainScreen([$bSetLog = True], [$bBuilderBase = False], [$bNotifyPending = True])
+; Parameters ....: $bSetLog: [optional] Sets a Message in Bot Log. Default is True  - $bBuilderBase: [optional] Use CheckMainScreen for Builder Base instead of normal Village. Default is False
+;                  $bNotifyPending: [optional] Executes pending notification actions after validation. Default is True
+; Return values .: True when the main screen is located; otherwise False
 ; Author ........:
 ; Modified ......: KnowJack (07-2015) , TheMaster1st(2015), Fliegerfaust (06-2017)
 ; Remarks .......: This file is part of MyBot, previously known as ClashGameBot. Copyright 2015-2025
@@ -14,21 +15,26 @@
 ; Example .......: No
 ; ===============================================================================================================================
 
-Func checkMainScreen($bSetLog = Default, $bBuilderBase = Default) ;Checks if in main screen
+Func checkMainScreen($bSetLog = Default, $bBuilderBase = Default, $bNotifyPending = True) ;Checks if in main screen
 	FuncEnter(checkMainScreen)
-	Return FuncReturn(_checkMainScreen($bSetLog, $bBuilderBase))
+	Return FuncReturn(_checkMainScreen($bSetLog, $bBuilderBase, $bNotifyPending))
 EndFunc   ;==>checkMainScreen
 
-Func _checkMainScreen($bSetLog = Default, $bBuilderBase = Default) ;Checks if in main screen
+Func _checkMainScreen($bSetLog = Default, $bBuilderBase = Default, $bNotifyPending = True) ;Checks if in main screen
+	; Ensure Clash of Clans is running at initial startup.
+	If GetAndroidProcessPID() = 0 Then
+		If Not OpenCoC(True) Then Return False
+		If Not __RunBotCanContinue() Then Return False
+	EndIf
 
 	If $bSetLog = Default Then $bSetLog = True
 	If $bBuilderBase = Default Then $bBuilderBase = $g_bStayOnBuilderBase
 
-	Local $i, $iErrorCount, $iCheckBeforeRestartAndroidCount, $bObstacleResult, $bContinue
+	Local $i, $iErrorCount, $iCheckBeforeRestartAndroidCount, $bObstacleResult, $bContinue, $bCaptureBackendRecovered = False
 	Local $aPixelToCheck = $aIsMain
 
 	If $bSetLog Then
-		SetLog("Trying to locate Main Screen")
+		SetLog("Locating Main Screen", $COLOR_INFO)
 	EndIf
 
 	If Not TestCapture() Then
@@ -48,7 +54,19 @@ Func _checkMainScreen($bSetLog = Default, $bBuilderBase = Default) ;Checks if in
 
 	If $bBuilderBase Then $aPixelToCheck = $aIsOnBuilderBase
 	Local $bLocated
+
+	; Return to Main Village before screen validation.
+	If Not TestCapture() And Not $bBuilderBase And _CaptureRegions() And isOnBuilderBase() Then
+		; The post-defense summary can falsely match the Builder Base detector.
+		; Let the regular obstacle loop close it before attempting to find the boat.
+		If Not IsPostDefenseSummaryPage(False) Then
+			SetLog("Builder Base Detected - Switching To Main Village", $COLOR_INFO)
+			If Not SwitchBetweenBases(False, False) Then Return False
+		EndIf
+	EndIf
+
 	While _CaptureRegions() And Not _checkMainScreenImage($bLocated, $aPixelToCheck)
+		If Not $g_bRunState Then Return False  ; Add immediate stop check
 		$i += 1
 		If TestCapture() Then
 			SetLog("Main Screen not Located", $COLOR_ERROR)
@@ -58,6 +76,7 @@ Func _checkMainScreen($bSetLog = Default, $bBuilderBase = Default) ;Checks if in
 
 		$bObstacleResult = checkObstacles($bBuilderBase)
 		SetDebugLog("CheckObstacles[" & $i & "] Result = " & $bObstacleResult, $COLOR_DEBUG)
+		If $g_bRestart Then Return False ; Restart completed: return control to the main bot loop.
 
 		;Arch: Arbitrary looping limit...
 		If $i > 24 Then
@@ -73,8 +92,26 @@ Func _checkMainScreen($bSetLog = Default, $bBuilderBase = Default) ;Checks if in
 				$bContinue = True
 			Else
 				If $i > $iCheckBeforeRestartAndroidCount Then
-					SaveDebugImage("checkMainScreen_RestartCoC", False) ; why do we need to restart ?
-					RestartAndroidCoC() ; Need to try to restart CoC
+					If $g_bChkBackgroundMode And Not $g_bAndroidAdbScreencap And Not $bCaptureBackendRecovered Then
+						$bCaptureBackendRecovered = True
+						SetLog("Main Screen Detection Failed - Refreshing WinAPI Capture", $COLOR_ERROR)
+						SaveDebugImage("checkMainScreen_WinAPIDetectionFailed", False)
+						_CaptureDispose()
+						WinGetAndroidHandle()
+						GetAndroidControlClass(True, True)
+						If @error Then SetDebugLog("WinAPI capture renderer handle refresh failed", $COLOR_ERROR)
+						If _Sleep($DELAYCHECKMAINSCREEN1) Then Return
+						ContinueLoop
+					ElseIf $g_bAndroidAdbScreencap And $g_bAndroidAdbPortPerInstance And $g_bAndroidAdbPort And Not $bCaptureBackendRecovered Then
+						$bCaptureBackendRecovered = True
+						SetLog("Main Screen Detection Failed - Restarting Dedicated ADB Screencap Daemon", $COLOR_ERROR)
+						SaveDebugImage("checkMainScreen_AdbDetectionFailed", False)
+						AndroidAdbTerminateShellInstance()
+						If KillAdbDaemon() Then ConnectAndroidAdb(False)
+					Else
+						SaveDebugImage("checkMainScreen_RestartCoC", False) ; why do we need to restart ?
+						RestartAndroidCoC() ; Need to try to restart CoC
+					EndIf
 					$bContinue = True
 				EndIf
 			EndIf
@@ -106,9 +143,9 @@ Func _checkMainScreen($bSetLog = Default, $bBuilderBase = Default) ;Checks if in
 
 	If $bSetLog Then
 		If $bLocated Then
-			SetLog("Main Screen located", $COLOR_SUCCESS)
+			SetLog("Main Screen Located", $COLOR_SUCCESS)
 		Else
-			SetLog("Main Screen not located", $COLOR_ERROR)
+			SetLog("Main Screen Not Located", $COLOR_ERROR)
 		EndIf
 	EndIf
 
@@ -116,13 +153,17 @@ Func _checkMainScreen($bSetLog = Default, $bBuilderBase = Default) ;Checks if in
 	DisposeWindows()
 
 	;Execute Notify Pending Actions
-	NotifyPendingActions()
+	If $bNotifyPending Then NotifyPendingActions()
 
 	Return $bLocated
 EndFunc   ;==>_checkMainScreen
 
 Func _checkMainScreenImage(ByRef $bLocated, $aPixelToCheck, $bNeedCaptureRegion = $g_bNoCapturePixel)
-	$bLocated = _CheckPixel($aPixelToCheck, $bNeedCaptureRegion) And Not checkObstacles_Network(False, False) And checkChatTabPixel()
+	$bLocated = _CheckPixel($aPixelToCheck, $bNeedCaptureRegion) And Not checkObstacles_Network(False, False)
+	If $bLocated Then
+		checkObstacles_Network(False, False, True) ; Confirmed main screen ends the current recovery sequence.
+		checkChatTabPixel()
+	EndIf
 	Return $bLocated
 EndFunc   ;==>_checkMainScreenImage
 
@@ -135,7 +176,7 @@ Func checkChatTabPixel()
 		Return True
 	Else
 		If Not $g_bRunState Then Return False
-		SetLog("ChatTabPixel not found", $COLOR_ERROR)
+		SetDebugLog("ChatTabPixel not found (account may not be in a clan)", $COLOR_DEBUG)
 	EndIf
 	Return False
 EndFunc   ;==>checkChatTabPixel

@@ -1,4 +1,4 @@
-; #FUNCTION# ====================================================================================================================
+﻿; #FUNCTION# ====================================================================================================================
 ; Name ..........: checkObstacles
 ; Description ...: Checks whether something is blocking the pixel for mainscreen and tries to unblock
 ; Syntax ........: checkObstacles()
@@ -20,7 +20,7 @@ Func checkObstacles($bBuilderBase = Default) ;Checks if something is in the way 
 
 	If UBound(decodeSingleCoord(FindImageInPlace2("Update", $g_sImgCOCUpdate, 220, 165 + $g_iMidOffsetY, 350, 260 + $g_iMidOffsetY, True))) > 1 Or _
 			UBound(decodeSingleCoord(FindImageInPlace2("UpdateNew", $g_sImgCOCUpdate, 350, 370 + $g_iMidOffsetY, 510, 450 + $g_iMidOffsetY, True))) > 1 Then ; COC Minor Update
-		SetLog("Chief, we have COC Update!", $COLOR_INFO)
+		SetLog("Chief, we have Clash of Clans Update!", $COLOR_INFO)
 		ClickAway()
 		If _Sleep($DELAYCHECKOBSTACLES1) Then Return
 	EndIf
@@ -47,24 +47,56 @@ Func _checkObstacles($bBuilderBase = False, $bRecursive = False) ;Checks if some
 	Local $b_Switch = False
 
 	_CaptureRegions()
+	If _IsWarMapVisible() Then
+		_ReturnFromWarMap()
+		$g_bMinorObstacle = True
+		Return False
+	EndIf
+	If _IsOffersWindowVisible() Then
+		SetLog("Offers Window Detected - Closing", $COLOR_INFO)
+		CloseWindow()
+		If _Sleep($DELAYCHECKOBSTACLES1) Then Return
+		$g_bMinorObstacle = True
+		Return False
+	EndIf
+	If _IsPromotionalPopupVisible() Then
+		SetLog("Promotional Popup Detected - Closing", $COLOR_INFO)
+		CloseWindow(5, 200, "715,155|760,155|760,200|715,200")
+		If _Sleep($DELAYCHECKOBSTACLES1) Then Return
+		$g_bMinorObstacle = True
+		Return False
+	EndIf
+	Local $aStoreRewardOkay = _PixelSearch(380, 455, 480, 500, Hex(0x4C89F3, 6), 25, True)
+	If _ColorCheck(_GetPixelColor(200, 236, True), Hex(0xFFFFFF, 6), 15) And IsArray($aStoreRewardOkay) Then
+		SetLog("Supercell Store Reward Detected - Closing", $COLOR_INFO)
+		PureClick(431, 479, 1, 120, "#StoreRewardOkay")
+		If _Sleep($DELAYCHECKOBSTACLES1) Then Return
+		$g_bMinorObstacle = True
+		Return False
+	EndIf
 
 	If Not $bRecursive Then
+		If checkObstacles_AnotherDevice() Then Return True
+		If checkObstacles_ConnectionLost() Then Return True
 		If checkObstacles_Network() Then Return True
 		If checkObstacles_GfxError() Then Return True
 	EndIf
+
+	; Current CoC OOS/Error dialog fallback. Do not depend on image-template or Reload button detection.
+	If checkObstacles_ReloadErrorDialog() Then Return True
 
 	If UBound(decodeSingleCoord(FindImageInPlace2("Loading", $g_sImgLoading, 380, 570 + $g_iBottomOffsetY, 490, 620 + $g_iBottomOffsetY, False))) > 1 Then
 
 		;  Add check for banned account :(
 		$Result = getOcrReloadMessage(290, 320 + $g_iMidOffsetY, "Check Obstacles OCR 'policy at super'=") ; OCR text for "policy at super"
 		If StringInStr($Result, "policy", $STR_NOCASESENSEBASIC) Then
-			$msg = "Sorry but account has been banned, Bot must stop!"
+			$msg = "The account has been banned. The bot must stop."
 			BanMsgBox()
 			Return checkObstacles_StopBot($msg) ; stop bot
 		EndIf
 		$Result = getOcrReloadMessage(410, 276 + $g_iMidOffsetY, "Check Obstacles OCR 'prohibited 3rd'= ") ; OCR text for "prohibited 3rd party"
 		If StringInStr($Result, "3rd", $STR_NOCASESENSEBASIC) Then
-			$msg = "Sorry but account has been banned, Bot must stop!"
+			$msg = "The account has been banned. The bot must stop."
 			BanMsgBox()
 			Return checkObstacles_StopBot($msg) ; stop bot
 		EndIf
@@ -73,11 +105,18 @@ Func _checkObstacles($bBuilderBase = False, $bRecursive = False) ;Checks if some
 
 	Local $aPixelSearchGrey = _PixelSearch(481, 490 + $g_iMidOffsetY, 483, 494 + $g_iMidOffsetY, Hex(0xCBCDD3, 6), 10, True)
 	Local $aPixelSearchFlamme = _PixelSearch(277, 134 + $g_iMidOffsetY, 279, 136 + $g_iMidOffsetY, Hex(0xFFFFDB, 6), 15, True)
-	If IsArray($aPixelSearchGrey) And IsArray($aPixelSearchFlamme) Then
+	Local $bChestPage = QuickMIS("BC1", $g_sImgChestPage, 270, 190 + $g_iMidOffsetY, 300, 220 + $g_iMidOffsetY) And _
+			QuickMIS("BC1", $g_sImgChestPage, 355, 485 + $g_iMidOffsetY, 380, 520 + $g_iMidOffsetY)
+	If $bChestPage Then
+		TreasureHunt()
+		If _Sleep(IsClashOfCardsEventActive() ? 250 : $DELAYCHECKOBSTACLES1) Then Return
+		$g_bMinorObstacle = True
+		Return False
+	ElseIf IsArray($aPixelSearchGrey) And IsArray($aPixelSearchFlamme) Then
 		Local $aiLockOfChest = decodeSingleCoord(FindImageInPlace2("LockOfBox", $ImgLockOfChest, 400, 305 + $g_iMidOffsetY, 480, 410 + $g_iMidOffsetY, True))
 		If IsArray($aiLockOfChest) And UBound($aiLockOfChest) = 2 Then
 			TreasureHunt()
-			If _Sleep($DELAYCHECKOBSTACLES1) Then Return
+			If _Sleep(IsClashOfCardsEventActive() ? 250 : $DELAYCHECKOBSTACLES1) Then Return
 			$g_bMinorObstacle = True
 			Return False
 		EndIf
@@ -94,6 +133,13 @@ Func _checkObstacles($bBuilderBase = False, $bRecursive = False) ;Checks if some
 				Return False
 			EndIf
 		EndIf
+	EndIf
+
+	; Clash of Cards event window
+	If IsClashOfCardsEventActive() And CheckClashOfCards(True, False) Then
+		$g_bMinorObstacle = True
+		If _Sleep(250) Then Return
+		Return False
 	EndIf
 
 	If UBound(decodeSingleCoord(FindImageInPlace2("InfoButton", $g_sImgInfoButton, 740, 0, 840, 90 + $g_iMidOffsetY, False))) > 1 Then
@@ -148,13 +194,23 @@ Func _checkObstacles($bBuilderBase = False, $bRecursive = False) ;Checks if some
 			EndIf
 		EndIf
 		SetLog("Maintenance Break, waiting: " & $iMaintenanceWaitTime / 60000 & " minutes", $COLOR_ERROR)
-		If $g_bNotifyTGEnable And $g_bNotifyAlertMaintenance = True Then NotifyPushToTelegram("Maintenance Break, waiting: " & $iMaintenanceWaitTime / 60000 & " minutes....")
+		If $g_bNotifyTGEnable And $g_bNotifyAlertMaintenance = True Then NotifyPushToTelegram("Maintenance break: waiting " & $iMaintenanceWaitTime / 60000 & " minutes.")
 		If _SleepStatus($iMaintenanceWaitTime) Then Return
 		If ClickB("ReloadButton") Then SetLog("Trying to reload game after maintenance break", $COLOR_INFO)
 		checkObstacles_ResetSearch()
 	EndIf
 
-	If UBound(decodeSingleCoord(FindImageInPlace2("Error", $g_sImgError, 630, 270 + $g_iMidOffsetY, 632, 290 + $g_iMidOffsetY, False))) > 1 Then
+	_CaptureRegion2Sync()
+	If IsProblemAffect(False) Then
+		If TestCapture() Then Return "Village is out of sync or inactivity or connection lost"
+		If CheckAllObstacles($g_bDebugImageSave, 0, 4, $bRecursive) Then Return True
+		SetLog("Warning: Cannot find type of Reload error message", $COLOR_ERROR)
+		; Unknown reload-type dialog: never wait for a button/template. Force a clean CoC restart and return to RunBot.
+		checkObstacles_ResetSearch()
+		Return checkObstacles_ReloadCoC(False)
+	EndIf
+
+	If UBound(decodeSingleCoord(FindImageInPlace2("Error", $g_sImgError, 150, 270 + $g_iMidOffsetY, 720, 455 + $g_iMidOffsetY, False))) > 1 Then
 
 		If TestCapture() Then Return "Village is out of sync or inactivity or connection lost"
 
@@ -176,13 +232,20 @@ Func _checkObstacles($bBuilderBase = False, $bRecursive = False) ;Checks if some
 		$g_bMinorObstacle = True
 		If _Sleep($DELAYCHECKOBSTACLES1) Then Return
 		Return False
-	ElseIf _ColorCheck(_GetPixelColor(810, 185 + $g_iMidOffsetY, $g_bCapturePixel), Hex(0x892B1F, 6), 20) Then
+	ElseIf _ColorCheck(_GetPixelColor(405, 525, $g_bCapturePixel), Hex(0xDCF583, 6), 15) And _
+			_ColorCheck(_GetPixelColor(405, 545, $g_bCapturePixel), Hex(0x84CD2C, 6), 15) Then
 		SetDebugLog("checkObstacles: Found Window to close")
-		PureClick(440, 510 + $g_iMidOffsetY, 1, 120, "#0132") ;See if village was attacked or upgrades finished : Click Okay
+		PureClick(440, 540 + $g_iMidOffsetY, 1, 120, "#0132") ;See if village was attacked or upgrades finished : Click Okay
 		$g_abNotNeedAllTime[0] = True
 		$g_abNotNeedAllTime[1] = True
 		$g_bMinorObstacle = True
 		If _Sleep($DELAYCHECKOBSTACLES1) Then Return
+		Return False
+	EndIf
+
+	If StarBonus() Then
+		SetLog("Star Bonus window closed chief!", $COLOR_INFO)
+		$g_bMinorObstacle = True
 		Return False
 	EndIf
 
@@ -191,10 +254,10 @@ Func _checkObstacles($bBuilderBase = False, $bRecursive = False) ;Checks if some
 	If $bIsOnBuilderBase Or $bIsOnMainVillage Then
 		Select
 			Case $bBuilderBase And Not $bIsOnBuilderBase And $bIsOnMainVillage
-				SetLog("Detected Main Village, trying to switch back to Builder Base")
+				SetLog("Main Village Detected - Switching To Builder Base", $COLOR_INFO)
 				$b_Switch = True
 			Case Not $bBuilderBase And $bIsOnBuilderBase And Not $bIsOnMainVillage
-				SetLog("Detected Builder Base, trying to switch back to Main Village")
+				SetLog("Builder Base Detected - Switching To Main Village", $COLOR_INFO)
 				$b_Switch = True
 		EndSelect
 		If $b_Switch Then
@@ -294,7 +357,7 @@ Func _checkObstacles($bBuilderBase = False, $bRecursive = False) ;Checks if some
 		Return False
 	EndIf
 	If Not $bHasTopBlackBar And IsBuilderBaseGrayed() Then
-		SetLog("checkObstacles: Found Builder Base gray Window to close")
+		SetDebugLog("checkObstacles: Found Builder Base gray Window to close")
 		; Season End Start
 		If EndStartSeason() Then
 			SetLog("Ended/New Season window closed chief!", $COLOR_INFO) ; Check for Ended or Started Season Window
@@ -326,7 +389,7 @@ Func _checkObstacles($bBuilderBase = False, $bRecursive = False) ;Checks if some
 		EndIf
 		; Star Bonus Window (After Restart)
 		If QuickMIS("BC1", $g_sImgBBAttackBonus, 360, 450 + $g_iMidOffsetY, 500, 510 + $g_iMidOffsetY) Then
-			SetLog("Congrats Chief, Stars Bonus Awarded", $COLOR_INFO)
+			SetLog("Congratulations chief, stars bonus awarded!", $COLOR_SUCCESS)
 			Click($g_iQuickMISX, $g_iQuickMISY)
 			If _Sleep(2000) Then Return
 			$g_bMinorObstacle = True
@@ -378,9 +441,22 @@ Func _checkObstacles($bBuilderBase = False, $bRecursive = False) ;Checks if some
 		Return True
 	EndIf
 	If _CheckPixel($aSurrenderButton, $g_bCapturePixel) Then
-		SetDebugLog("checkObstacles: Found End Battle to close")
-		ReturnHome(False, False) ;If End battle is available
-		Return True
+		Local $aiSurrenderButton = findButton("EndBattle", Default, 1, True)
+		If IsArray($aiSurrenderButton) And UBound($aiSurrenderButton, 1) = 2 Then
+			SetDebugLog("checkObstacles: Found End Battle to close")
+			ReturnHome(False, False) ;If End battle is available
+			Return True
+		Else
+			SetDebugLog("checkObstacles: Ignoring End Battle pixel without matching button")
+			Local $aiOkayButton = findButton("Okay", Default, 1, True)
+			If IsArray($aiOkayButton) And UBound($aiOkayButton, 1) = 2 Then
+				SetDebugLog("checkObstacles: Found Okay button on non-battle window")
+				ClickP($aiOkayButton)
+				$g_bMinorObstacle = True
+				If _Sleep($DELAYCHECKOBSTACLES1) Then Return
+				Return False
+			EndIf
+		EndIf
 	EndIf
 	If _CheckPixel($aNoCloudsAttack, $g_bCapturePixel) Then ; Prevent drop of troops while searching
 		$aMessage = _PixelSearch(23, 566 + $g_iBottomOffsetY, 36, 580 + $g_iBottomOffsetY, Hex(0xDADDCC, 6), 10, True)
@@ -393,6 +469,7 @@ Func _checkObstacles($bBuilderBase = False, $bRecursive = False) ;Checks if some
 	EndIf
 	If IsPostDefenseSummaryPage() Then
 		$aMessage = _PixelSearch(23, 566 + $g_iBottomOffsetY, 36, 580 + $g_iBottomOffsetY, Hex(0xDADDCC, 6), 10, True)
+		If Not IsArray($aMessage) Then $aMessage = _PixelSearch(23, 566 + $g_iBottomOffsetY, 36, 580 + $g_iBottomOffsetY, Hex(0xF2F2E1, 6), 15, True)
 		If IsArray($aMessage) Then
 			SetDebugLog("checkObstacles: Found Post Defense Summary to close")
 			PureClick(62, 607 + $g_iBottomOffsetY, 1, 120, "#0138") ;Check if Return Home button available
@@ -403,7 +480,7 @@ Func _checkObstacles($bBuilderBase = False, $bRecursive = False) ;Checks if some
 
 	Local $CSFoundCoords = decodeSingleCoord(FindImageInPlace2("CocStopped", $g_sImgCocStopped, 250, 328 + $g_iMidOffsetY, 618, 402 + $g_iMidOffsetY, True))
 	If UBound($CSFoundCoords) > 1 Then
-		SetLog("CoC Has Stopped Error .....", $COLOR_ERROR)
+		SetLog("Clash of Clans has stopped error...", $COLOR_ERROR)
 		If TestCapture() Then Return "CoC Has Stopped Error ....."
 		PushMsg("CoCError")
 		If _Sleep($DELAYCHECKOBSTACLES1) Then Return
@@ -436,6 +513,200 @@ Func _checkObstacles($bBuilderBase = False, $bRecursive = False) ;Checks if some
 	Return False
 EndFunc   ;==>_checkObstacles
 
+; #FUNCTION# ===========================================================================================================
+; Name ..........: _IsWarMapVisible
+; Description ...: Identifies the Clan War map by its blue information button.
+; Remarks .......: Captures the full screen before checking three pixels within the upper-right button.
+; ======================================================================================================================
+
+Func _IsWarMapVisible()
+	_CaptureRegion()
+	If @error Then Return False
+	If Not _ColorCheck(_GetPixelColor(810, 20, False), Hex(0x74CEF4, 6), 30) Then Return False
+	If Not _ColorCheck(_GetPixelColor(824, 30, False), Hex(0xFFFFFF, 6), 20) Then Return False
+	Return _ColorCheck(_GetPixelColor(830, 40, False), Hex(0x3A86E2, 6), 35)
+EndFunc   ;==>_IsWarMapVisible
+
+; #FUNCTION# ===========================================================================================================
+; Name ..........: _ReturnFromWarMap
+; Description ...: Uses Return Home on the Clan War map and confirms the Main Village.
+; Remarks .......: Repeats the click only while the War map anchor remains visible.
+; ======================================================================================================================
+
+Func _ReturnFromWarMap()
+	SetLog("Clan War Map Detected - Returning Home", $COLOR_INFO)
+	For $iAttempt = 1 To 2
+		Click(62, 672, 1, 120, "War Map Return Home")
+		For $iCheck = 1 To 10
+			If IsMainPage(1) Then
+				SetLog("Returned To Main Village", $COLOR_SUCCESS)
+				Return True
+			EndIf
+			If _Sleep(500) Then Return False
+		Next
+		If Not _IsWarMapVisible() Then ExitLoop
+	Next
+	SetLog("Could not return from Clan War Map", $COLOR_WARNING)
+	Return False
+EndFunc   ;==>_ReturnFromWarMap
+
+; #FUNCTION# ===========================================================================================================
+; Name ..........: _IsOffersWindowVisible
+; Description ...: Detects the Offers window from its purple tab and red close-button anchors.
+; Remarks .......: Both color anchors must match to avoid closing unrelated screens.
+; ======================================================================================================================
+
+Func _IsOffersWindowVisible()
+	Return _ColorCheck(_GetPixelColor(670, 40, True), Hex(0xCA75FF, 6), 45) And _ColorCheck(_GetPixelColor(807, 40, True), Hex(0xFF6A71, 6), 45)
+EndFunc   ;==>_IsOffersWindowVisible
+
+; #FUNCTION# ===========================================================================================================
+; Name ..........: _IsPromotionalPopupVisible
+; Description ...: Detects centered promotional popups using their close button.
+; Remarks .......: The restricted search area prevents matches with close buttons from other window layouts.
+; ======================================================================================================================
+
+Func _IsPromotionalPopupVisible()
+	Return QuickMIS("BC1", $g_sImgGeneralCloseButton, 715, 155 + $g_iMidOffsetY, 760, 200 + $g_iMidOffsetY)
+EndFunc   ;==>_IsPromotionalPopupVisible
+
+Func checkObstacles_AnotherDevice()
+	Local $aDevice = decodeSingleCoord(FindImageInPlace2("Device", $sImgDevice, 220, 300 + $g_iMidOffsetY, 360, 360 + $g_iMidOffsetY, False))
+	If Not IsArray($aDevice) Or UBound($aDevice) <> 2 Then Return False
+
+	SetLog("Detected Another Device Connected!!", $COLOR_INFO)
+	If TestCapture() Then Return True
+
+	If $g_iAnotherDeviceWaitTime > 3600 Then
+		SetLog("Another Device has connected, waiting " & Floor(Floor($g_iAnotherDeviceWaitTime / 60) / 60) & " hours " & Floor(Mod(Floor($g_iAnotherDeviceWaitTime / 60), 60)) & " minutes " & Floor(Mod($g_iAnotherDeviceWaitTime, 60)) & " seconds", $COLOR_ERROR)
+		PushMsg("AnotherDevice3600")
+	ElseIf $g_iAnotherDeviceWaitTime > 60 Then
+		SetLog("Another Device has connected, waiting " & Floor(Mod(Floor($g_iAnotherDeviceWaitTime / 60), 60)) & " minutes " & Floor(Mod($g_iAnotherDeviceWaitTime, 60)) & " seconds", $COLOR_ERROR)
+		PushMsg("AnotherDevice60")
+	Else
+		SetLog("Another Device has connected, waiting " & Floor(Mod($g_iAnotherDeviceWaitTime, 60)) & " seconds", $COLOR_ERROR)
+		PushMsg("AnotherDevice")
+	EndIf
+
+	If _SleepStatus($g_iAnotherDeviceWaitTime * 1000) Then Return True
+
+	; Never use the capture made before the configured wait.
+	_CaptureRegions()
+	$aDevice = decodeSingleCoord(FindImageInPlace2("DeviceRecheck", $sImgDevice, 220, 300 + $g_iMidOffsetY, 360, 360 + $g_iMidOffsetY, False))
+	If IsArray($aDevice) And UBound($aDevice) = 2 Then
+		Local $aReloadButton = decodeSingleCoord(FindImageInPlace2("DeviceReload", $sImgReloadBtn, 170, 365 + $g_iMidOffsetY, 330, 420 + $g_iMidOffsetY, False))
+		If IsArray($aReloadButton) And UBound($aReloadButton) = 2 Then
+			PureClickP($aReloadButton)
+			If _Sleep($DELAYCHECKOBSTACLES1) Then Return True
+		Else
+			checkObstacles_ReloadCoC()
+		EndIf
+	Else
+		SetLog("Another Device window cleared during wait", $COLOR_SUCCESS)
+	EndIf
+
+	checkObstacles_ResetSearch()
+	Return True
+EndFunc   ;==>checkObstacles_AnotherDevice
+
+
+; Centralized fatal game error check for attack/recovery loops.
+; Returns True when the current flow must be aborted back to RunBot.
+Func CheckCriticalGameError($bHonorRestart = True, $bRestartGame = True, $bAllowGenericDialog = False)
+	If $bHonorRestart And $g_bRestart Then Return True
+
+	_CaptureRegions()
+
+	If checkObstacles_ConnectionLost($bRestartGame) Then Return True
+
+	; Legacy Out Of Sync template.
+	Local $aOOS = decodeSingleCoord(FindImageInPlace2("CriticalOOS", $sImgOos, 330, 310 + $g_iMidOffsetY, 460, 350 + $g_iMidOffsetY, False))
+	If IsArray($aOOS) And UBound($aOOS) = 2 Then
+		SetLog("Detected Out Of Sync!", $COLOR_INFO)
+		If TestCapture() Then Return True
+		checkObstacles_ResetSearch()
+		If $bRestartGame Then checkObstacles_ReloadCoC(False)
+		Return True
+	EndIf
+
+	; Generic Error/pixel fallback is intentionally disabled during live attack loops.
+	; Those screens can contain grey panels and teal UI elements that may create false positives.
+	; Enable this only while waiting for CoC to load/recover.
+	If $bAllowGenericDialog Then
+		Local $aError = decodeSingleCoord(FindImageInPlace2("CriticalError", $g_sImgError, 150, 270 + $g_iMidOffsetY, 720, 455 + $g_iMidOffsetY, False))
+		If IsArray($aError) And UBound($aError) = 2 Then
+			; Confirm on a second frame before restarting.
+			If Not TestCapture() Then _Sleep(250)
+			_CaptureRegions()
+			Local $aErrorConfirm = decodeSingleCoord(FindImageInPlace2("CriticalErrorConfirm", $g_sImgError, 150, 270 + $g_iMidOffsetY, 720, 455 + $g_iMidOffsetY, False))
+			If IsArray($aErrorConfirm) And UBound($aErrorConfirm) = 2 Then
+				SetLog("Detected Error Dialog!", $COLOR_INFO)
+				If TestCapture() Then Return True
+				checkObstacles_ResetSearch()
+				If $bRestartGame Then checkObstacles_ReloadCoC(False)
+				Return True
+			EndIf
+		EndIf
+
+		If checkObstacles_ReloadErrorDialog($bRestartGame, True) Then Return True
+	EndIf
+
+	Return False
+EndFunc   ;==>CheckCriticalGameError
+
+Func checkObstacles_ConnectionLost($bRestartGame = True)
+	Local $aConnectionLost = decodeSingleCoord(FindImageInPlace2("ConnectionLost", $sImgConnectionLost, 170, 260 + $g_iMidOffsetY, 400, 320 + $g_iMidOffsetY, False))
+	If Not IsArray($aConnectionLost) Or UBound($aConnectionLost) <> 2 Then Return False
+
+	SetLog("Detected Connection Lost!", $COLOR_INFO)
+	If TestCapture() Then Return True
+
+	; Do not depend on the Reload button. Restart CoC and force all callers back to RunBot.
+	checkObstacles_ResetSearch()
+	If $bRestartGame Then checkObstacles_ReloadCoC(False)
+	Return True
+EndFunc   ;==>checkObstacles_ConnectionLost
+
+Func checkObstacles_ReloadErrorDialog($bRestartGame = True, $bConfirm = False)
+	; Current CoC grey "Error! / Client and server are out of sync" dialog.
+	; Use a wider pixel signature and test both normal and absolute Y positions.
+	Local $bDialog = False
+	Local $aReloadText = 0
+	Local $iOffset = $g_iMidOffsetY
+
+	For $iTry = 0 To 1
+		Local $iYOff = ($iTry = 0) ? $iOffset : 0
+		$bDialog = _ColorCheck(_GetPixelColor(160, 290 + $iYOff, $g_bCapturePixel), Hex(0x424242, 6), 18) And _
+				_ColorCheck(_GetPixelColor(700, 300 + $iYOff, $g_bCapturePixel), Hex(0x424242, 6), 18) And _
+				_ColorCheck(_GetPixelColor(200, 440 + $iYOff, $g_bCapturePixel), Hex(0x424242, 6), 18)
+		If Not $bDialog Then ContinueLoop
+
+		; RELOAD GAME teal text. Wider area/tolerance handles antialiasing and UI shifts.
+		$aReloadText = _PixelSearch(170, 390 + $iYOff, 340, 445 + $iYOff, Hex(0x80CBC4, 6), 40, True)
+		If IsArray($aReloadText) Then ExitLoop
+	Next
+
+	If Not $bDialog Or Not IsArray($aReloadText) Then Return False
+
+	; Optional second-frame confirmation used during startup/recovery.
+	If $bConfirm And Not TestCapture() Then
+		_Sleep(250)
+		_CaptureRegion()
+		Local $bConfirmDialog = _ColorCheck(_GetPixelColor(160, 290 + $g_iMidOffsetY, $g_bCapturePixel), Hex(0x424242, 6), 18) And _
+				_ColorCheck(_GetPixelColor(700, 300 + $g_iMidOffsetY, $g_bCapturePixel), Hex(0x424242, 6), 18) And _
+				_ColorCheck(_GetPixelColor(200, 440 + $g_iMidOffsetY, $g_bCapturePixel), Hex(0x424242, 6), 18)
+		Local $aReloadConfirm = _PixelSearch(170, 390 + $g_iMidOffsetY, 340, 445 + $g_iMidOffsetY, Hex(0x80CBC4, 6), 40, True)
+		If Not $bConfirmDialog Or Not IsArray($aReloadConfirm) Then Return False
+	EndIf
+
+	SetLog("Detected Reload Error Dialog!", $COLOR_INFO)
+	If TestCapture() Then Return True
+
+	checkObstacles_ResetSearch()
+	If $bRestartGame Then checkObstacles_ReloadCoC(False)
+	Return True
+EndFunc   ;==>checkObstacles_ReloadErrorDialog
+
 ; It's more easy to restart CoC app than click the message restarting the game :/
 Func checkObstacles_ReloadCoC($bRecursive = False)
 	If TestCapture() Then Return "Reload CoC"
@@ -448,7 +719,8 @@ Func checkObstacles_ReloadCoC($bRecursive = False)
 		Return True
 	EndIf
 
-	If Not $bRecursive Then CloseCoC(True)
+	; Allow the previous failed game session to settle before relaunching.
+	If Not $bRecursive Then CloseCoC(True, True, 60000)
 
 	If _Sleep($DELAYCHECKOBSTACLES3) Then Return
 	Return True
@@ -499,23 +771,57 @@ Func BanMsgBox()
 	WEnd
 EndFunc   ;==>BanMsgBox
 
-Func checkObstacles_Network($bForceCapture = False, $bReloadCoC = True)
+Func checkObstacles_Network($bForceCapture = False, $bReloadCoC = True, $bResetRecovery = False)
 	Static $hCocReconnectingTimer = 0 ; TimerHandle of first CoC reconnecting animation
+	Static $hNetworkRecoveryWindow = 0, $iNetworkRecoveryFailures = 0
+	If $bResetRecovery Then
+		$hCocReconnectingTimer = 0
+		$hNetworkRecoveryWindow = 0
+		$iNetworkRecoveryFailures = 0
+		Return False
+	EndIf
 
 	If UBound(decodeSingleCoord(FindImageInPlace2("CocReconnecting", $g_sImgCocReconnecting, 420, 325 + $g_iMidOffsetY, 440, 345 + $g_iMidOffsetY, $bForceCapture))) > 1 Then
 		If $hCocReconnectingTimer = 0 Then
 			SetLog("Network Connection lost...", $COLOR_ERROR)
 			$hCocReconnectingTimer = __TimerInit()
-		ElseIf __TimerDiff($hCocReconnectingTimer) > $g_iCoCReconnectingTimeout Then
-			SetLog("Network Connection really lost, Reloading Android...", $COLOR_ERROR)
+		ElseIf __TimerDiff($hCocReconnectingTimer) > $g_iCoCReconnectingTimeout And $bReloadCoC Then
 			$hCocReconnectingTimer = 0
-			If $bReloadCoC = True Then Return checkObstacles_RebootAndroid(False, True, False)
+			If $hNetworkRecoveryWindow = 0 Or __TimerDiff($hNetworkRecoveryWindow) > 600000 Then
+				$hNetworkRecoveryWindow = __TimerInit()
+				$iNetworkRecoveryFailures = 0
+			EndIf
+			$iNetworkRecoveryFailures += 1
+
+			If $iNetworkRecoveryFailures < 3 Then
+				SetLog("Network Connection really lost, restarting Clash of Clans...", $COLOR_ERROR)
+				CloseCoC(True)
+			Else
+				SetLog("Network recovery failed 3 times, escalating recovery...", $COLOR_ERROR)
+				$iNetworkRecoveryFailures = 0
+				$hNetworkRecoveryWindow = 0
+				If $g_bAndroidAdbPortPerInstance And $g_bAndroidAdbPort Then
+					SetLog("Restarting dedicated ADB daemon for this instance", $COLOR_ACTION)
+					AndroidAdbTerminateShellInstance()
+					KillAdbDaemon()
+					ConnectAndroidAdb(False)
+					CloseCoC(True)
+				Else
+					checkObstacles_RebootAndroid(False, True, False)
+				EndIf
+			EndIf
+			checkObstacles_ResetSearch()
 			Return True
 		Else
 			SetLog("Network Connection lost, waiting...", $COLOR_ERROR)
 		EndIf
+		Return True ; Block the current bot cycle while reconnecting is visible.
 	Else
 		$hCocReconnectingTimer = 0
+		If $hNetworkRecoveryWindow <> 0 And __TimerDiff($hNetworkRecoveryWindow) > 600000 Then
+			$hNetworkRecoveryWindow = 0
+			$iNetworkRecoveryFailures = 0
+		EndIf
 	EndIf
 
 	Return False
@@ -624,9 +930,15 @@ Func CheckAllObstacles($bDebugImageSave = $g_bDebugImageSave, $MinType = 0, $Max
 
 					If _SleepStatus($g_iAnotherDeviceWaitTime * 1000) Then Return ; Wait as long as user setting in GUI, default 120 seconds
 					$aiIsAnotherDevice = True
+				Else
+					Local $sReloadMessage = StringLower(getOcrReloadMessage(290, 276 + $g_iMidOffsetY, Default, Default, True) & " " & _
+							getOcrReloadMessage(410, 276 + $g_iMidOffsetY, Default, Default, True) & " " & _
+							getOcrReloadMessage(290, 320 + $g_iMidOffsetY, Default, Default, True) & " " & _
+							getOcrReloadMessage(410, 320 + $g_iMidOffsetY, Default, Default, True))
+					If StringInStr($sReloadMessage, "break") Or StringInStr($sReloadMessage, "rest") Or StringInStr($sReloadMessage, "played too long") Then PushMsg("TakeBreak")
 				EndIf
 			ElseIf $i = 4 Then ;Major Update, Stop bot
-				SetLog("Stop Bot Due To COC Update Required", $COLOR_ERROR)
+				SetLog("Stop bot due to Clash of Clans update required", $COLOR_ERROR)
 				BotStop()
 				Return True
 			ElseIf $i = 6 Then ;Clash Of Clan isn't responding Then Reboot Emulator
@@ -636,6 +948,14 @@ Func CheckAllObstacles($bDebugImageSave = $g_bDebugImageSave, $MinType = 0, $Max
 			EndIf
 
 			If _Sleep(100) Then Return
+
+			; Connection Lost / Out Of Sync: restart CoC directly instead of depending on Reload button detection.
+			If $i <= 1 Then
+				checkObstacles_ResetSearch()
+				checkObstacles_ReloadCoC(False)
+				$bRet = True
+				ExitLoop
+			EndIf
 
 			SetDebugLog("Searching for Button ...", $COLOR_INFO)
 
@@ -674,12 +994,8 @@ Func CheckAllObstacles($bDebugImageSave = $g_bDebugImageSave, $MinType = 0, $Max
 				PureClickP($aiButtonType[$Ref][0])
 				If _Sleep($DELAYCHECKOBSTACLES1) Then Return
 
-				If $i = 0 And $aiIsAnotherDevice Then
-					checkObstacles_ResetSearch()
-				ElseIf $i > 1 Then
-					$g_bMinorObstacle = True
-					ExitLoop
-				EndIf
+				$g_bMinorObstacle = True
+				ExitLoop
 
 			Else
 				If $bDebugImageSave Then SaveDebugImage("CheckObstacles")
@@ -701,7 +1017,8 @@ Func CheckAllObstacles($bDebugImageSave = $g_bDebugImageSave, $MinType = 0, $Max
 			If $i = 3 Then
 				SetLog("Warning: Cannot find type of Reload error message", $COLOR_ERROR)
 				If $bDebugImageSave Then SaveDebugImage("CheckObstacles")
-				checkObstacles_ReloadCoC($bRecursive)
+				checkObstacles_ResetSearch()
+				checkObstacles_ReloadCoC(False)
 				$bRet = True
 			EndIf
 

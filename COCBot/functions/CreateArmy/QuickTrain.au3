@@ -136,7 +136,7 @@ Func QuickTrain()
 		WEnd
 	EndIf
 
-	; check existing army then train missing troops, spells, sieges
+	; Check the existing army and train missing troops and spells.
 	If $bNeedRecheckTroop Or $bNeedRecheckSpell Then
 
 		Local $aWhatToRemove = WhatToTrain(True)
@@ -172,7 +172,6 @@ Func QuickTrain()
 			EndIf
 		EndIf
 
-		TrainSiege()
 	EndIf
 
 	If _Sleep(250) Then Return
@@ -206,7 +205,7 @@ Func CheckQuickTrainTroop()
 	Local $bResult = True
 
 
-	Local Static $asLastTimeChecked[8]
+	Local Static $asLastTimeChecked[$g_iSwitchAccMaxAccounts]
 	If $g_bFirstStart Then $asLastTimeChecked[$g_iCurAccount] = ""
 
 	If _DateIsValid($asLastTimeChecked[$g_iCurAccount]) Then
@@ -224,12 +223,12 @@ Func CheckQuickTrainTroop()
 
 	SetLog("Reading troops and spells in quick train army")
 
-	; reset troops/spells in quick army
-	Local $aEmptyTroop[$eTroopCount] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-	Local $aEmptySpell[$eSpellCount] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-	$g_aiArmyQuickTroops = $aEmptyTroop
-	$g_aiArmyQuickSpells = $aEmptySpell
-	$g_iTotalQuickTroops = 0
+	; Reset troops/spells in quick army
+ 	Local $aEmptyTroop[$eTroopCount] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+	Local $aEmptySpell[$eSpellCount] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+ 	$g_aiArmyQuickTroops = $aEmptyTroop
+ 	$g_aiArmyQuickSpells = $aEmptySpell
+ 	$g_iTotalQuickTroops = 0
 	$g_iTotalQuickSpells = 0
 	$g_iTotalQuickSiegeMachines = 0
 	$g_bQuickArmyMixed = False
@@ -301,10 +300,10 @@ Func CheckQuickTrainTroop()
 					If $iTroopIndex >= 0 And $iTroopIndex < $eTroopCount Then
 						SetLog("  - " & $g_asTroopNames[$iTroopIndex] & ": " & $aSearchResult[$j][3] & "x", $COLOR_SUCCESS)
 						$aiInGameTroop[$iTroopIndex] = $aSearchResult[$j][3]
-					ElseIf $iTroopIndex >= $eLSpell And $iTroopIndex <= $eOgSpell Then
+					ElseIf $iTroopIndex >= $eLSpell And $iTroopIndex <= $eASpell Then
 						SetLog("  - " & $g_asSpellNames[$iTroopIndex - $eLSpell] & ": " & $aSearchResult[$j][3] & "x", $COLOR_SUCCESS)
 						$aiInGameSpell[$iTroopIndex - $eLSpell] = $aSearchResult[$j][3]
-					ElseIf $iTroopIndex >= $eWallW And $iTroopIndex <= $eBattleD Then
+					ElseIf $iTroopIndex >= $eWallW And $iTroopIndex <= $eSkyW Then
 						SetLog("  - " & $g_asSiegeMachineNames[$iTroopIndex - $eWallW] & ": " & $aSearchResult[$j][3] & "x", $COLOR_SUCCESS)
 					Else
 						SetLog("  - Unsupport troop/spell index: " & $iTroopIndex)

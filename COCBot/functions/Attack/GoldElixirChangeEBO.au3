@@ -1,4 +1,4 @@
-; #FUNCTION# ====================================================================================================================
+﻿; #FUNCTION# ====================================================================================================================
 ; Name ..........: GoldElixirChangeEBO  (End Battle Options)
 ; Description ...: Checks if the gold/elixir changes , Returns True if changed.
 ; Syntax ........: GoldElixirChangeEBO()
@@ -14,42 +14,50 @@
 ; ===============================================================================================================================
 
 Func GoldElixirChangeEBO()
+	; Check the reward before the slower resource/damage OCR sequence.
+	CheckTagTeam()
+	Static $hInvalidResourceOCRStart = 0
+
 	Local $Gold1, $Gold2
 	Local $GoldChange, $ElixirChange
 	Local $Elixir1, $Elixir2
 	Local $DarkElixir1, $DarkElixir2
 	Local $DarkElixirChange
 	Local $Trophies
-	Local $txtDiff
-	Local $exitOneStar = 0, $exitTwoStars = 0
+	Local $txtDiff, $sBattleStatus
+	Local $exitOneStar = 0, $exitTwoStars = 0, $exitPctHigher = 0
 	Local $Damage, $CurDamage
-	$g_iDarkLow = 0
+	Local $bHasDarkElixir2 = False, $bResourceOCRValid = False
 	;READ RESOURCES n.1
-	$Gold1 = getGoldVillageSearch(48, 69 + 7)
-	$Elixir1 = getElixirVillageSearch(48, 69 + 29 + 7)
-	$Trophies = getTrophyVillageSearch(48, 69 + 99 + 7)
+	$Gold1 = getGoldVillageSearch(45, 68)
+	$Elixir1 = getElixirVillageSearch(45, 98)
+	$Trophies = getTrophyVillageSearch(45, 126)
 	$Damage = getOcrOverAllDamage(780, 527 + $g_iBottomOffsetY)
 	If Number($Damage) > Number($g_iPercentageDamage) Then $g_iPercentageDamage = Number($Damage)
-	If $Trophies <> "" Then ; If trophy value found, then base has Dark Elixir
+	Local $bHasDarkElixir1 = $Trophies <> "" Or _CheckPixel($aAtkHasDarkElixir, $g_bCapturePixel, Default, "HasDarkElixirEBO1") Or _ColorCheck(_GetPixelColor(31, 151, True), Hex(0x0F0617, 6), 5)
+	$bHasDarkElixir2 = $bHasDarkElixir1
+	If $bHasDarkElixir1 Then ; If DE icon found, then base has Dark Elixir
 		If _Sleep($DELAYGOLDELIXIRCHANGEEBO1) Then Return
-		$DarkElixir1 = getDarkElixirVillageSearch(48, 69 + 57 + 7)
+		$DarkElixir1 = getDarkElixirVillageSearch(45, 126)
 	Else
 		$DarkElixir1 = ""
-		$Trophies = getTrophyVillageSearch(48, 69 + 69 + 7)
+		$Trophies = getTrophyVillageSearch(45, 138)
 	EndIf
 
 	;CALCULATE WHICH TIMER TO USE
-	Local $x = $g_aiStopAtkNoLoot1Time[$g_iMatchMode] * 1000, $y = $g_aiStopAtkNoLoot2Time[$g_iMatchMode] * 1000, $z, $w = $g_aiStopAtkPctNoChangeTime[$g_iMatchMode] * 1000
-	If Number($Gold1) < $g_aiStopAtkNoLoot2MinGold[$g_iMatchMode] And _
-			Number($Elixir1) < $g_aiStopAtkNoLoot2MinElixir[$g_iMatchMode] And _
-			Number($DarkElixir1) < $g_aiStopAtkNoLoot2MinDark[$g_iMatchMode] And _
-			$g_abStopAtkNoLoot2Enable[$g_iMatchMode] Then
+	Local $x = $g_iStopAtkNoLoot1Time * 1000, $y = $g_iStopAtkNoLoot2Time * 1000, $z, $w = $g_iStopAtkPctNoChangeTime * 1000
+	Local $bInitialResourceOCR = StringLen($Gold1) > 0 And StringLen($Elixir1) > 0 And StringLen($Trophies) > 0 And _
+			(Not $bHasDarkElixir1 Or StringLen($DarkElixir1) > 0)
+	If $bInitialResourceOCR And Number($Gold1) < $g_iStopAtkNoLoot2MinGold And _
+			Number($Elixir1) < $g_iStopAtkNoLoot2MinElixir And _
+			Number($DarkElixir1) < $g_iStopAtkNoLoot2MinDark And _
+			$g_bStopAtkNoLoot2Enable Then
 
 		$z = $y
-	ElseIf $Damage <> "" And $g_abStopAtkPctNoChangeEnable[$g_iMatchMode] Then
+	ElseIf $Damage <> "" And $g_bStopAtkPctNoChangeEnable Then
 		$z = $w
 	Else
-		If $g_abStopAtkNoLoot1Enable[$g_iMatchMode] Then
+		If $g_bStopAtkNoLoot1Enable Then
 			$z = $x
 		Else
 			$z = AttackRemainingTime()
@@ -57,31 +65,33 @@ Func GoldElixirChangeEBO()
 	EndIf
 
 	;CALCULATE TWO STARS REACH
-	If $g_abStopAtkTwoStars[$g_iMatchMode] And _CheckPixel($aWonTwoStar, True) Then
-		SetLog("Two Star Reach, exit", $COLOR_SUCCESS)
+	If $g_bStopAtkTwoStars And _CheckPixel($aWonTwoStar, True) Then
+		SetLog("2 Stars Reached | Ending Battle", $COLOR_INFO)
 		$exitTwoStars = 1
 		$z = 0
 	EndIf
 
 	;CALCULATE ONE STARS REACH
-	If $g_abStopAtkOneStar[$g_iMatchMode] And _CheckPixel($aWonOneStar, True) Then
-		SetLog("One Star Reach, exit", $COLOR_SUCCESS)
+	If $g_bStopAtkOneStar And _CheckPixel($aWonOneStar, True) Then
+		SetLog("1 Star Reached | Ending Battle", $COLOR_INFO)
 		$exitOneStar = 1
 		$z = 0
 	EndIf
 
-	; Early Check if Percentage is alreay higher than set
-	If $g_abStopAtkPctHigherEnable[$g_iMatchMode] And Number(getOcrOverAllDamage(780, 527 + $g_iBottomOffsetY)) > Number($g_aiStopAtkPctHigherAmt[$g_iMatchMode]) Then
-		SetLog("Overall Damage above " & Number($g_aiStopAtkPctHigherAmt[$g_iMatchMode]), $COLOR_SUCCESS)
+	; Early Check if Percentage is already higher than set
+	If $g_bStopAtkPctHigherEnable And Number(getOcrOverAllDamage(780, 527 + $g_iBottomOffsetY)) > Number($g_iStopAtkPctHigherAmt) Then
+		SetLog("Damage Above " & Number($g_iStopAtkPctHigherAmt) & "% | Ending Battle", $COLOR_INFO)
 		$g_iPercentageDamage = Number(getOcrOverAllDamage(780, 527 + $g_iBottomOffsetY))
+		$exitPctHigher = 1
 		$z = 0
 	EndIf
 
 	Local $NoResourceOCR = False
-	Local $ExitNoLootChange = ($g_abStopAtkNoLoot1Enable[$g_iMatchMode] Or $g_abStopAtkNoLoot2Enable[$g_iMatchMode] Or $g_abStopAtkNoResources[$g_iMatchMode])
+	Local $ExitNoLootChange = ($g_bStopAtkNoLoot1Enable Or $g_bStopAtkNoLoot2Enable Or $g_bStopAtkNoResources)
 
 	;MAIN LOOP
 	Local $iBegin = __TimerInit()
+	Local $iTagTeamPauseStart = GetTagTeamPauseTime()
 
 	Local $iSuspendAndroidTimeOffset = SuspendAndroidTime()
 	SetDebugLog("GoldElixirChangeEBO: Start waiting for battle end, Wait: " & $z & ", Offset: " & $iSuspendAndroidTimeOffset)
@@ -90,35 +100,41 @@ Func GoldElixirChangeEBO()
 	Local $bOneLoop = True
 	While $bOneLoop Or ($iTime < $z And $z > 0 And $iTime >= 0)
 		$bOneLoop = False
+
+		; Centralized fatal error check while waiting for battle end.
+		If CheckCriticalGameError() Then Return False
+
+		; Tag Team selection/deployment is synchronous. Restart this EBO iteration
+		; only after it finishes so no exit/resource checks overlap the deploy.
+		If CheckTagTeam() Then
+			If IsReturnHomeBattlePage(True, False) Then ExitLoop
+			ContinueLoop
+		EndIf
 		;HEALTH HEROES
 		CheckHeroesHealth()
 
-		;DE SPECIAL END EARLY
-		If $g_iMatchMode = $LB And $g_aiAttackStdDropSides[$LB] = 4 And $g_bDESideEndEnable Then
-			If $g_bDropQueen Or $g_bDropKing Then DELow()
-			If $g_iDarkLow = 1 Then ExitLoop
-		EndIf
-		If $g_bCheckKingPower Or $g_bCheckQueenPower Or $g_iDarkLow = 2 Then
+		If $g_bCheckKingPower Or $g_bCheckQueenPower Then
 			If _Sleep($DELAYGOLDELIXIRCHANGEEBO1) Then Return
 		Else
 			If _Sleep($DELAYGOLDELIXIRCHANGEEBO2) Then Return
 		EndIf
 
 		;--> Read Ressources #2
-		$Gold2 = getGoldVillageSearch(48, 69 + 7)
+		$Gold2 = getGoldVillageSearch(45, 68)
 		If $Gold2 = "" Then
 			If _Sleep($DELAYGOLDELIXIRCHANGEEBO1) Then Return
-			$Gold2 = getGoldVillageSearch(48, 69 + 7)
+			$Gold2 = getGoldVillageSearch(45, 68)
 		EndIf
-		$Elixir2 = getElixirVillageSearch(48, 69 + 29 + 7)
-		$Trophies = getTrophyVillageSearch(48, 69 + 99 + 7)
+		$Elixir2 = getElixirVillageSearch(45, 98)
+		$Trophies = getTrophyVillageSearch(45, 126)
 		CheckHeroesHealth()
-		If $Trophies <> "" Then ; If trophy value found, then base has Dark Elixir
+		$bHasDarkElixir2 = $bHasDarkElixir2 Or $Trophies <> "" Or _CheckPixel($aAtkHasDarkElixir, $g_bCapturePixel, Default, "HasDarkElixirEBO2") Or _ColorCheck(_GetPixelColor(31, 151, True), Hex(0x0F0617, 6), 5)
+		If $bHasDarkElixir2 Then ; If DE icon found, then base has Dark Elixir
 			If _Sleep($DELAYGOLDELIXIRCHANGEEBO1) Then Return
-			$DarkElixir2 = getDarkElixirVillageSearch(48, 69 + 57 + 7)
+			$DarkElixir2 = getDarkElixirVillageSearch(45, 126)
 		Else
 			$DarkElixir2 = ""
-			$Trophies = getTrophyVillageSearch(48, 69 + 69 + 7)
+			$Trophies = getTrophyVillageSearch(45, 138)
 		EndIf
 		$CurDamage = getOcrOverAllDamage(780, 527 + $g_iBottomOffsetY)
 		;--> Read Ressources #2
@@ -126,7 +142,8 @@ Func GoldElixirChangeEBO()
 		CheckHeroesHealth()
 
 		;WRITE LOG
-		$txtDiff = Round(($z - (__TimerDiff($iBegin) - SuspendAndroidTime() + $iSuspendAndroidTimeOffset)) / 1000, 0)
+		Local $iTagTeamPause = GetTagTeamPauseTime() - $iTagTeamPauseStart
+		$txtDiff = Round(($z - (__TimerDiff($iBegin) - SuspendAndroidTime() + $iSuspendAndroidTimeOffset - $iTagTeamPause)) / 1000, 0)
 		If Number($txtDiff) < 0 Then
 			$txtDiff = "0s"
 		Else
@@ -136,58 +153,25 @@ Func GoldElixirChangeEBO()
 			If $m > 0 Then $txtDiff = $m & "m "
 			$txtDiff &= $s & "s"
 		EndIf
-		$NoResourceOCR = StringLen($Gold2) = 0 And StringLen($Elixir2) = 0 And StringLen($DarkElixir2) = 0
-		If $NoResourceOCR Then
-			SetLog("Exit now, [G]: " & $Gold2 & " [E]: " & $Elixir2 & " [DE]: " & $DarkElixir2 & " [%]: " & $CurDamage, $COLOR_INFO)
-		Else
+		$bResourceOCRValid = StringLen($Gold2) > 0 And StringLen($Elixir2) > 0 And StringLen($Trophies) > 0 And _
+				(Not $bHasDarkElixir2 Or StringLen($DarkElixir2) > 0)
+		$NoResourceOCR = Not $bResourceOCRValid
+		If Not $NoResourceOCR Then $hInvalidResourceOCRStart = 0
+		$sBattleStatus = $txtDiff & _
+				" | G:" & ($Gold2 = "" ? "?" : $Gold2) & _
+				" E:" & ($Elixir2 = "" ? "?" : $Elixir2) & _
+				" DE:" & ($DarkElixir2 = "" ? "?" : $DarkElixir2) & _
+				" | " & ($CurDamage = "" ? "?" : $CurDamage) & "%"
+		If $NoResourceOCR And CheckTagTeam(True) Then
+			ContinueLoop
+		EndIf
+		If Not $NoResourceOCR Then
 			If $g_bDebugSetLog Then
 				SetDebugLog("Exit in " & $txtDiff & ", [G]: " & $Gold2 & " [E]: " & $Elixir2 & " [DE]: " & $DarkElixir2 & " [%]: " & $CurDamage & ", Suspend-Time: " & $g_iSuspendAndroidTime & ", Suspend-Count: " & $g_iSuspendAndroidTimeCount & ", Offset: " & $iSuspendAndroidTimeOffset, $COLOR_INFO)
-			Else
-				SetLog("Exit in " & $txtDiff & ", [G]: " & $Gold2 & " [E]: " & $Elixir2 & " [DE]: " & $DarkElixir2 & " [%]: " & $CurDamage, $COLOR_INFO)
 			EndIf
 		EndIf
 
 		If Number($CurDamage) > Number($g_iPercentageDamage) Then $g_iPercentageDamage = Number($CurDamage)
-
-		If Number($CurDamage) >= 92 Then
-
-			If $g_iKingSlot >= 11 Or $g_iQueenSlot >= 11 Or $g_iPrinceSlot >= 11 Or $g_iWardenSlot >= 11 Or $g_iChampionSlot >= 11 Then
-				If Not $g_bDraggedAttackBar Then DragAttackBar($g_iTotalAttackSlot, False) ; drag forward
-			Else
-				If $g_iKingSlot >= 0 Or $g_iQueenSlot >= 0 Or $g_iPrinceSlot >= 0 Or $g_iWardenSlot >= 0 Or $g_iChampionSlot >= 0 Then
-					If $g_bDraggedAttackBar Then DragAttackBar($g_iTotalAttackSlot, True) ; return drag
-				EndIf
-			EndIf
-
-			If ($g_bCheckKingPower Or $g_bCheckQueenPower Or $g_bCheckPrincePower Or $g_bCheckWardenPower Or $g_bCheckChampionPower) Then
-				If $g_bCheckKingPower And $g_iActivateKing = 0 Then
-					SetLog("Activating King's ability to restore some health before leaving with a 3 Star", $COLOR_INFO)
-					If IsAttackPage() Then SelectDropTroop($g_iKingSlot) ;If King was not activated: Boost King before Battle ends with a 3 Star
-					$g_bCheckKingPower = False
-				EndIf
-				If $g_bCheckQueenPower And $g_iActivateQueen = 0 Then
-					SetLog("Activating Queen's ability to restore some health before leaving with a 3 Star", $COLOR_INFO)
-					If IsAttackPage() Then SelectDropTroop($g_iQueenSlot) ;If Queen was not activated: Boost Queen before Battle ends with a 3 Star
-					$g_bCheckQueenPower = False
-				EndIf
-				If $g_bCheckPrincePower And $g_iActivatePrince = 0 Then
-					SetLog("Activating Prince's ability to restore some health before leaving with a 3 Star", $COLOR_INFO)
-					If IsAttackPage() Then SelectDropTroop($g_iPrinceSlot) ;If Prince was not activated: Boost Prince before Battle ends with a 3 Star
-					$g_bCheckPrincePower = False
-				EndIf
-				If $g_bCheckWardenPower And $g_iActivateWarden = 0 Then
-					SetLog("Activating Warden's ability to restore some health before leaving with a 3 Star", $COLOR_INFO)
-					If IsAttackPage() Then SelectDropTroop($g_iWardenSlot) ;If Queen was not activated: Boost Queen before Battle ends with a 3 Star
-					$g_bCheckWardenPower = False
-				EndIf
-				If $g_bCheckChampionPower And $g_iActivateChampion = 0 Then
-					SetLog("Activating Royal Champion's ability to restore some health before leaving with a 3 Star", $COLOR_INFO)
-					If IsAttackPage() Then SelectDropTroop($g_iChampionSlot) ;If Champion was not activated: Boost Champion before Battle ends with a 3 Star
-					$g_bCheckChampionPower = False
-				EndIf
-			EndIf
-		EndIf
-
 
 		;CALCULATE RESOURCE CHANGES
 		If $Gold2 <> "" Or $Elixir2 <> "" Or $DarkElixir2 <> "" Then
@@ -197,102 +181,107 @@ Func GoldElixirChangeEBO()
 		EndIf
 
 		;EXIT IF RESOURCES = 0
-		If $g_abStopAtkNoResources[$g_iMatchMode] And Number($Gold2) = 0 And Number($Elixir2) = 0 And Number($DarkElixir2) = 0 Then
-			SetLog("Gold & Elixir & DE = 0, end battle ", $COLOR_SUCCESS)
+		If $g_bStopAtkNoResources And Not $NoResourceOCR And Number($Gold2) = 0 And Number($Elixir2) = 0 And Number($DarkElixir2) = 0 Then
+			SetLog("No Resources Left | Ending Battle", $COLOR_INFO)
 			If _Sleep($DELAYGOLDELIXIRCHANGEEBO2) Then Return
 			ExitLoop
 		EndIf
 
 		;EXIT IF TWO STARS REACH
-		If $g_abStopAtkTwoStars[$g_iMatchMode] And _CheckPixel($aWonTwoStar, True) Then
-			SetLog("Two Star Reach, exit", $COLOR_SUCCESS)
+		If $g_bStopAtkTwoStars And _CheckPixel($aWonTwoStar, True) Then
+			SetLog("2 Stars Reached | Ending Battle", $COLOR_INFO)
 			$exitTwoStars = 1
 			ExitLoop
 		EndIf
 
 		;EXIT IF ONE STARS REACH
-		If $g_abStopAtkOneStar[$g_iMatchMode] And _CheckPixel($aWonOneStar, True) Then
-			SetLog("One Star Reach, exit", $COLOR_SUCCESS)
+		If $g_bStopAtkOneStar And _CheckPixel($aWonOneStar, True) Then
+			SetLog("1 Star Reached | Ending Battle", $COLOR_INFO)
 			$exitOneStar = 1
 			ExitLoop
 		EndIf
 
-		;EXIT LOOP IF RESOURCES = "" ... battle end
-		If getGoldVillageSearch(48, 69 + 7) = "" And getElixirVillageSearch(48, 69 + 29 + 7) = "" Then
-			ExitLoop
+		; Empty OCR can occur while the Tag Team reward closes. Only a confirmed
+		; result screen may use missing resource text as a battle-end signal.
+		If getGoldVillageSearch(45, 68) = "" And getElixirVillageSearch(45, 98) = "" Then
+			If IsReturnHomeBattlePage(True, False) Then ExitLoop
 		EndIf
 
-		If $g_abStopAtkPctHigherEnable[$g_iMatchMode] And Number(getOcrOverAllDamage(780, 527 + $g_iBottomOffsetY)) > Number($g_aiStopAtkPctHigherAmt[$g_iMatchMode]) Then
-			SetLog("Overall Damage above " & Number($g_aiStopAtkPctHigherAmt[$g_iMatchMode]) & ", exit", $COLOR_SUCCESS)
+		If $g_bStopAtkPctHigherEnable And $exitPctHigher = 0 And Number(getOcrOverAllDamage(780, 527 + $g_iBottomOffsetY)) > Number($g_iStopAtkPctHigherAmt) Then
+			SetLog("Damage Above " & Number($g_iStopAtkPctHigherAmt) & "% | Ending Battle", $COLOR_INFO)
 			$g_iPercentageDamage = Number(getOcrOverAllDamage(780, 527 + $g_iBottomOffsetY))
+			$exitPctHigher = 1
 			ExitLoop
 		EndIf
 
 		;RETURN IF RESOURCES CHANGE DETECTED
-		If ($g_abStopAtkNoLoot1Enable[$g_iMatchMode] Or $g_abStopAtkNoLoot2Enable[$g_iMatchMode]) And ($Gold1 <> $Gold2 Or $Elixir1 <> $Elixir2 Or $DarkElixir1 <> $DarkElixir2) Then
-			SetLog("Gold & Elixir & DE change detected, waiting...", $COLOR_SUCCESS)
+		If ($g_bStopAtkNoLoot1Enable Or $g_bStopAtkNoLoot2Enable) And ($Gold1 <> $Gold2 Or $Elixir1 <> $Elixir2 Or $DarkElixir1 <> $DarkElixir2) Then
+			SetLog("Loot Changed | " & $sBattleStatus, $COLOR_INFO)
 			Return True
 		EndIf
 
 		;RETURN IF DAMAGE CHANGE DETECTED
-		If $g_abStopAtkPctNoChangeEnable[$g_iMatchMode] And (Number($Damage) <> Number($CurDamage)) Then
-			SetLog("Overall Damage Percentage change detected, waiting...", $COLOR_SUCCESS)
+		If $g_bStopAtkPctNoChangeEnable And $Damage <> "" And $CurDamage <> "" And (Number($Damage) <> Number($CurDamage)) Then
+			SetLog("Damage Changed | " & $sBattleStatus, $COLOR_INFO)
 			$g_iPercentageDamage = Number(getOcrOverAllDamage(780, 527 + $g_iBottomOffsetY))
 			Return True
 		EndIf
 
-		$iTime = __TimerDiff($iBegin) - SuspendAndroidTime() + $iSuspendAndroidTimeOffset
+		SetLog("Waiting | " & $sBattleStatus, $COLOR_INFO)
+
+		$iTime = __TimerDiff($iBegin) - SuspendAndroidTime() + $iSuspendAndroidTimeOffset - $iTagTeamPause
 	WEnd ; END MAIN LOOP
 
-	;Priority Check... Exit To protect Hero Health
-	If $g_iMatchMode = $LB And $g_aiAttackStdDropSides[$LB] = 4 And $g_bDESideEndEnable And $g_iDarkLow = 1 Then
-		SetLog("Returning Now -DE-", $COLOR_SUCCESS)
-		Return False
-	EndIf
-
 	;FIRST CHECK... EXIT FOR ONE STAR REACH
-	If $g_abStopAtkOneStar[$g_iMatchMode] And $exitOneStar = 1 Then
+	If $g_bStopAtkOneStar And $exitOneStar = 1 Then
 		If _Sleep($DELAYGOLDELIXIRCHANGEEBO2) Then Return
 		Return False
 	EndIf
 
 	;SECOND CHECK... EXIT FOR TWO STARS REACH
-	If $g_abStopAtkTwoStars[$g_iMatchMode] And $exitTwoStars = 1 Then
+	If $g_bStopAtkTwoStars And $exitTwoStars = 1 Then
 		If _Sleep($DELAYGOLDELIXIRCHANGEEBO2) Then Return
 		Return False
 	EndIf
 
-	;THIRD CHECK... IF VALUES= "" REREAD AND RETURN FALSE IF = ""
-	If ($NoResourceOCR = True) Then
-		SetLog("Battle has finished", $COLOR_SUCCESS)
-		Return False ;end battle
-	EndIf
+	; A configured damage limit is a definitive end-battle condition even when
+	; resource OCR is temporarily unavailable.
+	If $g_bStopAtkPctHigherEnable And $exitPctHigher = 1 Then Return False
 
-	If $g_abStopAtkPctHigherEnable[$g_iMatchMode] And Number(getOcrOverAllDamage(780, 527 + $g_iBottomOffsetY)) > Number($g_aiStopAtkPctHigherAmt[$g_iMatchMode]) Then
-		$g_iPercentageDamage = Number(getOcrOverAllDamage(780, 527 + $g_iBottomOffsetY))
-		Return False
+	; Invalid resource OCR is not proof that the battle ended. Restart the
+	; observation window briefly unless the result screen is positively confirmed.
+	If $NoResourceOCR Then
+		If IsReturnHomeBattlePage(True, False) Then
+			$hInvalidResourceOCRStart = 0
+			Return False
+		EndIf
+		If $hInvalidResourceOCRStart = 0 Then $hInvalidResourceOCRStart = __TimerInit()
+		If __TimerDiff($hInvalidResourceOCRStart) >= 120000 Then
+			SetLog("Resource OCR unavailable for 2 minutes; ending battle", $COLOR_WARNING)
+			$hInvalidResourceOCRStart = 0
+			Return False
+		EndIf
+		Return True
 	EndIf
 
 	;FOURTH CHECK... IF RESOURCES = 0 THEN EXIT
-	If $g_abStopAtkNoResources[$g_iMatchMode] And $NoResourceOCR = False And Number($Gold2) = 0 And Number($Elixir2) = 0 And Number($DarkElixir2) = 0 Then
-		SetLog("Gold & Elixir & DE = 0, end battle ", $COLOR_SUCCESS)
+	If $g_bStopAtkNoResources And $NoResourceOCR = False And Number($Gold2) = 0 And Number($Elixir2) = 0 And Number($DarkElixir2) = 0 Then
+		SetLog("No Resources Left | Ending Battle", $COLOR_INFO)
 		If _Sleep($DELAYGOLDELIXIRCHANGEEBO2) Then Return
 		Return False
 	EndIf
 
-	If $g_abStopAtkPctNoChangeEnable[$g_iMatchMode] And Number($Damage) = Number($CurDamage) Then
-		SetLog("No Overall Damage Percentage change detected, exit", $COLOR_SUCCESS)
+	If $g_bStopAtkPctNoChangeEnable And $Damage <> "" And $CurDamage <> "" And Number($Damage) = Number($CurDamage) Then
+		SetLog("No Damage Change | Ending Battle", $COLOR_INFO)
 		Return False
 	EndIf
 
 
 	;FIFTH CHECK... IF VALUES NOT CHANGED  RETURN FALSE ELSE RETURN TRUE
-	If (Number($Gold1) = Number($Gold2) And Number($Elixir1) = Number($Elixir2) And Number($DarkElixir1) = Number($DarkElixir2)) Then
-		If $g_abStopAtkNoLoot1Enable[$g_iMatchMode] Or $g_abStopAtkNoLoot2Enable[$g_iMatchMode] Then
-			SetLog("Gold & Elixir & DE no change detected, exit", $COLOR_SUCCESS)
+	If $bInitialResourceOCR And (Number($Gold1) = Number($Gold2) And Number($Elixir1) = Number($Elixir2) And Number($DarkElixir1) = Number($DarkElixir2)) Then
+		If $g_bStopAtkNoLoot1Enable Or $g_bStopAtkNoLoot2Enable Then
+			SetLog("No Loot Change | Ending Battle", $COLOR_INFO)
 			Return False
-		Else
-			SetLog("Gold & Elixir & DE no change detected, waiting...", $COLOR_SUCCESS)
 		EndIf
 	Else
 		If $g_bDebugSetLog Then

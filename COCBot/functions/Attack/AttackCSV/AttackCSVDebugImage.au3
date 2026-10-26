@@ -37,6 +37,7 @@ Func AttackCSVDEBUGIMAGE()
 	Local $hPenPaleBlue = _GDIPlus_PenCreate(0xFF66B2FF, 2)
 	Local $hPenCyan = _GDIPlus_PenCreate(0xFF00FFFF, 2)
 	Local $hPenYellow = _GDIPlus_PenCreate(0xFFFFD800, 2)
+	Local $hPenOrange = _GDIPlus_PenCreate(0xFFFF8000, 2)
 	Local $hPenLtGrey = _GDIPlus_PenCreate(0xFFCCCCCC, 2)
 	Local $hPenWhite = _GDIPlus_PenCreate(0xFFFFFFFF, 2)
 	Local $hPenMagenta = _GDIPlus_PenCreate(0xFFFF00F6, 2)
@@ -337,6 +338,22 @@ Func AttackCSVDEBUGIMAGE()
 		_GDIPlus_GraphicsDrawRect($hGraphic, $g_aiCSVMonolithPos[0] - 15, $g_aiCSVMonolithPos[1] - 15, 30, 30, $hPenWhite)
 	EndIf
 
+	; - DRAW Firespitter -------------------------------------------------------------------
+	If $g_bCSVLocateFirespitter = True And IsArray($g_aiCSVFirespitterPos) Then
+		For $i = 0 To UBound($g_aiCSVFirespitterPos) - 1
+			$pixel = $g_aiCSVFirespitterPos[$i]
+			_GDIPlus_GraphicsDrawRect($hGraphic, $pixel[0] - 15, $pixel[1] - 15, 30, 30, $hPenOrange)
+		Next
+	EndIf
+
+	; - DRAW Revenge Tower -------------------------------------------------------------------
+	If $g_bCSVLocateRevengeTower = True And IsArray($g_aiCSVRevengeTowerPos) Then
+		For $i = 0 To UBound($g_aiCSVRevengeTowerPos) - 1
+			$pixel = $g_aiCSVRevengeTowerPos[$i]
+			If UBound($pixel) = 2 Then _GDIPlus_GraphicsDrawRect($hGraphic, $pixel[0] - 15, $pixel[1] - 15, 30, 30, $hPenYellow)
+		Next
+	EndIf
+
 	; 99 -  DRAW SLICE NUMBERS
 	_GDIPlus_GraphicsDrawString($hGraphic, "1", 580, 580, "Arial", 20)
 	_GDIPlus_GraphicsDrawString($hGraphic, "2", 750, 450, "Arial", 20)
@@ -375,6 +392,7 @@ Func AttackCSVDEBUGIMAGE()
 	_GDIPlus_PenDispose($hPenPaleBlue)
 	_GDIPlus_PenDispose($hPenCyan)
 	_GDIPlus_PenDispose($hPenYellow)
+	_GDIPlus_PenDispose($hPenOrange)
 	_GDIPlus_PenDispose($hPenLtGrey)
 	_GDIPlus_PenDispose($hPenWhite)
 	_GDIPlus_PenDispose($hPenMagenta)

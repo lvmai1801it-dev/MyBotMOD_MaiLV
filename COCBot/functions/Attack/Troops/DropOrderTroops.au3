@@ -11,109 +11,79 @@
 ; ===============================================================================================================================
 
 Func MatchTroopDropName($Num)
-	Switch _GUICtrlComboBox_GetCurSel($g_ahCmbDropOrder[$Num])
-		Case 0
-			Return $eBarb
-		Case 1
-			Return $eSBarb
-		Case 2
-			Return $eArch
-		Case 3
-			Return $eSArch
-		Case 4
-			Return $eGiant
-		Case 5
-			Return $eSGiant
-		Case 6
-			Return $eGobl
-		Case 7
-			Return $eSGobl
-		Case 8
-			Return $eWall
-		Case 9
-			Return $eSWall
-		Case 10
-			Return $eBall
-		Case 11
-			Return $eRBall
-		Case 12
-			Return $eWiza
-		Case 13
-			Return $eSWiza
-		Case 14
-			Return $eHeal
-		Case 15
-			Return $eDrag
-		Case 16
-			Return $eSDrag
-		Case 17
-			Return $ePekk
-		Case 18
-			Return $eBabyD
-		Case 19
-			Return $eInfernoD
-		Case 20
-			Return $eMine
-		Case 21
-			Return $eSMine			
-		Case 22
-			Return $eEDrag
-		Case 23
-			Return $eYeti
-		Case 24
-			Return $eRDrag
-		Case 25
-			Return $eETitan
-		Case 26
-			Return $eRootR
-		Case 27
-			Return $eThrower
-		Case 28
-			Return $eMini
-		Case 29
-			Return $eSMini
-		Case 30
-			Return $eHogs
-		Case 31
-			Return $eSHogs
-		Case 32
-			Return $eValk
-		Case 33
-			Return $eSValk
-		Case 34
-			Return $eGole
-		Case 35
-			Return $eWitc
-		Case 36
-			Return $eSWitc
-		Case 37
-			Return $eLava
-		Case 38
-			Return $eIceH
-		Case 39
-			Return $eBowl
-		Case 40
-			Return $eSBowl
-		Case 41
-			Return $eIceG
-		Case 42
-			Return $eHunt
-		Case 43
-			Return $eAppWard
-		Case 44
-			Return $eDruid
-		Case 45
+	Switch $g_aiCmbCustomDropOrder[$Num]
+		Case 0 To 46
+			Return $g_aiCmbCustomDropOrder[$Num]
+		Case 47 ; Furnace
 			Return $eFurn
-		Case 46
-			Return "CC"
-		Case 47
+		Case 48 ; Ruin Witch
+			Return $eRuinW
+		Case 49 ; Heroes
 			Return "HEROES"
+		Case 50 ; Clan Castle
+			Return "CC"
+		Case 51 ; Debt Collector
+			Return $eDebt
+		Case 52 ; Elephant Rider
+			Return $eERider
+		Case 53 ; Giant Giant
+			Return $eGGiant
+		Case 54 ; KANE
+			Return $eKANE
+		Case 55 ; YEETer
+			Return $eYEET
+		Case 56 ; The Disarmer
+			Return $eDisarmer
+		Case 57 ; Yeti Undertaker
+			Return $eYUnder
+		Case 58 ; Barbarian Kicker
+			Return $eKicker
+		Case 59 ; Giant Thrower
+			Return $eGThrow
+		Case 60 ; Broom Witch
+			Return $eBroom
+		Case 61 ; MECHA
+			Return $eMECHA
+		Case 62 ; Ice Minion
+			Return $eIceMini
+		Case 63 ; Ice Wizard
+			Return $eIceWiz
+		Case 64 ; Party Wizard
+			Return $ePartyWiz
+		Case 65 ; COOKIE
+			Return $eCOOKIE
+		Case 66 ; Firecracker
+			Return $eFire
+		Case 67 ; Ram Rider
+			Return $eRamR
+		Case 68 ; Pumpkin Barbarian
+			Return $ePBarb
+		Case 69 ; Royal Ghost
+			Return $eRoyalG
+		Case 70 ; Barcher
+			Return $eBarcher
+		Case 71 ; Hog Wizard
+			Return $eHogWiz
+		Case 72 ; Lavaloon
+			Return $eLavaloon
+		Case 73 ; Totem Thrower
+			Return $eTThrow
+		Case 74 ; Witch Golem
+			Return $eWitchG
+		Case 75 ; Giant Skeleton
+			Return $eGiantS
+		Case 76 ; Skeleton Barrel
+			Return $eSBarrel
+		Case 77 ; Azure Dragon
+			Return $eADrag
+		Case 78 ; Golden Dragon
+			Return $eGDrag
 	EndSwitch
 EndFunc   ;==>MatchTroopDropName
 
 Func MatchSlotsPerEdge($Num)
 	; 0 = spread in all deploy points each side , 1 = one deploy point , 2 = 2 deploy points
-	Switch _GUICtrlComboBox_GetCurSel($g_ahCmbDropOrder[$Num])
+	Switch $g_aiCmbCustomDropOrder[$Num]
 		Case 0 ;$eBarb
 			Return 0
 		Case 1 ;$eSBarb
@@ -198,100 +168,167 @@ Func MatchSlotsPerEdge($Num)
 			Else
 				Return 2
 			EndIf
-		Case 24 ; $eRDrag
+		Case 24 ; $eSYeti
 			If $g_iMatchMode = $LB And $g_aiAttackStdDropSides[$LB] = 5 Then
 				Return 0
 			Else
 				Return 2
 			EndIf
-		Case 25 ; $eETitan
+		Case 25 ; $eRDrag
 			If $g_iMatchMode = $LB And $g_aiAttackStdDropSides[$LB] = 5 Then
 				Return 0
 			Else
 				Return 2
 			EndIf
-		Case 26 ; $eRootR
+		Case 26 ; $eETitan
 			If $g_iMatchMode = $LB And $g_aiAttackStdDropSides[$LB] = 5 Then
 				Return 0
 			Else
 				Return 2
 			EndIf
-		Case 27 ; $eThrower
+		Case 27 ; $eRootR
+			If $g_iMatchMode = $LB And $g_aiAttackStdDropSides[$LB] = 5 Then
+				Return 0
+			Else
+				Return 2
+			EndIf
+		Case 28 ; $eThrower
 			If $g_iMatchMode = $LB And $g_aiAttackStdDropSides[$LB] = 5 Then
 				Return 0
 			Else
 				Return 2
 			EndIf	
-		Case 28 ;$eMini
-			Return 0
-		Case 29 ;$eSMini
-			Return 0
-		Case 30 ;$eHogs
-			If $g_iMatchMode = $LB And $g_aiAttackStdDropSides[$LB] = 5 Then
-				Return 1
-			Else
-				Return 2
-			EndIf
-		Case 31 ;$eSHogs
-			If $g_iMatchMode = $LB And $g_aiAttackStdDropSides[$LB] = 5 Then
-				Return 1
-			Else
-				Return 2
-			EndIf
-		Case 32 ;$eValk
-			If $g_iMatchMode = $LB And $g_aiAttackStdDropSides[$LB] = 5 Then
-				Return 0
-			Else
-				Return 2
-			EndIf
-		Case 33 ;$eSValk
-			If $g_iMatchMode = $LB And $g_aiAttackStdDropSides[$LB] = 5 Then
-				Return 0
-			Else
-				Return 2
-			EndIf
-		Case 34 ;$eGole
-			Return 2
-		Case 35 ;$eWitc
-			If $g_iMatchMode = $LB And $g_aiAttackStdDropSides[$LB] = 5 Then
-				Return 1
-			Else
-				Return 2
-			EndIf
-		Case 36 ;$eSWitc
-			If $g_iMatchMode = $LB And $g_aiAttackStdDropSides[$LB] = 5 Then
-				Return 1
-			Else
-				Return 2
-			EndIf
-		Case 37 ;$eLava
-			Return 2
-		Case 38 ;$eIceH
-			Return 2
-		Case 39 ;$eBowl
-			Return 0
-		Case 40 ;$eSBowl
-			Return 0
-		Case 41 ;$eIceG
-			Return 2
-		Case 42 ;$eHunt
-			Return 0
-		Case 43 ;$eAppWard
-			Return 0
-		Case 44 ;$eDruid
-			Return 0
-		Case 45 ;$eFurn
-			Return 0
-		Case 46 ;CC
+ 		Case 29 ;$eMini
+ 			Return 0
+		Case 30 ;$eSMini
+ 			Return 0
+		Case 31 ;$eHogs
+ 			If $g_iMatchMode = $LB And $g_aiAttackStdDropSides[$LB] = 5 Then
+ 				Return 1
+ 			Else
+ 				Return 2
+ 			EndIf
+		Case 32 ;$eSHogs
+ 			If $g_iMatchMode = $LB And $g_aiAttackStdDropSides[$LB] = 5 Then
+ 				Return 1
+ 			Else
+ 				Return 2
+ 			EndIf
+		Case 33 ;$eValk
+ 			If $g_iMatchMode = $LB And $g_aiAttackStdDropSides[$LB] = 5 Then
+ 				Return 0
+ 			Else
+ 				Return 2
+ 			EndIf
+		Case 34 ;$eSValk
+ 			If $g_iMatchMode = $LB And $g_aiAttackStdDropSides[$LB] = 5 Then
+ 				Return 0
+ 			Else
+ 				Return 2
+ 			EndIf
+		Case 35 ;$eGole
+ 			Return 2
+		Case 36 ;$eWitc
+ 			If $g_iMatchMode = $LB And $g_aiAttackStdDropSides[$LB] = 5 Then
+ 				Return 1
+ 			Else
+ 				Return 2
+ 			EndIf
+		Case 37 ;$eSWitc
+ 			If $g_iMatchMode = $LB And $g_aiAttackStdDropSides[$LB] = 5 Then
+ 				Return 1
+ 			Else
+ 				Return 2
+ 			EndIf
+		Case 38 ;$eLava
+ 			Return 2
+		Case 39 ;$eIceH
+ 			Return 2
+		Case 40 ;$eBowl
+ 			Return 0
+		Case 41 ;$eSBowl
+ 			Return 0
+		Case 42 ;$eIceG
+ 			Return 2
+		Case 43 ;$eHunt
+ 			Return 0
+		Case 44 ;$eAppWard
+ 			Return 0
+		Case 45 ;$eDruid
+ 			Return 0
+		Case 46 ;$eSYeti
+ 			Return 0
+		Case 47 ; Furnace
+  			Return 0
+		Case 48 ; Ruin Witch
+  			Return 0
+		Case 49 ; Heroes
 			Return 1
-		Case 47 ;HEROES
+		Case 50 ; Clan Castle
 			Return 1
-	EndSwitch
-EndFunc   ;==>MatchSlotsPerEdge
+		Case 51 ; Debt Collector
+			Return 0
+		Case 52 ; Elephant Rider
+			Return 0
+		Case 53 ; Giant Giant
+			Return 0
+		Case 54 ; KANE
+			Return 0
+		Case 55 ; YEETer
+			Return 0
+		Case 56 ; The Disarmer
+  			Return 0
+		Case 57 ; Yeti Undertaker
+			Return 0
+		Case 58 ; Barbarian Kicker
+  			Return 0
+		Case 59 ; Giant Thrower
+  			Return 0
+		Case 60 ; Broom Witch
+  			Return 0
+		Case 61 ; MECHA
+  			Return 0
+		Case 62 ; Ice Minion
+  			Return 0
+		Case 63 ; Ice Wizard
+  			Return 0
+		Case 64 ; Party Wizard
+  			Return 0
+		Case 65 ; COOKIE
+  			Return 0
+		Case 66 ; Firecracker
+  			Return 0
+		Case 67 ; Ram Rider
+  			Return 0
+		Case 68 ; Pumpkin Barbarian
+			Return 0
+		Case 69 ; Royal Ghost
+			Return 0
+		Case 70 ; Barcher
+  			Return 0
+		Case 71 ; Hog Wizard
+  			Return 0
+		Case 72 ; Lavaloon
+  			Return 0
+		Case 73 ; Totem Thrower
+ 			Return 0
+		Case 74 ; Witch Golem
+  			Return 0
+		Case 75 ; Giant Skeleton
+  			Return 0
+		Case 76 ; Skeleton Barrel
+			Return 0
+		Case 77 ; Azure Dragon
+  			Return 0
+		Case 78 ; Golden Dragon
+  			Return 0
+ 	EndSwitch
+ EndFunc   ;==>MatchSlotsPerEdge
 
 Func MatchSidesDrop($Num)
-	Switch _GUICtrlComboBox_GetCurSel($g_ahCmbDropOrder[$Num])
-		Case $eBarb To $eFurn
+	Local $vTroopKind = MatchTroopDropName($Num)
+	Switch $vTroopKind
+		Case $eBarb To $eGDrag
 			If $g_aiAttackStdDropSides[$g_iMatchMode] = 0 Then Return 1
 			If $g_aiAttackStdDropSides[$g_iMatchMode] = 1 Then Return 2
 			If $g_aiAttackStdDropSides[$g_iMatchMode] = 2 Then Return 3
@@ -299,9 +336,9 @@ Func MatchSidesDrop($Num)
 			If $g_aiAttackStdDropSides[$g_iMatchMode] = 4 Then Return 4
 			If $g_aiAttackStdDropSides[$g_iMatchMode] = 5 Then Return 1
 			If $g_aiAttackStdDropSides[$g_iMatchMode] = 6 Then Return 1
-		Case 46
+		Case "CC"
 			Return 1 ;CC
-		Case 47
+		Case "HEROES"
 			Return 1 ;HEROES
 	EndSwitch
 EndFunc   ;==>MatchSidesDrop

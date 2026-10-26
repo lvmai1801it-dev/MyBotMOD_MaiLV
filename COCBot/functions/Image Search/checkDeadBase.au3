@@ -1,4 +1,4 @@
-; #FUNCTION# ====================================================================================================================
+﻿; #FUNCTION# ====================================================================================================================
 ; Name ..........: checkDeadBase
 ; Description ...: This file Includes the Variables and functions to detection of a DeadBase.
 ;                  is full or semi-full to indicate that it is a dead base
@@ -97,7 +97,7 @@ Func checkDeadBase($TestDeadBase = False)
 		Return CheckForDeadEagle()
 	Else
 		SetDebugLog("Checking base for Collector Level : " & $g_iSearchCount)
-		Return checkDeadBaseQuick(False, $TestDeadBase)
+		Return checkDeadBaseFast(False, $TestDeadBase)
 	EndIf
 EndFunc   ;==>checkDeadBase
 
@@ -120,11 +120,102 @@ Func CleanSuperchargeTemplates()
 	EndIf
 EndFunc   ;==>CleanSuperchargeTemplates
 
+Func checkDeadBaseFast($bForceCapture = True, $TestDeadBase = False)
+
+	If $g_bCollectorFilterDisable Then
+		Return True
+	EndIf
+
+	SuperchargeCheck($TestDeadBase)
+
+	SetDebugLog("Checking Deadbase With IMGLOC START (Fast)", $COLOR_WARNING)
+
+	Local $sCocDiamond = "ECD"
+	Local $redLines = $g_sImglocRedline
+	Local $minLevel = 0
+	Local $maxLevel = 1000
+	Local $maxReturnPoints = 0
+	Local $returnProps = "objectname,objectpoints,objectlevel,fillLevel"
+	Local $TotalMatched = 0
+	Local $dbFound = False
+	Local $aCollectors[0][2]
+	Local $bMetadataUsable = False
+
+	Local $result = findMultiple($g_sImgElixirCollectorFill, $sCocDiamond, $redLines, $minLevel, $maxLevel, $maxReturnPoints, $returnProps, $bForceCapture)
+	Local $bFoundFilledCollectors = $result <> "" And IsArray($result)
+
+	If $bFoundFilledCollectors Then
+		For $i = 0 To UBound($result, 1) - 1
+			Local $aMatched = $result[$i]
+			If StringInStr($aMatched[0], "exclusion", $STR_NOCASESENSEBASIC) Then ContinueLoop
+
+			Local $iObjectLevel = Number($aMatched[2])
+			If $iObjectLevel <= 0 Then $iObjectLevel = _GetCollectorLevelFromName($aMatched[0])
+			If $iObjectLevel <= 0 Then ContinueLoop
+
+			$bMetadataUsable = True
+			Local $aMultiCoords = decodeMultipleCoords($aMatched[1], 5, 5)
+			For $j = 0 To UBound($aMultiCoords, 1) - 1
+				Local $aCoords = $aMultiCoords[$j]
+				If _AddCollectorIfUnique($aCollectors, Number($aCoords[0]), Number($aCoords[1]), 20) Then
+					$TotalMatched += 1
+					If $TotalMatched >= $g_iCollectorMatchesMin Then
+						$dbFound = True
+						If Not $TestDeadBase Then ExitLoop 2
+					EndIf
+				EndIf
+			Next
+		Next
+	EndIf
+
+	If Not $bMetadataUsable And $bFoundFilledCollectors Then
+		SetDebugLog("Fast Deadbase metadata unavailable, falling back to level validation", $COLOR_DEBUG)
+		Return checkDeadBaseQuick(False, $TestDeadBase)
+	EndIf
+
+	If $g_bDebugSetLog Then
+		If Not $bFoundFilledCollectors Then
+			SetDebugLog("IMGLOC : NOT A DEADBASE", $COLOR_INFO)
+		ElseIf Not $dbFound Then
+			SetDebugLog("IMGLOC : DEADBASE NOT MATCHED: " & $TotalMatched & "/" & $g_iCollectorMatchesMin, $COLOR_WARNING)
+		Else
+			SetDebugLog("IMGLOC : FOUND DEADBASE Matched: " & $TotalMatched & "/" & $g_iCollectorMatchesMin & ": " & UBound($aCollectors) & " collector points", $COLOR_GREEN)
+		EndIf
+	EndIf
+
+	$g_aZombie[3] = $TotalMatched
+	If $g_bDebugDeadBaseImage Then
+		setZombie(0, $g_iSearchElixir, $TotalMatched, $g_iSearchCount, $g_sImglocRedline)
+	EndIf
+
+	Return $dbFound
+
+EndFunc   ;==>checkDeadBaseFast
+
+Func _GetCollectorLevelFromName($sName)
+	Local $aLevel = StringRegExp($sName, "(?:elixir|supercharge)[A-Z]_([0-9]+)_", $STR_REGEXPARRAYMATCH)
+	If IsArray($aLevel) And UBound($aLevel) > 0 Then Return Number($aLevel[0])
+	Return 0
+EndFunc   ;==>_GetCollectorLevelFromName
+
+Func _AddCollectorIfUnique(ByRef $aCollectors, $x, $y, $iDistance)
+	For $i = 0 To UBound($aCollectors, 1) - 1
+		Local $a = $aCollectors[$i][0] - $x
+		Local $b = $aCollectors[$i][1] - $y
+		If Sqrt($a * $a + $b * $b) < $iDistance Then Return False
+	Next
+
+	_ArrayAdd($aCollectors, $x & "|" & $y)
+	Return True
+EndFunc   ;==>_AddCollectorIfUnique
+
 Func checkDeadBaseQuick($bForceCapture = True, $TestDeadBase = False)
 
 	If $g_bCollectorFilterDisable Then
 		Return True
 	EndIf
+
+	SuperchargeCheck($TestDeadBase)
 
 	SetDebugLog("Checking Deadbase With IMGLOC START (Quick)", $COLOR_WARNING)
 
@@ -340,4 +431,3 @@ Func CheckForDeadEagle()
 
 	Return True
 EndFunc   ;==>CheckForDeadEagle
-

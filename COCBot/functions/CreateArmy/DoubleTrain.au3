@@ -236,7 +236,7 @@ Func GetCurrentArmy($x_start, $y_start)
 EndFunc   ;==>GetCurrentArmy
 
 Func CheckQueueTroopAndTrainRemain($ArmyCamp, $bDebug)
-	If $ArmyCamp[0] = $ArmyCamp[1] * 2 And ((ProfileSwitchAccountEnabled() And $g_abAccountNo[$g_iCurAccount] And $g_abDonateOnly[$g_iCurAccount]) Or $g_iCommandStop = 0) Then Return True ; bypass Donate account when full queue
+	If $ArmyCamp[0] = $ArmyCamp[1] * 2 And $g_iCommandStop = 0 Then Return True ; bypass when full queue and attacks are halted
 
 	Local $iTotalQueue = 0
 	If $bDebug Then SetLog("Checking troop queue: " & $ArmyCamp[0] & "/" & $ArmyCamp[1] * 2, $COLOR_DEBUG)
@@ -292,7 +292,7 @@ Func CheckQueueTroopAndTrainRemain($ArmyCamp, $bDebug)
 EndFunc   ;==>CheckQueueTroopAndTrainRemain
 
 Func CheckQueueSpellAndTrainRemain($ArmyCamp, $bDebug, $iUnbalancedSpell = 0)
-	If $ArmyCamp[0] = $ArmyCamp[1] * 2 And ((ProfileSwitchAccountEnabled() And $g_abAccountNo[$g_iCurAccount] And $g_abDonateOnly[$g_iCurAccount]) Or $g_iCommandStop = 0) Then Return True ; bypass Donate account when full queue
+	If $ArmyCamp[0] = $ArmyCamp[1] * 2 And $g_iCommandStop = 0 Then Return True ; bypass when full queue and attacks are halted
 
 	Local $iTotalQueue = 0
 	If $bDebug Then SetLog("Checking spell queue: " & $ArmyCamp[0] & "/" & $ArmyCamp[1] * 2, $COLOR_DEBUG)

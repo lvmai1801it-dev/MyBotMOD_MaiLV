@@ -48,7 +48,7 @@ Func BoostSuperTroop($bTest = False)
 
 				If _Sleep(1000) Then Return
 				Local $sTroopName = GetSTroopName($g_iCmbSuperTroops[$i] - 1)
-				SetLog("Trying to boost " & $sTroopName, $COLOR_INFO)
+				SetLog("Boosting " & $sTroopName, $COLOR_INFO)
 
 				Local $iColumnX = $columnStart
 				Select
@@ -71,17 +71,17 @@ Func BoostSuperTroop($bTest = False)
 				EndIf
 
 				If QuickMIS("BC1", $g_sImgBoostTroopsClock, $iColumnX, $iColumnY1, $iColumnX + $picswidth, $iColumnY2, True, False) Then ;find pics Clock on spesific row / column (if clock found = troops already boosted)
-					SetLog($sTroopName & ", Troops Already boosted", $COLOR_INFO)
+					SetLog($sTroopName & " is already boosted")
 					SetDebugLog("Found Clock Image", $COLOR_DEBUG)
 				Else
 					SetDebugLog("Clock Image Not Found", $COLOR_DEBUG)
-					SetLog($sTroopName & ", Currently is not boosted", $COLOR_INFO)
+					SetDebugLog($sTroopName & " is currently not boosted", $COLOR_DEBUG)
 					If FindStroopIcons($g_iCmbSuperTroops[$i], $iColumnX, $iColumnY1, $iColumnX + $picswidth, $iColumnY2) Then
 						If QuickMIS("BC1", $g_sImgBoostTroopsIcons, $iColumnX, $iColumnY1, $iColumnX + $picswidth, $iColumnY2, True, False) Then ;find pics of Stroop on spesific row / column
 							Click($g_iQuickMISX, $g_iQuickMISY, 1)
 							If _Sleep(1500) Then Return
 							If $g_bSuperTroopsBoostUsePotionFirst Then
-								SetLog("Using Super Potion...", $COLOR_INFO)
+								SetLog("Using Super Potion", $COLOR_INFO)
 								If QuickMIS("BC1", $g_sImgBoostTroopsPotion, 500, 530 + $g_iMidOffsetY, 535, 570 + $g_iMidOffsetY, True, False) Then ;find image of Super Potion
 									Click($g_iQuickMISX - 40, $g_iQuickMISY - 10, 1)
 									If _Sleep(1500) Then Return
@@ -92,17 +92,17 @@ Func BoostSuperTroop($bTest = False)
 												CancelBoost("Using Potion")
 											Else
 												Click($g_iQuickMISX - 48, $g_iQuickMISY, 1)
-												SetLog("Using Potion, Successfully Boost " & $sTroopName, $COLOR_SUCCESS)
+												SetLog("Using potion, successfully boosted " & $sTroopName, $COLOR_SUCCESS)
 												$bRet = True
 											EndIf
 										Else
-											SetLog("Could not find Potion button for final upgrade " & $sTroopName, $COLOR_ERROR)
+											SetLog("Could not find potion button for final upgrade " & $sTroopName, $COLOR_ERROR)
 											CloseWindow()
 										EndIf
 									EndIf
 								Else ;try to use dark elixir because potion not found
 									If _Sleep(1500) Then Return
-									SetLog("Cannot Find Potion, Using Dark Elixir...", $COLOR_INFO)
+									SetLog("Cannot find potion, using dark elixir", $COLOR_INFO)
 									If QuickMIS("BC1", $g_sImgBoostTroopsButtons, 670, 530 + $g_iMidOffsetY, 705, 570 + $g_iMidOffsetY) Then ;find image of dark elixir button
 										Click($g_iQuickMISX - 55, $g_iQuickMISY, 1)
 										If _Sleep(1500) Then Return
@@ -113,7 +113,7 @@ Func BoostSuperTroop($bTest = False)
 													CancelBoost("Using Dark Elixir")
 												Else
 													Click($g_iQuickMISX - 53, $g_iQuickMISY, 1)
-													SetLog("Using Dark Elixir, Successfully Boost " & $sTroopName, $COLOR_SUCCESS)
+													SetLog("Using dark elixir, successfully boosted " & $sTroopName, $COLOR_SUCCESS)
 													$bRet = True
 												EndIf
 											Else
@@ -121,7 +121,7 @@ Func BoostSuperTroop($bTest = False)
 												CloseWindow()
 											EndIf
 										Else
-											SetLog("Not Enough Dark Elixir To Boost Super Troop", $COLOR_ERROR)
+											SetLog("Not enoughSucces dark elixir to boost super troop", $COLOR_ERROR)
 											If _Sleep(1500) Then Return
 										EndIf
 									Else
@@ -129,7 +129,7 @@ Func BoostSuperTroop($bTest = False)
 									EndIf
 								EndIf
 							Else
-								SetLog("Using Dark Elixir...", $COLOR_INFO)
+								SetLog("Using Dark Elixir", $COLOR_INFO)
 								If QuickMIS("BC1", $g_sImgBoostTroopsButtons, 670, 530 + $g_iMidOffsetY, 705, 570 + $g_iMidOffsetY) Then ;find image of dark elixir button
 									Click($g_iQuickMISX - 55, $g_iQuickMISY, 1)
 									If _Sleep(1500) Then Return
@@ -140,7 +140,7 @@ Func BoostSuperTroop($bTest = False)
 												CancelBoost("Using Dark Elixir")
 											Else
 												Click($g_iQuickMISX - 53, $g_iQuickMISY, 1)
-												SetLog("Successfully Boost " & $sTroopName, $COLOR_SUCCESS)
+												SetLog("Successfully Boosted " & $sTroopName, $COLOR_SUCCESS)
 												$bRet = True
 											EndIf
 										Else
@@ -148,7 +148,7 @@ Func BoostSuperTroop($bTest = False)
 											CloseWindow()
 										EndIf
 									Else
-										SetLog("Not Enough Dark Elixir To Boost Super Troop", $COLOR_ERROR)
+											SetLog("Not enough dark elixir to boost super troop", $COLOR_ERROR)
 										If _Sleep(1500) Then Return
 									EndIf
 								Else
@@ -156,11 +156,11 @@ Func BoostSuperTroop($bTest = False)
 								EndIf
 							EndIf
 						Else
-							SetLog("Cannot find " & $sTroopName & ", Troop Not Unlocked yet?", $COLOR_ERROR)
+							SetLog("Cannot find " & $sTroopName & ", troop not unlocked yet?", $COLOR_ERROR)
 						EndIf
 					Else
-						SetLog("Double Check Image for Icon " & $sTroopName & " Not Found", $COLOR_ERROR)
-						SetLog("Troop Not Unlocked yet?", $COLOR_ERROR)
+						SetLog("Double check image for icon " & $sTroopName & " not found", $COLOR_ERROR)
+						SetLog("Troop not unlocked yet?", $COLOR_ERROR)
 					EndIf
 				EndIf
 			EndIf
@@ -221,14 +221,14 @@ Func OpenBarrel($bTest = False)
 		Next
 
 		If $BarrelStoppedLoop Then
-			SetLog("No Troop Currently Boosted", $COLOR_INFO)
+			SetLog("No troop currently boosted")
 		Else
 			If WaitforPixel($aiSearchArrayLower[0], $aiSearchArrayLower[1], $aiSearchArrayLower[2], $aiSearchArrayLower[3], "ED5B00", 30, 2) Then $aSearchForProgress += 1
 			If WaitforPixel($aiSearchArrayUpper[0], $aiSearchArrayUpper[1], $aiSearchArrayUpper[2], $aiSearchArrayUpper[3], "ED5B00", 30, 2) Then $aSearchForProgress += 1
 			If WaitforPixel($aiSearchArrayThird[0], $aiSearchArrayThird[1], $aiSearchArrayThird[2], $aiSearchArrayThird[3], "ED5B00", 30, 2) Then $aSearchForProgress += 1
 		EndIf
 		SetDebugLog("Progress Bar Found : " & $aSearchForProgress, $COLOR_DEBUG)
-		If $bTest Then SetLog("Progress Bar Found : " & $aSearchForProgress, $COLOR_DEBUG)
+		If $bTest Then SetLog("Progress Bar Found: " & $aSearchForProgress, $COLOR_DEBUG)
 
 		If Number($aSearchForProgress) > 0 Then
 			If Number($aSearchForProgress) = 1 And Not $IsEvent Then
@@ -238,7 +238,7 @@ Func OpenBarrel($bTest = False)
 			EndIf
 
 			If (Number($aSearchForProgress) = UBound($g_iCmbSuperTroops) And Not $g_bFirstStartBarrel) Or Number($aSearchForProgress) = 3 Then ; When 2 troops already boosted. (3 while event)
-				SetLog("Max Number Of Troops Already Boosted", $COLOR_INFO)
+				SetLog("Max number of troops already boosted")
 				If Not $bTest Then Return False
 			EndIf
 
@@ -263,7 +263,7 @@ Func OpenBarrel($bTest = False)
 					For $i = 0 To $iMaxSupersTroop - 1
 						If $g_iCmbSuperTroops[$i] > 0 Then $bSetLog += 1
 					Next
-					If $bSetLog > 0 Then SetLog("Troop" & ($bSetLog > 1 ? "s" : "") & " Already boosted", $COLOR_INFO)
+					If $bSetLog > 0 Then SetLog("Troop" & ($bSetLog > 1 ? "s" : "") & " already boosted")
 					$bOpenBarrel = False
 				EndIf
 			Else
@@ -273,7 +273,7 @@ Func OpenBarrel($bTest = False)
 						For $i = 0 To $iMaxSupersTroop - 1
 							If $g_iCmbSuperTroops[$i] = $g_iCmbSuperTroops[$iMaxSupersTroop] And $iSTCount = 0 Then
 								$bOpenBarrel = False
-								SetLog("Troop Already boosted", $COLOR_INFO)
+								SetLog("Troop already boosted")
 								ExitLoop
 							EndIf
 						Next
@@ -285,7 +285,7 @@ Func OpenBarrel($bTest = False)
 		If $bTest Then $bOpenBarrel = True
 
 		If $bOpenBarrel Then
-			SetLog("Found Barrel !", $COLOR_SUCCESS1)
+			SetLog("Super Troops Barrel Detected: (" & $g_iQuickMISX & "," & $g_iQuickMISY & ")", $COLOR_SUCCESS)
 			SetDebugLog("At " & $g_iQuickMISX & "," & $g_iQuickMISY, $COLOR_DEBUG)
 			Click($g_iQuickMISX, $g_iQuickMISY, 1)
 			If _Sleep(1000) Then Return
@@ -311,7 +311,7 @@ Func OpenBarrel($bTest = False)
 					If FindEventTroop() Then
 						If ProfileSwitchAccountEnabled() Then SwitchAccountVariablesReload("Save")
 						Local $sTroopName = GetSTroopName($g_iCmbSuperTroops[$iMaxSupersTroop] - 1)
-						SetLog("Event Super Troop is: " & $sTroopName, $COLOR_INFO)
+						SetLog("Event Super Troop: " & $sTroopName, $COLOR_INFO)
 					EndIf
 				Else
 					If UBound($g_iCmbSuperTroops) > Number($MaxBoostOCR) Then
@@ -319,19 +319,19 @@ Func OpenBarrel($bTest = False)
 					EndIf
 				EndIf
 				If $BoostedOCR = $MaxBoostOCR Then
-					SetLog("Max Number Of Troops Already Boosted", $COLOR_INFO)
+					SetLog("Max number of troops already boosted")
 					CloseWindow()
 					Return False
 				EndIf
 				Return True
 			Else
-				SetLog("Couldn't find Super Troop Window", $COLOR_ERROR)
+				SetLog("Couldn't find super troop window", $COLOR_ERROR)
 				If Not $g_bFirstStartBarrel Then $g_bFirstStartBarrel = 1
 				ClickAway()
 			EndIf
 		EndIf
 	Else
-		SetLog("Couldn't Find Super Troop Barrel", $COLOR_ERROR)
+		SetLog("Couldn't find super troop barrel", $COLOR_ERROR)
 		ClearScreen()
 	EndIf
 
@@ -433,8 +433,12 @@ EndFunc   ;==>GetSTroopName
 Func FindStroopIcons($iIndex, $iColumnX, $iColumnY1, $iColumnX1, $iColumnY2)
 	Local $FullTemp
 	$FullTemp = SearchImgloc($g_sImgBoostTroopsIcons, $iColumnX, $iColumnY1, $iColumnX1, $iColumnY2)
+	If Not IsArray($FullTemp) Then
+		SetDebugLog("SearchImgloc returned non-array", $COLOR_ERROR)
+		Return False
+	EndIf
 	SetDebugLog("Troop SearchImgloc returned:" & $FullTemp[0] & ".", $COLOR_DEBUG)
-	SetLog("Trying to find " & GetSTroopName($iIndex - 1), $COLOR_DEBUG)
+	SetDebugLog("Trying to find " & GetSTroopName($iIndex - 1), $COLOR_DEBUG)
 	If StringInStr($FullTemp[0] & " ", "empty") > 0 Then Return
 
 	If $FullTemp[0] <> "" Then
@@ -458,4 +462,3 @@ Func CancelBoost($aMessage = "")
 	SetLog(" -- Cancelling", $COLOR_DEBUG)
 	CloseWindow()
 EndFunc   ;==>CancelBoost
-

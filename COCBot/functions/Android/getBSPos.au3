@@ -137,7 +137,7 @@ EndFunc   ;==>getBSPos
 Func getAndroidPos($FastCheck = False, $RetryCount1 = 0, $RetryCount2 = 0, $bWidthFirst = Default)
 	Static $asControlSize[6][4]
 	If $g_bAndroidControlUseParentPos Then
-		; If true, control pos is used from parent control (only used to fix docking for Nox in DirectX mode)
+		; If true, control pos is used from parent control
 		Local $hCtrl = ControlGetHandle(GetCurrentAndroidHWnD(), $g_sAppPaneName, GetAndroidControlClass(True))
 		Local $hCtrlParent = _WinAPI_GetParent($hCtrl)
 		Local $aControlSize = ControlGetPos(GetCurrentAndroidHWnD(), "", $hCtrlParent)
@@ -180,6 +180,15 @@ Func getAndroidPos($FastCheck = False, $RetryCount1 = 0, $RetryCount2 = 0, $bWid
 			;DisposeWindows()
 			;WinActivate($g_hAndroidWindow)
 			SetDebugLog($sPre & "Unsupported " & $g_sAndroidEmulator & " screen size of " & $aControlSize[2] & " x " & $aControlSize[3] & " at " & $aControlSize[0] & ", " & $aControlSize[1] & " (expect " & $g_iAndroidClientWidth & " x " & $g_iAndroidClientHeight & ")", $COLOR_ACTION)
+			If $g_sAndroidEmulator = "MEmu" Then
+				SetLog($g_sAndroidEmulator & " screen mismatch; checking emulator display configuration", $COLOR_ACTION)
+				If $RetryCount1 = 0 And $RetryCount2 = 0 Then
+					UpdateAndroidWindowState()
+					$aControlSize = getAndroidPos(True)
+					If IsArray($aControlSize) And $aControlSize[2] = $g_iAndroidClientWidth And $aControlSize[3] = $g_iAndroidClientHeight Then Return $aControlSize
+				EndIf
+				Return $aControlSize
+			EndIf
 			Local $aAdj0 = [0, 0]
 			If $RetryCount1 = 0 And $RetryCount2 = 0 Then
 				; resize window first to an invalid size
@@ -257,6 +266,10 @@ Func getAndroidPos($FastCheck = False, $RetryCount1 = 0, $RetryCount2 = 0, $bWid
 
 			$aAndroidWindow[0] += $aAdj[0]
 			$aAndroidWindow[1] += $aAdj[1]
+			If $aAndroidWindow[0] < 100 Or $aAndroidWindow[1] < 100 Then
+				SetLog($g_sAndroidEmulator & " window resize stopped; checking emulator display configuration", $COLOR_ACTION)
+				Return $aControlSize
+			EndIf
 			SetDebugLog($sPre & $g_sAndroidTitle & " Adjusted Window Size: " & $aAndroidWindow[0] & " x " & $aAndroidWindow[1] & " (by " & $aAdj[0] + $aAdj0[0] & ", " & $aAdj[1] + $aAdj0[1] & ")", $COLOR_INFO)
 
 			If $bExpectControlResize And $RetryCount1 < 6 Then
@@ -291,16 +304,16 @@ Func getAndroidPos($FastCheck = False, $RetryCount1 = 0, $RetryCount2 = 0, $bWid
 						If $aControlSize[2] <> $g_iAndroidClientWidth Or $aControlSize[3] <> $g_iAndroidClientHeight Then
 							If $bExpectControlResize = True Then
 								If $g_bDebugSetLog Then
-									SetDebugLog($sPre & $g_sAndroidEmulator & " window resize didn't work, screen is " & $aControlSize[2] & " x " & $aControlSize[3], $COLOR_ERROR)
+									SetDebugLog($sPre & $g_sAndroidEmulator & " window resize did not change screen size, current screen is " & $aControlSize[2] & " x " & $aControlSize[3], $COLOR_ERROR)
 								Else
-									SetLog($g_sAndroidEmulator & " window resize didn't work, screen is " & $aControlSize[2] & " x " & $aControlSize[3], $COLOR_ERROR)
+									SetLog($g_sAndroidEmulator & " window resize did not change screen size, current screen is " & $aControlSize[2] & " x " & $aControlSize[3], $COLOR_ACTION)
 								EndIf
 								If $RetryCount1 > 0 And $RetryCount1 < 6 And $RetryCount2 = 0 Then
 									; early abort when cannot be resized
 									Local $bXinc = $aControlSize[0] > $asControlSize[$RetryCount1][0] And $asControlSize[$RetryCount1][0] > $asControlSize[$RetryCount1 - 1][0]
 									Local $bYinc = $aControlSize[1] > $asControlSize[$RetryCount1][1] And $asControlSize[$RetryCount1][1] > $asControlSize[$RetryCount1 - 1][1]
 									If ($bXinc And Not $bYinc) Or (Not $bXinc And $bYinc) Or ($aControlSize[2] < $g_iAndroidClientWidth / 2 Or $aControlSize[2] > $g_iAndroidClientWidth * 1.5 Or $aControlSize[3] < $g_iAndroidClientHeight / 2 Or $aControlSize[3] > $g_iAndroidClientHeight * 1.5) Then
-										SetLog($g_sAndroidEmulator & " window cannot be resized, abort", $COLOR_ERROR)
+										SetLog($g_sAndroidEmulator & " window resize stopped; checking emulator display configuration", $COLOR_ACTION)
 										Return $aControlSize
 									EndIf
 								EndIf
@@ -314,7 +327,7 @@ Func getAndroidPos($FastCheck = False, $RetryCount1 = 0, $RetryCount2 = 0, $bWid
 							$bResizedOk = True
 						EndIf
 					Else
-						; added for Nox that reports during launch a client size of 1x1
+						; Some render controls report a client size of 1x1 during launch
 						If $RetryCount2 < 5 Then
 							Sleep(250)
 							Return getAndroidPos($FastCheck, $RetryCount1, $RetryCount2 + 1, $bWidthFirst)
@@ -325,7 +338,7 @@ Func getAndroidPos($FastCheck = False, $RetryCount1 = 0, $RetryCount2 = 0, $bWid
 				EndIf
 
 			Else
-				; added for Nox that reports during launch a client size of 1x1
+				; Some render controls report a client size of 1x1 during launch
 				If $RetryCount2 < 5 Then
 					Sleep(250)
 					Return getAndroidPos($FastCheck, $RetryCount1, $RetryCount2 + 1, $bWidthFirst)
@@ -376,7 +389,7 @@ Func getAndroidPosWait(ByRef $aControlSize, $aNewControlSize = 0)
 	; wait 3 Sec. till window client content is resized also
 
 	Local $hTimer = __TimerInit()
-	While __TimerDiff($hTimer) < 3000 And UBound($aNewControlSize) > 2 And ($aControlSize[2] = $aNewControlSize[2] Or $aControlSize[3] = $aNewControlSize[3]) And $aNewControlSize[2] <> $g_iAndroidClientWidth And $aNewControlSize[3] <> $g_iAndroidClientHeight
+	While __TimerDiff($hTimer) < 3000 And UBound($aNewControlSize) > 2 And ($aControlSize[2] = $aNewControlSize[2] Or $aControlSize[3] = $aNewControlSize[3]) And ($aNewControlSize[2] <> $g_iAndroidClientWidth Or $aNewControlSize[3] <> $g_iAndroidClientHeight)
 		Sleep($DELAYSLEEP)
 		$aNewControlSize = getAndroidPos(True)
 	WEnd

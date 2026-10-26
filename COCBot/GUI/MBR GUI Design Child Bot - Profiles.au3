@@ -17,8 +17,8 @@
 Global $g_hCmbProfile = 0, $g_hTxtVillageName = 0, $g_hBtnAddProfile = 0, $g_hBtnConfirmAddProfile = 0, $g_hBtnConfirmRenameProfile = 0, $g_hChkOnlySCIDAccounts = 0, $g_hCmbWhatSCIDAccount2Use = 0, _
 		$g_hBtnDeleteProfile = 0, $g_hBtnCancelProfileChange = 0, $g_hBtnRenameProfile = 0, $g_hBtnPullSharedPrefs = 0, $g_hBtnPushSharedPrefs = 0, $g_hBtnSaveprofile = 0
 
-Global $g_hChkSwitchAcc = 0, $g_hCmbSwitchAcc = 0, $g_hChkSharedPrefs = 0, $g_hCmbTotalAccount = 0, $g_hChkDonateLikeCrazy = 0, $g_hCmbMaxInARow = 0, _
-		$g_ahChkAccount[8], $g_ahCmbProfile[8], $g_ahChkDonate[8], _
+Global $g_hChkSwitchAcc = 0, $g_hChkSwitchAccWaitForCC = 0, $g_hCmbSwitchAcc = 0, $g_hChkSharedPrefs = 0, $g_hCmbTotalAccount = 0, $g_hCmbMaxInARow = 0, $g_hBtnSwitchAccPage = 0, _
+		$g_ahChkAccount[$g_iSwitchAccMaxAccounts], $g_ahCmbProfile[$g_iSwitchAccMaxAccounts], _
 		$g_hRadSwitchSuperCellID = 0, $g_hRadSwitchSharedPrefs = 0
 
 Func CreateBotProfiles()
@@ -124,7 +124,7 @@ Func CreateBotProfiles()
 	_GUICtrlSetTip(-1, GetTranslatedFileIni("MBR GUI Design Child Bot - Profiles", "BtnSaveprofile_Info_01", "Save your current setting."))
 
 	$x += 17
-	$g_hChkOnlySCIDAccounts = GUICtrlCreateCheckbox(GetTranslatedFileIni("MBR GUI Design Child Bot - Profiles", "ChkOnlySCIDAccounts", "SCid"), $x + 297, $y, -1, -1)
+	$g_hChkOnlySCIDAccounts = GUICtrlCreateCheckbox(GetTranslatedFileIni("MBR GUI Design Child Bot - Profiles", "ChkOnlySCIDAccounts", "SCID"), $x + 297, $y, -1, -1)
 	_GUICtrlSetTip(-1, GetTranslatedFileIni("MBR GUI Design Child Bot - Profiles", "ChkOnlySCIDAccounts_Info_01", "Are you using SC_ID?"))
 	GUICtrlSetOnEvent(-1, "OnlySCIDAccounts")
 	$g_hCmbWhatSCIDAccount2Use = GUICtrlCreateCombo("", $x + 295 + 47, $y, 75, 18, BitOR($CBS_DROPDOWNLIST, $CBS_AUTOHSCROLL))
@@ -138,7 +138,7 @@ Func CreateBotProfiles()
 	$x -= 8
 	$g_hCmbSwitchAcc = GUICtrlCreateCombo("", $x, $y, 175, 18, BitOR($CBS_DROPDOWNLIST, $CBS_AUTOHSCROLL))
 	Local $s = "No Switch Accounts Group"
-	For $i = 1 To UBound($g_ahChkAccount)
+	For $i = 1 To $g_iSwitchAccMaxGroups
 		$s &= "|Switch Accounts Group " & $i
 	Next
 	GUICtrlSetData(-1, GetTranslatedFileIni("MBR GUI Design Child Bot - Profiles", "CmbSwitchAcc", $s), "No Switch Accounts Group")
@@ -148,49 +148,54 @@ Func CreateBotProfiles()
 	$g_hChkSwitchAcc = GUICtrlCreateCheckbox(GetTranslatedFileIni("MBR GUI Design Child Bot - Profiles", "ChkSwitchAcc", "Enable Switch Accounts"), $x, $y, -1, -1)
 	GUICtrlSetOnEvent(-1, "chkSwitchAcc")
 	_GUICtrlSetTip(-1, GetTranslatedFileIni("MBR GUI Design Child Bot - Profiles", "ChkSwitchAcc_Info_01", "Enable or disable current selected Switch Accounts Group"))
+	$g_hChkSwitchAccWaitForCC = GUICtrlCreateCheckbox(GetTranslatedFileIni("MBR GUI Design Child Bot - Profiles", "ChkSwitchAccWaitForCC", "Switch While Waiting"), $x, $y + 23, -1, -1)
+	GUICtrlSetOnEvent(-1, "chkSwitchAccWaitForCC")
+	_GUICtrlSetTip(-1, GetTranslatedFileIni("MBR GUI Design Child Bot - Profiles", "ChkSwitchAccWaitForCC_Info_01", "Switch to another active account when Clan Castle troops are still missing after 1 minute."))
 
 	$g_hCmbTotalAccount = GUICtrlCreateCombo("", $x + 345, $y - 1, 77, -1, BitOR($CBS_DROPDOWNLIST, $CBS_AUTOHSCROLL))
-	GUICtrlSetData(-1, "2 accounts|3 accounts|4 accounts|5 accounts|6 accounts|7 accounts|8 accounts", "2 accounts")
+	GUICtrlSetData(-1, "2 Accounts|3 Accounts|4 Accounts|5 Accounts|6 Accounts|7 Accounts|8 Accounts|9 Accounts|10 Accounts|11 Accounts|12 Accounts|13 Accounts|14 Accounts|15 Accounts|16 Accounts", "2 Accounts")
 	GUICtrlSetOnEvent(-1, "cmbTotalAcc")
-	GUICtrlCreateLabel(GetTranslatedFileIni("MBR GUI Design Child Bot - Profiles", "CmbTotalAccount", "Total CoC Accounts") & ": ", $x + 220, $y + 4, -1, -1)
+	GUICtrlCreateLabel(GetTranslatedFileIni("MBR GUI Design Child Bot - Profiles", "CmbTotalAccount", "Accounts"), $x + 220, $y + 4, -1, -1)
 
-	$g_hRadSwitchSuperCellID = GUICtrlCreateRadio(GetTranslatedFileIni("MBR GUI Design Child Bot - Profiles", "RadSwitchSuperCellID", "SuperCell ID"), $x + 220, $y - 30, -1, -1)
-	_GUICtrlSetTip(-1, GetTranslatedFileIni("MBR GUI Design Child Bot - Profiles", "RadSwitchSuperCellID_Info_01", "Only support for all SuperCell ID accounts"))
+	$g_hRadSwitchSuperCellID = GUICtrlCreateRadio(GetTranslatedFileIni("MBR GUI Design Child Bot - Profiles", "RadSwitchSuperCellID", "Supercell ID"), $x + 220, $y - 30, -1, -1)
+	_GUICtrlSetTip(-1, GetTranslatedFileIni("MBR GUI Design Child Bot - Profiles", "RadSwitchSuperCellID_Info_01", "Only support for all Supercell ID accounts"))
 	GUICtrlSetState(-1, $GUI_CHECKED)
 	$g_hRadSwitchSharedPrefs = GUICtrlCreateRadio(GetTranslatedFileIni("MBR GUI Design Child Bot - Profiles", "RadSwitchSharedPrefs", "Shared_prefs"), $x + 320, $y - 30, -1, -1)
-	_GUICtrlSetTip(-1, GetTranslatedFileIni("MBR GUI Design Child Bot - Profiles", "RadSwitchSharedPrefs_Info_01", "Support for SuperCell ID accounts"))
+	_GUICtrlSetTip(-1, GetTranslatedFileIni("MBR GUI Design Child Bot - Profiles", "RadSwitchSharedPrefs_Info_01", "Support for Supercell ID accounts"))
 
 	$y += 23
-	$g_hChkDonateLikeCrazy = GUICtrlCreateCheckbox(GetTranslatedFileIni("MBR GUI Design Child Bot - Profiles", "DonateLikeCrazy", "Donate like Crazy"), $x, $y, -1, -1)
-	_GUICtrlSetTip(-1, GetTranslatedFileIni("MBR GUI Design Child Bot - Profiles", "DonateLikeCrazy_Info_01", "Enable it allows account switching in the order: Donate - Acc01 - Donate - Acc02  - Donate...!"))
-
-	GUICtrlCreateLabel(GetTranslatedFileIni("MBR GUI Design Child Bot - Profiles", "CmbMaxAttacksinaRow", "Max attacks in a row : "), $x + 220, $y + 4, -1, -1)
+	GUICtrlCreateLabel(GetTranslatedFileIni("MBR GUI Design Child Bot - Profiles", "CmbMaxAttacksinaRow", "Consecutive Attacks: "), $x + 220, $y + 4, -1, -1)
 	$g_hCmbMaxInARow = GUICtrlCreateCombo("", $x + 345, $y - 1, 77, -1, BitOR($CBS_DROPDOWNLIST, $CBS_AUTOHSCROLL))
 	GUICtrlSetData(-1, "1|2|3|4|5|6|7|8|9|10", "2")
+	GUICtrlSetOnEvent(-1, "cmbMaxInARow")
 
 	$y += 23
-	GUICtrlCreateLabel(GetTranslatedFileIni("MBR GUI Design Child Bot - Profiles", "Description", _
-			"Using Switch Accounts requires that not more Google Accounts are registered in Android than configured here. " & _
-			"Maximum of 8 Google/CoC Accounts is supported."), $x, $y, $g_iSizeWGrpTab2 - 20, 42, $SS_CENTER)
 
 	$y += 29
 	GUICtrlCreateLabel(GetTranslatedFileIni("MBR GUI Design Child Bot - Profiles", "Label_01", "Accounts"), $x - 5, $y, 60, -1, $SS_CENTER)
-	GUICtrlCreateLabel(GetTranslatedFileIni("MBR GUI Design Child Bot - Profiles", "Label_02", "Profile name"), $x + 82, $y, 70, -1, $SS_CENTER)
-	GUICtrlCreateLabel(GetTranslatedFileIni("MBR GUI Design Child Bot - Profiles", "Label_03", "Donate only"), $x + 170, $y, 60, -1, $SS_CENTER)
-	GUICtrlCreateLabel(GetTranslatedFileIni("MBR GUI Design Child Bot - Profiles", "Label_04", "SwitchAcc log"), $x + 285, $y, -1, -1, $SS_CENTER)
+	GUICtrlCreateLabel(GetTranslatedFileIni("MBR GUI Design Child Bot - Profiles", "Label_02", "Profile Name"), $x + 82, $y, 70, -1, $SS_CENTER)
+	GUICtrlCreateLabel(GetTranslatedFileIni("MBR GUI Design Child Bot - Profiles", "Label_04", "SwitchAcc Log"), $x + 285, $y, -1, -1, $SS_CENTER)
 
 	$y += 14
 	GUICtrlCreateGraphic($x, $y, 422, 1, $SS_GRAYRECT)
 
 	$y += 7
 	For $i = 0 To UBound($g_ahChkAccount) - 1
-		$g_ahChkAccount[$i] = GUICtrlCreateCheckbox("Acc " & $i + 1 & ".", $x, $y + ($i) * 25, -1, -1)
+		Local $iPageSlot = Mod($i, $g_iSwitchAccAccountsPerPage)
+		$g_ahChkAccount[$i] = GUICtrlCreateCheckbox("Acc " & $i + 1 & ".", $x, $y + $iPageSlot * 25, -1, -1)
 		GUICtrlSetOnEvent(-1, "chkAccountX")
-		$g_ahCmbProfile[$i] = GUICtrlCreateCombo("", $x + 65, $y + ($i) * 25, 110, 25, BitOR($CBS_DROPDOWNLIST, $CBS_AUTOHSCROLL, $WS_VSCROLL))
+		$g_ahCmbProfile[$i] = GUICtrlCreateCombo("", $x + 65, $y + $iPageSlot * 25, 110, 25, BitOR($CBS_DROPDOWNLIST, $CBS_AUTOHSCROLL, $WS_VSCROLL))
 		GUICtrlSetOnEvent(-1, "cmbSwitchAccProfileX")
 		GUICtrlSetData(-1, _GUICtrlComboBox_GetList($g_hCmbProfile))
-		$g_ahChkDonate[$i] = GUICtrlCreateCheckbox("", $x + 190, $y + ($i) * 25 - 3, -1, 25)
+		If $i >= $g_iSwitchAccAccountsPerPage Then _GUI_Value_STATE("HIDE", $g_ahChkAccount[$i] & "#" & $g_ahCmbProfile[$i])
 	Next
+	$g_hBtnSwitchAccPage = GUICtrlCreateButton(">", $x + 186, $y, 20, 20)
+	GUICtrlSetBkColor(-1, 0x2A2A2A)
+	GUICtrlSetColor(-1, $COLOR_WHITE)
+	GUICtrlSetFont(-1, 8, $FW_BOLD, Default, "Segoe UI Semibold", $CLEARTYPE_QUALITY)
+	GUICtrlSetOnEvent(-1, "btnSwitchAccPage")
+	_GUICtrlSetTip(-1, "Next page")
+	GUICtrlSetState(-1, $GUI_HIDE)
 	GUICtrlCreateGroup("", -99, -99, 1, 1)
 
 EndFunc   ;==>CreateBotProfiles

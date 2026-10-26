@@ -17,6 +17,10 @@
 Global $ResetStats = 0
 
 Func UpdateStats()
+    GUICtrlSetData($g_hLblResultGoldBBNow, $g_aiCurrentLootBB[$eLootGoldBB] = 0 ? "" : _NumberFormat($g_aiCurrentLootBB[$eLootGoldBB], True))
+    GUICtrlSetData($g_hLblResultElixirBBNow, $g_aiCurrentLootBB[$eLootElixirBB] = 0 ? "" : _NumberFormat($g_aiCurrentLootBB[$eLootElixirBB], True))
+    GUICtrlSetData($g_hLblResultTrophyBBNow, $g_aiCurrentLootBB[$eLootTrophyBB] = 0 ? "" : _NumberFormat($g_aiCurrentLootBB[$eLootTrophyBB], True))
+    GUICtrlSetData($g_hLblResultBuilderBBNow, $g_iTotalBuilderCountBB = 0 ? "" : $g_iFreeBuilderCountBB & "/" & $g_iTotalBuilderCountBB)
     Static $s_iOldSmartZapGain = 0, $s_iOldNumLSpellsUsed = 0, $s_iOldNumEQSpellsUsed = 0
     Static $topgoldloot = 0, $topelixirloot = 0, $topdarkloot = 0, $topTrophyloot = 0
     Static $bDonateTroopsStatsChanged = False, $bDonateSpellsStatsChanged = False
@@ -37,7 +41,6 @@ Func UpdateStats()
 
 	If $g_iFirstRun = 1 Then
 		;GUICtrlSetState($g_hLblResultStatsTemp, $GUI_HIDE)
-		GUICtrlSetState($g_hLblVillageReportTemp, $GUI_HIDE)
 		GUICtrlSetState($g_hPicResultGoldTemp, $GUI_HIDE)
 		GUICtrlSetState($g_hPicResultElixirTemp, $GUI_HIDE)
 		GUICtrlSetState($g_hPicResultDETemp, $GUI_HIDE)

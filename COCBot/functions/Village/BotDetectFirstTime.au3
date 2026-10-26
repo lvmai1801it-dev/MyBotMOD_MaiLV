@@ -1,6 +1,6 @@
 ; #FUNCTION# ====================================================================================================================
 ; Name ..........: BotDetectFirstTime
-; Description ...: This script detects your builings on the first run
+; Description ...: This script detects your buildings on the first run
 ; Author ........: HungLe (04/2015)
 ; Modified ......: Hervidero (05/2015), HungLe (05/2015), KnowJack(07/2015), Sardo (08/2015), CodeSlinger69 (01/2017)
 ; Remarks .......: This file is part of MyBot, previously known as ClashGameBot. Copyright 2015-2025
@@ -17,99 +17,17 @@ Func BotDetectFirstTime()
 	ClearScreen()
 	If _Sleep($DELAYBOTDETECT1) Then Return
 
-	SetLog("Detecting your Buildings", $COLOR_INFO)
-
-	#cs
-	If Not isInsideDiamond($g_aiTownHallPos) Then
-	checkMainScreen()
-	Collect(False)
-	_CaptureRegion2()
-	; USES OLD OPENCV DETECTION
-	Local $PixelTHHere = GetLocationItem("getLocationTownHall")
-	If UBound($PixelTHHere) > 0 Then
-	Local $pixel = $PixelTHHere[0]
-	$g_aiTownHallPos[0] = $pixel[0]
-	$g_aiTownHallPos[1] = $pixel[1]
-	SetDebugLog("DLLc# Townhall: (" & $g_aiTownHallPos[0] & "," & $g_aiTownHallPos[1] & ")", $COLOR_ERROR)
-	EndIf
-	If $g_aiTownHallPos[1] = "" Or $g_aiTownHallPos[1] = -1 Then
-	imglocTHSearch(True, True) ; search th on myvillage
-	$g_aiTownHallPos[0] = $g_iTHx
-	$g_aiTownHallPos[1] = $g_iTHy
-	SetDebugLog("OldDDL Townhall: (" & $g_aiTownHallPos[0] & "," & $g_aiTownHallPos[1] & ")", $COLOR_ERROR)
-	EndIf
-	SetLog("Townhall: (" & $g_aiTownHallPos[0] & "," & $g_aiTownHallPos[1] & ")", $COLOR_DEBUG)
-	EndIf
-	#ce
-
-	If Not isInsideDiamond($g_aiTownHallPos) Then
-		checkMainScreen()
-		Collect(False)
-		imglocTHSearch(True, True, True) ; search th on myvillage
-		SetLog("Townhall: (" & $g_aiTownHallPos[0] & "," & $g_aiTownHallPos[1] & ")", $COLOR_DEBUG)
-	EndIf
-
-	If Number($g_iTownHallLevel) < 2 Then
-		Local $aTownHallLevel = GetTownHallLevel(True) ; Get the Users TH level
-		If IsArray($aTownHallLevel) Then $g_iTownHallLevel = 0 ; Check for error finding TH level, and reset to zero if yes
-	EndIf
+	SetLog("Detecting Buildings", $COLOR_INFO)
+	AutoDetectTownHall()
 
 	If Number($g_iTownHallLevel) > 1 And Number($g_iTownHallLevel) < 6 Then
-		SetLog("Warning: TownHall level below 6 NOT RECOMMENDED!", $COLOR_ERROR)
-		SetLog("Proceed with caution as errors may occur.", $COLOR_ERROR)
+		SetLog("Warning: Town Hall level below 6 is not recommended!", $COLOR_ERROR)
+		SetLog("Proceed with caution as errors may occur", $COLOR_ERROR)
 	EndIf
-
-	If $g_iTownHallLevel < 2 Or ($g_aiTownHallPos[1] = "" Or $g_aiTownHallPos[1] = -1) Then LocateTownHall(False, False)
 
 	If _Sleep($DELAYBOTDETECT1) Then Return
 	; CheckImageType()
 	If _Sleep($DELAYBOTDETECT1) Then Return
-
-	If $g_bScreenshotHideName Then
-		If _Sleep($DELAYBOTDETECT3) Then Return
-		If $g_aiClanCastlePos[0] = -1 Or $g_aiClanCastleTroopsCap = -1 Then
-			LocateClanCastle(False)
-			SaveConfig()
-		EndIf
-	EndIf
-
-	If Number($g_iTownHallLevel) >= 7 Then
-		If _Sleep($DELAYBOTDETECT3) Then Return
-		If $g_aiHeroHallPos[0] = "" Or $g_aiHeroHallPos[0] = -1 Then
-			LocateHeroHall(False)
-			SaveConfig()
-		EndIf
-	EndIf
-
-	If _Sleep($DELAYBOTDETECT3) Then Return
-	If $g_aiLaboratoryPos[0] = "" Or $g_aiLaboratoryPos[0] = -1 Then
-		LocateLab(False)
-		SaveConfig()
-	EndIf
-
-	If Number($g_iTownHallLevel) >= 14 Then
-		If _Sleep($DELAYBOTDETECT3) Then Return
-		If $g_aiPetHousePos[0] = "" Or $g_aiPetHousePos[0] = -1 Then
-			LocatePetHouse(False)
-			SaveConfig()
-		EndIf
-	EndIf
-
-	If Number($g_iTownHallLevel) >= 8 Then
-		If _Sleep($DELAYBOTDETECT3) Then Return
-		If $g_aiBlacksmithPos[0] = "" Or $g_aiBlacksmithPos[0] = -1 Then
-			LocateBlacksmith(False)
-			SaveConfig()
-		EndIf
-	EndIf
-
-	If Number($g_iTownHallLevel) >= 9 Then
-		If _Sleep($DELAYBOTDETECT3) Then Return
-		If $g_aiHelperHutPos[0] = "" Or $g_aiHelperHutPos[0] = -1 Then
-		LocateHelperHut(False)
-		SaveConfig()
-		EndIf
-	EndIf
 
 	;Display Level TH in Stats
 	GUICtrlSetData($g_hLblTHLevels, "")
@@ -119,3 +37,51 @@ Func BotDetectFirstTime()
 	GUICtrlSetState($g_ahPicTHLevels[$g_iTownHallLevel], $GUI_SHOW)
 	GUICtrlSetData($g_hLblTHLevels, $g_iTownHallLevel)
 EndFunc   ;==>BotDetectFirstTime
+
+Func AutoDetectTownHall()
+	Local $aiSavedTownHallPos = $g_aiTownHallPos
+	Local $iSavedTownHallLevel = $g_iTownHallLevel
+	Local $bLocalSearch = False
+
+	$g_aiTownHallPos[0] = -1
+	$g_aiTownHallPos[1] = -1
+
+	If isInsideDiamond($aiSavedTownHallPos) Then
+		Local $iLeft = $aiSavedTownHallPos[0] - 90
+		Local $iTop = $aiSavedTownHallPos[1] - 90
+		Local $iRight = $aiSavedTownHallPos[0] + 90
+		Local $iBottom = $aiSavedTownHallPos[1] + 90
+		If $iLeft < 0 Then $iLeft = 0
+		If $iTop < 0 Then $iTop = 0
+		If $iRight > $g_iGAME_WIDTH Then $iRight = $g_iGAME_WIDTH
+		If $iBottom > $g_iGAME_HEIGHT Then $iBottom = $g_iGAME_HEIGHT
+		Local $sLocalArea = GetDiamondFromRect2($iLeft, $iTop, $iRight, $iBottom)
+		imglocTHSearch(True, True, True, $sLocalArea, True)
+		$bLocalSearch = True
+	EndIf
+
+	If Not isInsideDiamond($g_aiTownHallPos) Then imglocTHSearch(True, True, Not $bLocalSearch)
+	If isInsideDiamond($g_aiTownHallPos) Then
+		BuildingClick($g_aiTownHallPos[0], $g_aiTownHallPos[1])
+		If _Sleep($DELAYIMGLOCATE1) Then Return False
+		Local $aTownHallInfo = BuildingInfo(242, 475 + $g_iBottomOffsetY)
+		If IsArray($aTownHallInfo) And StringInStr($aTownHallInfo[1], "Town") And Number($aTownHallInfo[2]) >= 2 Then
+			$g_iTownHallLevel = Number($aTownHallInfo[2])
+			SetLog("Town Hall Detected: (" & $g_aiTownHallPos[0] & "," & $g_aiTownHallPos[1] & "), Level: " & $g_iTownHallLevel, $COLOR_SUCCESS)
+			SaveConfig()
+			ClearScreen()
+			Return True
+		EndIf
+		ClearScreen()
+	EndIf
+
+	$g_aiTownHallPos = $aiSavedTownHallPos
+	$g_iTownHallLevel = $iSavedTownHallLevel
+	If Not isInsideDiamond($g_aiTownHallPos) Then LogUnknownBuildingPosition("Town Hall")
+	Return False
+EndFunc   ;==>AutoDetectTownHall
+
+Func LogUnknownBuildingPosition($sBuilding)
+	SetLog($sBuilding & ": Unknow Position", $COLOR_DEBUG)
+	SetLog("Require manual detection")
+EndFunc   ;==>LogUnknownBuildingPosition

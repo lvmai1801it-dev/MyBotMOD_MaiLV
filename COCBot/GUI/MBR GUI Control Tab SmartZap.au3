@@ -14,73 +14,127 @@
 ; ===============================================================================================================================
 #include-once
 
-Func chkSmartLightSpell()
-	If GUICtrlRead($g_hChkSmartLightSpell) = $GUI_CHECKED Then
-		GUICtrlSetState($g_hChkSmartZapDB, $GUI_ENABLE)
-		GUICtrlSetState($g_hChkSmartZapSaveHeroes, $GUI_ENABLE)
-		GUICtrlSetState($g_hChkSmartZapFTW, $GUI_ENABLE)
-		GUICtrlSetState($g_hChkNoobZap, $GUI_ENABLE)
-		GUICtrlSetState($g_hChkSmartEQSpell, $GUI_ENABLE)
-		GUICtrlSetState($g_hLblSmartUseLSpell, $GUI_SHOW)
-		If GUICtrlRead($g_hChkNoobZap) = $GUI_CHECKED Then
-			GUICtrlSetState($g_hTxtSmartZapMinDE, $GUI_ENABLE)
-			GUICtrlSetState($g_hTxtSmartExpectedDE, $GUI_ENABLE)
-		Else
-			GUICtrlSetState($g_hTxtSmartZapMinDE, $GUI_DISABLE)
-			GUICtrlSetState($g_hTxtSmartExpectedDE, $GUI_DISABLE)
-		EndIf
-		$g_bSmartZapEnable = True
-	Else
-		GUICtrlSetState($g_hChkSmartZapDB, $GUI_DISABLE)
-		GUICtrlSetState($g_hChkSmartZapSaveHeroes, $GUI_DISABLE)
-		GUICtrlSetState($g_hChkSmartZapFTW, $GUI_DISABLE)
-		GUICtrlSetState($g_hTxtSmartZapMinDE, $GUI_DISABLE)
-		GUICtrlSetState($g_hChkNoobZap, $GUI_DISABLE)
-		GUICtrlSetState($g_hChkSmartEQSpell, $GUI_DISABLE)
-		GUICtrlSetState($g_hLblSmartUseLSpell, $GUI_HIDE)
-		GUICtrlSetState($g_hTxtSmartExpectedDE, $GUI_DISABLE)
-		$g_bSmartZapEnable = False
+Func UpdateSmartZapControls()
+	$g_bSmartZapUseLightning = (GUICtrlRead($g_hChkSmartLightSpell) = $GUI_CHECKED)
+	$g_bEarthQuakeZap = (GUICtrlRead($g_hChkSmartEQSpell) = $GUI_CHECKED)
+	$g_bSmartZapEnable = ($g_bSmartZapUseLightning Or $g_bEarthQuakeZap)
+
+	GUICtrlSetState($g_hCmbSmartZapTarget, $g_bSmartZapEnable ? $GUI_ENABLE : $GUI_DISABLE)
+	GUICtrlSetState($g_hCmbSmartZapSecondaryTarget, $g_bSmartZapEnable ? $GUI_ENABLE : $GUI_DISABLE)
+	GUICtrlSetState($g_hCmbSmartZapTiming, $g_bSmartZapEnable ? $GUI_ENABLE : $GUI_DISABLE)
+	GUICtrlSetState($g_hTxtSmartZapSpellsPerTarget, $g_bSmartZapUseLightning ? $GUI_ENABLE : $GUI_DISABLE)
+	GUICtrlSetState($g_hTxtSmartZapEarthquakesPerTarget, $g_bEarthQuakeZap ? $GUI_ENABLE : $GUI_DISABLE)
+
+	If $g_bSmartZapEnable Then
+		cmbSmartZapTarget()
+		cmbSmartZapSecondaryTarget()
+		cmbSmartZapTiming()
 	EndIf
+	If $g_bSmartZapUseLightning Then txtSmartZapSpellsPerTarget()
+	If $g_bEarthQuakeZap Then txtSmartZapEarthquakesPerTarget()
+EndFunc   ;==>UpdateSmartZapControls
+
+Func chkSmartLightSpell()
+	UpdateSmartZapControls()
 EndFunc   ;==>chkSmartLightSpell
 
-Func chkNoobZap()
-	If GUICtrlRead($g_hChkNoobZap) = $GUI_CHECKED Then
-		GUICtrlSetState($g_hTxtSmartZapMinDE, $GUI_ENABLE)
-		GUICtrlSetState($g_hTxtSmartExpectedDE, $GUI_ENABLE)
-		$g_bNoobZap = True
-	Else
-		GUICtrlSetState($g_hTxtSmartZapMinDE, $GUI_DISABLE)
-		GUICtrlSetState($g_hTxtSmartExpectedDE, $GUI_DISABLE)
-		$g_bNoobZap = False
-	EndIf
-EndFunc   ;==>chkNoobZap
-
 Func chkEarthQuakeZap()
-	If GUICtrlRead($g_hChkSmartEQSpell) = $GUI_CHECKED Then
-		GUICtrlSetState($g_hLblSmartUseEQSpell, $GUI_SHOW)
-		$g_bEarthQuakeZap = True
-	Else
-		GUICtrlSetState($g_hLblSmartUseEQSpell, $GUI_HIDE)
-		$g_bEarthQuakeZap = False
-	EndIf
+	UpdateSmartZapControls()
 EndFunc   ;==>chkEarthQuakeZap
 
-Func chkSmartZapDB()
-    $g_bSmartZapDB = (GUICtrlRead($g_hChkSmartZapDB) = $GUI_CHECKED)
-EndFunc   ;==>chkSmartZapDB
+Func cmbSmartZapTarget()
+	$g_iSmartZapTarget = SmartZapTargetFromComboIndex(_GUICtrlComboBox_GetCurSel($g_hCmbSmartZapTarget))
+EndFunc   ;==>cmbSmartZapTarget
 
-Func chkSmartZapFTW()
-    $g_bSmartZapFTW = (GUICtrlRead($g_hChkSmartZapFTW) = $GUI_CHECKED)
-EndFunc   ;==>chkSmartZapFTW
+Func cmbSmartZapSecondaryTarget()
+	$g_iSmartZapSecondaryTarget = SmartZapTargetFromComboIndex(_GUICtrlComboBox_GetCurSel($g_hCmbSmartZapSecondaryTarget) - 1)
+EndFunc   ;==>cmbSmartZapSecondaryTarget
 
-Func chkSmartZapSaveHeroes()
-    $g_bSmartZapSaveHeroes = (GUICtrlRead($g_hChkSmartZapSaveHeroes) = $GUI_CHECKED)
-EndFunc   ;==>chkSmartZapSaveHeroes
+Func SmartZapTargetFromComboIndex($iComboIndex)
+	Switch $iComboIndex
+		Case 1
+			Return $eSmartZapTargetAirDefense
+		Case 2
+			Return $eSmartZapTargetAirSweeper
+		Case 3
+			Return $eSmartZapTargetEagle
+		Case 4
+			Return $eSmartZapTargetFirespitter
+		Case 5
+			Return $eSmartZapTargetInferno
+		Case 6
+			Return $eSmartZapTargetMonolith
+		Case 7
+			Return $eSmartZapTargetMortar
+		Case 8
+			Return $eSmartZapTargetRevengeTower
+		Case 9
+			Return $eSmartZapTargetScatterShot
+		Case 10
+			Return $eSmartZapTargetWizardTower
+		Case 11
+			Return $eSmartZapTargetXBow
+		Case 0
+			Return $eSmartZapTargetDrill
+		Case Else
+			Return -1
+	EndSwitch
+EndFunc   ;==>SmartZapTargetFromComboIndex
 
-Func txtMinDark()
-	$g_iSmartZapMinDE = GUICtrlRead($g_hTxtSmartZapMinDE)
-EndFunc   ;==>txtMinDark
+Func SmartZapTargetComboIndex()
+	Return SmartZapTargetToComboIndex($g_iSmartZapTarget)
+EndFunc   ;==>SmartZapTargetComboIndex
 
-Func txtExpectedDE()
-	$g_iSmartZapExpectedDE = GUICtrlRead($g_hTxtSmartExpectedDE)
-EndFunc   ;==>TxtExpectedDE
+Func SmartZapSecondaryTargetComboIndex()
+	If $g_iSmartZapSecondaryTarget < $eSmartZapTargetDrill Then Return 0
+	Return SmartZapTargetToComboIndex($g_iSmartZapSecondaryTarget) + 1
+EndFunc   ;==>SmartZapSecondaryTargetComboIndex
+
+Func SmartZapTargetToComboIndex($iTarget)
+	Switch $iTarget
+		Case $eSmartZapTargetAirDefense
+			Return 1
+		Case $eSmartZapTargetAirSweeper
+			Return 2
+		Case $eSmartZapTargetEagle
+			Return 3
+		Case $eSmartZapTargetFirespitter
+			Return 4
+		Case $eSmartZapTargetInferno
+			Return 5
+		Case $eSmartZapTargetMonolith
+			Return 6
+		Case $eSmartZapTargetMortar
+			Return 7
+		Case $eSmartZapTargetRevengeTower
+			Return 8
+		Case $eSmartZapTargetScatterShot
+			Return 9
+		Case $eSmartZapTargetWizardTower
+			Return 10
+		Case $eSmartZapTargetXBow
+			Return 11
+		Case Else
+			Return 0
+	EndSwitch
+EndFunc   ;==>SmartZapTargetToComboIndex
+
+Func txtSmartZapSpellsPerTarget()
+	$g_iSmartZapSpellsPerTarget = Int(GUICtrlRead($g_hTxtSmartZapSpellsPerTarget))
+	If $g_iSmartZapSpellsPerTarget < 1 Then $g_iSmartZapSpellsPerTarget = 1
+	If $g_iSmartZapSpellsPerTarget > 99 Then $g_iSmartZapSpellsPerTarget = 99
+	GUICtrlSetData($g_hTxtSmartZapSpellsPerTarget, $g_iSmartZapSpellsPerTarget)
+EndFunc   ;==>txtSmartZapSpellsPerTarget
+
+Func txtSmartZapEarthquakesPerTarget()
+	$g_iSmartZapEarthquakesPerTarget = Int(GUICtrlRead($g_hTxtSmartZapEarthquakesPerTarget))
+	If $g_iSmartZapEarthquakesPerTarget < 1 Then $g_iSmartZapEarthquakesPerTarget = 1
+	If $g_iSmartZapEarthquakesPerTarget > 99 Then $g_iSmartZapEarthquakesPerTarget = 99
+	GUICtrlSetData($g_hTxtSmartZapEarthquakesPerTarget, $g_iSmartZapEarthquakesPerTarget)
+EndFunc   ;==>txtSmartZapEarthquakesPerTarget
+
+Func cmbSmartZapTiming()
+	$g_iSmartZapTiming = _GUICtrlComboBox_GetCurSel($g_hCmbSmartZapTiming)
+	If $g_iSmartZapTiming < $eSmartZapTimingStart Or $g_iSmartZapTiming > $eSmartZapTimingEnd Then $g_iSmartZapTiming = $eSmartZapTimingStart
+	$g_bSmartZapBeforeAttack = ($g_bSmartZapEnable And $g_iSmartZapTiming = $eSmartZapTimingStart)
+EndFunc   ;==>cmbSmartZapTiming

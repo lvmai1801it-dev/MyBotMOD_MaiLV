@@ -1,4 +1,4 @@
-; #FUNCTION# ====================================================================================================================
+﻿; #FUNCTION# ====================================================================================================================
 ; Name ..........: MBR GUI Control Upgrade
 ; Description ...: This file Includes all functions to current GUI
 ; Syntax ........:
@@ -14,24 +14,19 @@
 ; ===============================================================================================================================
 #include-once
 
-Func InitTranslatedTextUpgradeTab()
-	GetTranslatedFileIni("MBR GUI Design - AutoUpgrade", "MsgBox_Warning_Title", "Warning about your settings...")
-	GetTranslatedFileIni("MBR GUI Design - AutoUpgrade", "MsgBox_Warning_Text", "Warning ! You selected 2 resources to ignore... That can be a problem,\r\n" & _
-			"and Auto Upgrade can be ineffective, by not launching any upgrade...\r\n" & _
-			"I recommend you to select only one resource, not more...")
-	GetTranslatedFileIni("MBR GUI Design - AutoUpgrade", "MsgBox_Invalid_Title", "Invalid settings...")
-	GetTranslatedFileIni("MBR GUI Design - AutoUpgrade", "MsgBox_Invalid_Text", "Warning ! You selected 3 resources to ignore... And you can't...\r\n" & _
-			"With your settings, Auto Upgrade will be completely ineffective\r\n" & _
-			"and will not launch any upgrade... You must deselect one or more\r\n" & _
-			"ignored resource.")
-EndFunc   ;==>InitTranslatedTextUpgradeTab
-
 Func btnLocateUpgrades()
 	Local $wasRunState = $g_bRunState
 	$g_bRunState = True
 	LocateUpgrades()
 	$g_bRunState = $wasRunState
 EndFunc   ;==>btnLocateUpgrades
+
+Func cmbBuildingReservedBuilder()
+	$g_iBuildingReservedBuilder = _GUICtrlComboBox_GetCurSel($g_hCmbBuildingReservedBuilder)
+	If $g_iBuildingReservedBuilder < 0 Then $g_iBuildingReservedBuilder = 0
+	If $g_iBuildingReservedBuilder > 6 Then $g_iBuildingReservedBuilder = 6
+	_GUICtrlComboBox_SetCurSel($g_hCmbBuildingReservedBuilder, $g_iBuildingReservedBuilder)
+EndFunc   ;==>cmbBuildingReservedBuilder
 
 Func btnchkbxUpgrade()
 	For $i = 0 To UBound($g_avBuildingUpgrades, 1) - 1
@@ -206,16 +201,24 @@ EndFunc   ;==>btnResetUpgrade
 Func chkLab()
 	If GUICtrlRead($g_hChkAutoLabUpgrades) = $GUI_CHECKED Then
 		$g_bAutoLabUpgradeEnable = True
-		GUICtrlSetState($g_hPicLabUpgrade, $GUI_SHOW)
-		GUICtrlSetState($g_hLblNextUpgrade, $GUI_ENABLE)
-		GUICtrlSetState($g_hCmbLaboratory, $GUI_ENABLE)
-		_GUICtrlSetImage($g_hPicLabUpgrade, $g_sLibIconPath, $g_avLabTroops[$g_iCmbLaboratory][1])
+		For $i = 0 To 2
+			GUICtrlSetState($g_ahCmbLabPriority[$i], $GUI_ENABLE)
+			GUICtrlSetState($g_ahPicLabPriority[$i], $GUI_SHOW)
+		Next
+		; Update icons
+		For $i = 0 To 2
+			If $g_aiLabUpgradePriority[$i] > 0 Then
+				_GUICtrlSetImage($g_ahPicLabPriority[$i], $g_sLibIconPath, $g_avLabTroops[$g_aiLabUpgradePriority[$i]][1])
+			Else
+				_GUICtrlSetImage($g_ahPicLabPriority[$i], $g_sLibIconPath, $eIcnBlank)
+			EndIf
+		Next
 	Else
 		$g_bAutoLabUpgradeEnable = False
-		GUICtrlSetState($g_hPicLabUpgrade, $GUI_HIDE)
-		GUICtrlSetState($g_hLblNextUpgrade, $GUI_DISABLE)
-		GUICtrlSetState($g_hCmbLaboratory, $GUI_DISABLE)
-		_GUICtrlSetImage($g_hPicLabUpgrade, $g_sLibIconPath, $g_avLabTroops[0][1])
+		For $i = 0 To 2
+			GUICtrlSetState($g_ahCmbLabPriority[$i], $GUI_DISABLE)
+			GUICtrlSetState($g_ahPicLabPriority[$i], $GUI_HIDE)
+		Next
 	EndIf
 	LabStatusGUIUpdate()
 EndFunc   ;==>chkLab
@@ -223,16 +226,24 @@ EndFunc   ;==>chkLab
 Func chkStarLab()
 	If GUICtrlRead($g_hChkAutoStarLabUpgrades) = $GUI_CHECKED Then
 		$g_bAutoStarLabUpgradeEnable = True
-		GUICtrlSetState($g_hPicStarLabUpgrade, $GUI_SHOW)
-		GUICtrlSetState($g_hLblNextSLUpgrade, $GUI_ENABLE)
-		GUICtrlSetState($g_hCmbStarLaboratory, $GUI_ENABLE)
-		_GUICtrlSetImage($g_hPicStarLabUpgrade, $g_sLibIconPath, $g_avStarLabTroops[$g_iCmbStarLaboratory][4])
+		For $i = 0 To 2
+			GUICtrlSetState($g_ahCmbStarLabPriority[$i], $GUI_ENABLE)
+			GUICtrlSetState($g_ahPicStarLabPriority[$i], $GUI_SHOW)
+		Next
+		; Update icons
+		For $i = 0 To 2
+			If $g_aiStarLabUpgradePriority[$i] > 0 Then
+				_GUICtrlSetImage($g_ahPicStarLabPriority[$i], $g_sLibIconPath, $g_avStarLabTroops[$g_aiStarLabUpgradePriority[$i]][4])
+			Else
+				_GUICtrlSetImage($g_ahPicStarLabPriority[$i], $g_sLibIconPath, $eIcnBlank)
+			EndIf
+		Next
 	Else
 		$g_bAutoStarLabUpgradeEnable = False
-		GUICtrlSetState($g_hPicStarLabUpgrade, $GUI_HIDE)
-		GUICtrlSetState($g_hLblNextSLUpgrade, $GUI_DISABLE)
-		GUICtrlSetState($g_hCmbStarLaboratory, $GUI_DISABLE)
-		_GUICtrlSetImage($g_hPicStarLabUpgrade, $g_sLibIconPath, $g_avStarLabTroops[0][4])
+		For $i = 0 To 2
+			GUICtrlSetState($g_ahCmbStarLabPriority[$i], $GUI_DISABLE)
+			GUICtrlSetState($g_ahPicStarLabPriority[$i], $GUI_HIDE)
+		Next
 	EndIf
 	StarLabStatusGUIUpdate()
 EndFunc   ;==>chkStarLab
@@ -271,15 +282,43 @@ Func StarLabStatusGUIUpdate()
 	EndIf
 EndFunc   ;==>StarLabStatusGUIUpdate
 
-Func cmbLab()
-	$g_iCmbLaboratory = _GUICtrlComboBox_GetCurSel($g_hCmbLaboratory)
-	_GUICtrlSetImage($g_hPicLabUpgrade, $g_sLibIconPath, $g_avLabTroops[$g_iCmbLaboratory][1])
-EndFunc   ;==>cmbLab
+Func cmbLabPriority()
+	Local $iCtrlId = @GUI_CtrlId
+	Local $iIndex = -1
+	For $i = 0 To 2
+		If $iCtrlId = $g_ahCmbLabPriority[$i] Then
+			$iIndex = $i
+			ExitLoop
+		EndIf
+	Next
+	For $i = 0 To 2
+		$g_aiLabUpgradePriority[$i] = _GUICtrlComboBox_GetCurSel($g_ahCmbLabPriority[$i])
+	Next
+	If $iIndex <> -1 Then
+		If $g_aiLabUpgradePriority[$iIndex] > 0 Then
+			_GUICtrlSetImage($g_ahPicLabPriority[$iIndex], $g_sLibIconPath, $g_avLabTroops[$g_aiLabUpgradePriority[$iIndex]][1])
+		Else
+			_GUICtrlSetImage($g_ahPicLabPriority[$iIndex], $g_sLibIconPath, $eIcnBlank)
+		EndIf
+	EndIf
+EndFunc   ;==>cmbLabPriority
 
-Func cmbStarLab()
-	$g_iCmbStarLaboratory = _GUICtrlComboBox_GetCurSel($g_hCmbStarLaboratory)
-	_GUICtrlSetImage($g_hPicStarLabUpgrade, $g_sLibIconPath, $g_avStarLabTroops[$g_iCmbStarLaboratory][4])
-EndFunc   ;==>cmbStarLab
+Func cmbStarLabPriority()
+	Local $iCtrlId = @GUI_CtrlId
+	Local $iIndex = -1
+	For $i = 0 To 2
+		$g_aiStarLabUpgradePriority[$i] = _GUICtrlComboBox_GetCurSel($g_ahCmbStarLabPriority[$i])
+		If $g_ahCmbStarLabPriority[$i] = $iCtrlId Then $iIndex = $i
+	Next
+	; Update the specific icon
+	If $iIndex >= 0 Then
+		If $g_aiStarLabUpgradePriority[$iIndex] > 0 Then
+			_GUICtrlSetImage($g_ahPicStarLabPriority[$iIndex], $g_sLibIconPath, $g_avStarLabTroops[$g_aiStarLabUpgradePriority[$iIndex]][4])
+		Else
+			_GUICtrlSetImage($g_ahPicStarLabPriority[$iIndex], $g_sLibIconPath, $eIcnBlank)
+		EndIf
+	EndIf
+EndFunc   ;==>cmbStarLabPriority
 
 Func ResetLabUpgradeTime()
 	; Display are you sure message
@@ -331,38 +370,36 @@ Func ResetStarLabUpgradeTime()
 	EndIf
 EndFunc   ;==>ResetStarLabUpgradeTime
 
+Func ApplyHeroMaxLevelUpgradeState($iHeroIndex, $hCheckbox, ByRef $bUpgradeEnabled)
+	If Not $g_abUpgradeHeroMaxLevel[$iHeroIndex] Then Return False
+	GUICtrlSetState($hCheckbox, BitOR($GUI_DISABLE, $GUI_UNCHECKED))
+	$bUpgradeEnabled = False
+	Return True
+EndFunc   ;==>ApplyHeroMaxLevelUpgradeState
+
 Func chkUpgradeKing()
 	Local $ahGroupKingWait[4] = [$g_hChkDBKingWait, $g_hChkABKingWait, $g_hPicDBKingWait, $g_hPicABKingWait]
 	Local $TxtTip = GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "TxtKingWait_Info_01", -1) & @CRLF & _
 			GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "TxtKingWait_Info_02", -1)
 	Local $TxtWarningTip = GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "TxtKingWait_Info_03", "ATTENTION: King auto upgrade is currently enable.")
+	If ApplyHeroMaxLevelUpgradeState(0, $g_hChkUpgradeKing, $g_bUpgradeKingEnable) Then Return
 	If $g_iTownHallLevel > 6 Then ; Must be TH7 or above to have King
-		If GUICtrlRead($g_hCmbBoostBarbarianKing) > 0 Then
-			GUICtrlSetState($g_hChkUpgradeKing, $GUI_UNCHECKED + $GUI_DISABLE)
-			GUICtrlSetState($g_hChkRepUpgradeKing, $GUI_UNCHECKED + $GUI_DISABLE)
-			$g_bUpgradeKingEnable = False
-		Else
-			GUICtrlSetState($g_hChkUpgradeKing, $GUI_ENABLE)
-		EndIf
+		GUICtrlSetState($g_hChkUpgradeKing, $GUI_ENABLE)
 
 		If GUICtrlRead($g_hChkUpgradeKing) = $GUI_CHECKED Then
 			$g_bUpgradeKingEnable = True
-			_GUI_Value_STATE("SHOW", $groupKingSleeping)
 			For $i In $ahGroupKingWait
 				_GUICtrlSetTip($i, $TxtTip & @CRLF & $TxtWarningTip)
 			Next
-			GUICtrlSetState($g_hChkRepUpgradeKing, $GUI_ENABLE)
 		Else
 			$g_bUpgradeKingEnable = False
 			_GUI_Value_STATE("HIDE", $groupKingSleeping)
 			For $i In $ahGroupKingWait
 				_GUICtrlSetTip($i, $TxtTip)
 			Next
-			GUICtrlSetState($g_hChkRepUpgradeKing, $GUI_UNCHECKED + $GUI_DISABLE)
 		EndIf
 	Else
 		GUICtrlSetState($g_hChkUpgradeKing, BitOR($GUI_DISABLE, $GUI_UNCHECKED))
-		GUICtrlSetState($g_hChkRepUpgradeKing, BitOR($GUI_DISABLE, $GUI_UNCHECKED))
 		$g_bUpgradeKingEnable = False
 		_GUI_Value_STATE("HIDE", $groupKingSleeping)
 		For $i In $ahGroupKingWait
@@ -376,38 +413,28 @@ Func chkUpgradeQueen()
 	Local $TxtTip = GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "TxtQueenWait_Info_01", -1) & @CRLF & _
 			GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "TxtQueenWait_Info_02", -1)
 	Local $TxtWarningTip = GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "TxtQueenWait_Info_03", "ATTENTION: Queen auto upgrade is currently enable.")
+	If ApplyHeroMaxLevelUpgradeState(1, $g_hChkUpgradeQueen, $g_bUpgradeQueenEnable) Then Return
 	If $g_iTownHallLevel > 7 Then ; Must be TH8 or above to have Queen
-		If GUICtrlRead($g_hCmbBoostArcherQueen) > 0 Then
-			GUICtrlSetState($g_hChkUpgradeQueen, $GUI_UNCHECKED + $GUI_DISABLE)
-			GUICtrlSetState($g_hChkRepUpgradeQueen, $GUI_UNCHECKED + $GUI_DISABLE)
-			$g_bUpgradeQueenEnable = False
-		Else
-			GUICtrlSetState($g_hChkUpgradeQueen, $GUI_ENABLE)
-		EndIf
+		GUICtrlSetState($g_hChkUpgradeQueen, $GUI_ENABLE)
 
 		If GUICtrlRead($g_hChkUpgradeQueen) = $GUI_CHECKED Then
 			$g_bUpgradeQueenEnable = True
-			_GUI_Value_STATE("SHOW", $groupQueenSleeping)
 			For $i In $ahGroupQueenWait
 				_GUICtrlSetTip($i, $TxtTip & @CRLF & $TxtWarningTip)
 			Next
-			GUICtrlSetState($g_hChkRepUpgradeQueen, $GUI_ENABLE)
 		Else
 			$g_bUpgradeQueenEnable = False
 			_GUI_Value_STATE("HIDE", $groupQueenSleeping)
 			For $i In $ahGroupQueenWait
 				_GUICtrlSetTip($i, $TxtTip)
-				GUICtrlSetState($g_hChkRepUpgradeQueen, $GUI_UNCHECKED + $GUI_DISABLE)
 			Next
 		EndIf
 	Else
 		GUICtrlSetState($g_hChkUpgradeQueen, BitOR($GUI_DISABLE, $GUI_UNCHECKED))
-		GUICtrlSetState($g_hChkRepUpgradeQueen, BitOR($GUI_DISABLE, $GUI_UNCHECKED))
 		$g_bUpgradeQueenEnable = False
 		_GUI_Value_STATE("HIDE", $groupQueenSleeping)
 		For $i In $ahGroupQueenWait
 			_GUICtrlSetTip($i, $TxtTip)
-			GUICtrlSetState($g_hChkRepUpgradeQueen, $GUI_DISABLE)
 		Next
 	EndIf
 EndFunc   ;==>chkUpgradeQueen
@@ -417,33 +444,24 @@ Func chkUpgradePrince()
 	Local $TxtTip = GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "TxtPrinceWait_Info_01", -1) & @CRLF & _
 			GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "TxtPrinceWait_Info_02", -1)
 	Local $TxtWarningTip = GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "TxtPrinceWait_Info_03", "ATTENTION: Prince auto upgrade is currently enable.")
+	If ApplyHeroMaxLevelUpgradeState(2, $g_hChkUpgradePrince, $g_bUpgradePrinceEnable) Then Return
 	If $g_iTownHallLevel > 8 Then ; Must be TH9 or above to have Prince
-		If GUICtrlRead($g_hCmbBoostMinionPrince) > 0 Then
-			GUICtrlSetState($g_hChkUpgradePrince, $GUI_UNCHECKED + $GUI_DISABLE)
-			GUICtrlSetState($g_hChkRepUpgradePrince, $GUI_UNCHECKED + $GUI_DISABLE)
-			$g_bUpgradePrinceEnable = False
-		Else
-			GUICtrlSetState($g_hChkUpgradePrince, $GUI_ENABLE)
-		EndIf
+		GUICtrlSetState($g_hChkUpgradePrince, $GUI_ENABLE)
 
 		If GUICtrlRead($g_hChkUpgradePrince) = $GUI_CHECKED Then
 			$g_bUpgradePrinceEnable = True
-			_GUI_Value_STATE("SHOW", $groupPrinceSleeping)
 			For $i In $ahGroupPrinceWait
 				_GUICtrlSetTip($i, $TxtTip & @CRLF & $TxtWarningTip)
 			Next
-			GUICtrlSetState($g_hChkRepUpgradePrince, $GUI_ENABLE)
 		Else
 			$g_bUpgradePrinceEnable = False
 			_GUI_Value_STATE("HIDE", $groupPrinceSleeping)
 			For $i In $ahGroupPrinceWait
 				_GUICtrlSetTip($i, $TxtTip)
 			Next
-			GUICtrlSetState($g_hChkRepUpgradePrince, $GUI_UNCHECKED + $GUI_DISABLE)
 		EndIf
 	Else
 		GUICtrlSetState($g_hChkUpgradePrince, BitOR($GUI_DISABLE, $GUI_UNCHECKED))
-		GUICtrlSetState($g_hChkRepUpgradePrince, BitOR($GUI_DISABLE, $GUI_UNCHECKED))
 		$g_bUpgradePrinceEnable = False
 		_GUI_Value_STATE("HIDE", $groupPrinceSleeping)
 		For $i In $ahGroupPrinceWait
@@ -457,33 +475,24 @@ Func chkUpgradeWarden()
 	Local $TxtTip = GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "TxtWardenWait_Info_01", -1) & @CRLF & _
 			GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "TxtWardenWait_Info_02", -1)
 	Local $TxtWarningTip = GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "TxtWardenWait_Info_03", "ATTENTION: Warden auto upgrade is currently enable.")
+	If ApplyHeroMaxLevelUpgradeState(3, $g_hChkUpgradeWarden, $g_bUpgradeWardenEnable) Then Return
 	If $g_iTownHallLevel > 10 Then ; Must be TH11 to have warden
-		If GUICtrlRead($g_hCmbBoostWarden) > 0 Then
-			GUICtrlSetState($g_hChkUpgradeWarden, $GUI_UNCHECKED + $GUI_DISABLE)
-			GUICtrlSetState($g_hChkRepUpgradeWarden, $GUI_UNCHECKED + $GUI_DISABLE)
-			$g_bUpgradeWardenEnable = False
-		Else
-			GUICtrlSetState($g_hChkUpgradeWarden, $GUI_ENABLE)
-		EndIf
+		GUICtrlSetState($g_hChkUpgradeWarden, $GUI_ENABLE)
 
 		If GUICtrlRead($g_hChkUpgradeWarden) = $GUI_CHECKED Then
 			$g_bUpgradeWardenEnable = True
-			_GUI_Value_STATE("SHOW", $groupWardenSleeping)
 			For $i In $ahGroupWardenWait
 				_GUICtrlSetTip($i, $TxtTip & @CRLF & $TxtWarningTip)
 			Next
-			GUICtrlSetState($g_hChkRepUpgradeWarden, $GUI_ENABLE)
 		Else
 			$g_bUpgradeWardenEnable = False
 			_GUI_Value_STATE("HIDE", $groupWardenSleeping)
 			For $i In $ahGroupWardenWait
 				_GUICtrlSetTip($i, $TxtTip)
 			Next
-			GUICtrlSetState($g_hChkRepUpgradeWarden, $GUI_UNCHECKED + $GUI_DISABLE)
 		EndIf
 	Else
 		GUICtrlSetState($g_hChkUpgradeWarden, BitOR($GUI_DISABLE, $GUI_UNCHECKED))
-		GUICtrlSetState($g_hChkRepUpgradeWarden, BitOR($GUI_DISABLE, $GUI_UNCHECKED))
 		$g_bUpgradeWardenEnable = False
 		_GUI_Value_STATE("HIDE", $groupWardenSleeping)
 		For $i In $ahGroupWardenWait
@@ -497,33 +506,24 @@ Func chkUpgradeChampion()
 	Local $TxtTip = GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "TxtChampionWait_Info_01", -1) & @CRLF & _
 			GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "TxtChampionWait_Info_02", -1)
 	Local $TxtWarningTip = GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "TxtChampionWait_Info_03", "ATTENTION: Champion auto upgrade is currently enable.")
+	If ApplyHeroMaxLevelUpgradeState(4, $g_hChkUpgradeChampion, $g_bUpgradeChampionEnable) Then Return
 	If $g_iTownHallLevel > 12 Then ; Must be TH13 to have Champion
-		If GUICtrlRead($g_hCmbBoostChampion) > 0 Then
-			GUICtrlSetState($g_hChkUpgradeChampion, $GUI_UNCHECKED + $GUI_DISABLE)
-			GUICtrlSetState($g_hChkRepUpgradeChampion, $GUI_UNCHECKED + $GUI_DISABLE)
-			$g_bUpgradeChampionEnable = False
-		Else
-			GUICtrlSetState($g_hChkUpgradeChampion, $GUI_ENABLE)
-		EndIf
+		GUICtrlSetState($g_hChkUpgradeChampion, $GUI_ENABLE)
 
 		If GUICtrlRead($g_hChkUpgradeChampion) = $GUI_CHECKED Then
 			$g_bUpgradeChampionEnable = True
-			_GUI_Value_STATE("SHOW", $groupChampionSleeping)
 			For $i In $ahGroupChampionWait
 				_GUICtrlSetTip($i, $TxtTip & @CRLF & $TxtWarningTip)
 			Next
-			GUICtrlSetState($g_hChkRepUpgradeChampion, $GUI_ENABLE)
 		Else
 			$g_bUpgradeChampionEnable = False
 			_GUI_Value_STATE("HIDE", $groupChampionSleeping)
 			For $i In $ahGroupChampionWait
 				_GUICtrlSetTip($i, $TxtTip)
 			Next
-			GUICtrlSetState($g_hChkRepUpgradeChampion, $GUI_UNCHECKED + $GUI_DISABLE)
 		EndIf
 	Else
 		GUICtrlSetState($g_hChkUpgradeChampion, BitOR($GUI_DISABLE, $GUI_UNCHECKED))
-		GUICtrlSetState($g_hChkRepUpgradeChampion, BitOR($GUI_DISABLE, $GUI_UNCHECKED))
 		$g_bUpgradeChampionEnable = False
 		_GUI_Value_STATE("HIDE", $groupChampionSleeping)
 		For $i In $ahGroupChampionWait
@@ -531,6 +531,35 @@ Func chkUpgradeChampion()
 		Next
 	EndIf
 EndFunc   ;==>chkUpgradeChampion
+
+Func chkUpgradeDuke()
+	Local $ahGroupDukeWait[1] = [$g_hPicChkDukeSleepWait]
+	Local $TxtTip = GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "TxtDukeWait_Info_01", -1) & @CRLF & _
+			GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "TxtDukeWait_Info_02", -1)
+	Local $TxtWarningTip = GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "TxtDukeWait_Info_03", "ATTENTION: Dragon Duke auto upgrade is currently enable.")
+	If ApplyHeroMaxLevelUpgradeState(5, $g_hChkUpgradeDuke, $g_bUpgradeDukeEnable) Then Return
+	If $g_iTownHallLevel >= 15 Then ; Must be TH15 to have Dragon Duke
+		If GUICtrlRead($g_hChkUpgradeDuke) = $GUI_CHECKED Then
+			$g_bUpgradeDukeEnable = True
+			For $i In $ahGroupDukeWait
+				_GUICtrlSetTip($i, $TxtTip & @CRLF & $TxtWarningTip)
+			Next
+		Else
+			$g_bUpgradeDukeEnable = False
+			_GUI_Value_STATE("HIDE", $groupDukeSleeping)
+			For $i In $ahGroupDukeWait
+				_GUICtrlSetTip($i, $TxtTip)
+			Next
+		EndIf
+	Else
+		GUICtrlSetState($g_hChkUpgradeDuke, BitOR($GUI_DISABLE, $GUI_UNCHECKED))
+		$g_bUpgradeDukeEnable = False
+		_GUI_Value_STATE("HIDE", $groupDukeSleeping)
+		For $i In $ahGroupDukeWait
+			_GUICtrlSetTip($i, $TxtTip)
+		Next
+	EndIf
+EndFunc   ;==>chkUpgradeDuke
 
 Func chkUpgradePets()
 	If $g_iTownHallLevel = 14 Then ; Must be TH14 to have Pets 1->4
@@ -566,7 +595,7 @@ Func chkUpgradePets()
 			SetDebugLog("Upgrade: " & $g_asPetNames[$i] & " disabled")
 		Next
 	ElseIf $g_iTownHallLevel = 16 Then ; TH16 : Pets 1->10
-		For $i = 0 To $ePetCount - 2
+		For $i = 0 To $ePetSneezy - 1
 			GUICtrlSetState($g_hChkUpgradePets[$i], $GUI_ENABLE)
 			If GUICtrlRead($g_hChkUpgradePets[$i]) = $GUI_CHECKED Then
 				$g_bUpgradePetsEnable[$i] = True
@@ -576,13 +605,15 @@ Func chkUpgradePets()
 				SetDebugLog("Upgrade: " & $g_asPetNames[$i] & " disabled")
 			EndIf
 		Next
-		;Sneezy
-		GUICtrlSetState($g_hChkUpgradePets[$ePetCount - 1], $GUI_DISABLE + $GUI_UNCHECKED)
-		$g_bUpgradePetsEnable[$ePetCount - 1] = False
-	ElseIf $g_iTownHallLevel = 17 Then ; TH17 : Pets 1->11
-		For $i = 0 To $ePetCount - 1
-			GUICtrlSetState($g_hChkUpgradePets[$i], $GUI_ENABLE)
-			If GUICtrlRead($g_hChkUpgradePets[$i]) = $GUI_CHECKED Then
+		For $i = $ePetSneezy To $ePetCount - 1
+			GUICtrlSetState($g_hChkUpgradePets[$i], $GUI_DISABLE + $GUI_UNCHECKED)
+			$g_bUpgradePetsEnable[$i] = False
+			SetDebugLog("Upgrade: " & $g_asPetNames[$i] & " disabled")
+		Next
+	ElseIf $g_iTownHallLevel >= 17 Then ; TH17 : Pets 1->11
+ 		For $i = 0 To $ePetCount - 1
+ 			GUICtrlSetState($g_hChkUpgradePets[$i], $GUI_ENABLE)
+ 			If GUICtrlRead($g_hChkUpgradePets[$i]) = $GUI_CHECKED Then
 				$g_bUpgradePetsEnable[$i] = True
 				SetDebugLog("Upgrade: " & $g_asPetNames[$i] & " enabled")
 			Else
@@ -596,13 +627,24 @@ Func chkUpgradePets()
 			$g_bUpgradePetsEnable[$i] = False
 		Next
 	EndIf
+	ApplyMaxLevelPetUpgradeState()
 EndFunc   ;==>chkUpgradePets
+
+Func ApplyMaxLevelPetUpgradeState()
+	For $i = 0 To $ePetCount - 1
+		If $g_bPetMaxLevel[$i] Then
+			GUICtrlSetState($g_hChkUpgradePets[$i], BitOR($GUI_DISABLE, $GUI_UNCHECKED))
+			$g_bUpgradePetsEnable[$i] = False
+			SetDebugLog("Upgrade: " & $g_asPetNames[$i] & " disabled, max level")
+		EndIf
+	Next
+EndFunc   ;==>ApplyMaxLevelPetUpgradeState
 
 Func cmbHeroReservedBuilder()
 	$g_iHeroReservedBuilder = _GUICtrlComboBox_GetCurSel($g_hCmbHeroReservedBuilder)
 	If $g_iTownHallLevel > 6 Then ; Must be TH7 or above to have Heroes
-		If $g_iTownHallLevel > 12 Then ; For TH13 enable up to 5 reserved builders
-			If $g_aiHeroHallPos[2] > 6 Then GUICtrlSetData($g_hCmbHeroReservedBuilder, "|0|1|2|3|4|5", "0")
+		If $g_iTownHallLevel > 12 Then ; For TH13 enable up to 6 reserved builders
+			If $g_aiHeroHallPos[2] > 5 Then GUICtrlSetData($g_hCmbHeroReservedBuilder, "|0|1|2|3|4|5|6", "0")
 		ElseIf $g_iTownHallLevel > 10 Then ; For TH13 enable up to 4 reserved builders
 			If $g_aiHeroHallPos[2] > 4 Then GUICtrlSetData($g_hCmbHeroReservedBuilder, "|0|1|2|3|4", "0")
 		ElseIf $g_iTownHallLevel > 8 Then ; For TH9 enable up to 3 reserved builders
@@ -625,7 +667,7 @@ EndFunc   ;==>cmbHeroReservedBuilder
 
 Func ReducecmbHeroReservedBuilder()
 	Local $IsToUpNrbHeroes = 0
-	Local $CheckedHeroes[5] = [$g_bUpgradeKingEnable, $g_bUpgradeQueenEnable, $g_bUpgradePrinceEnable, $g_bUpgradeWardenEnable, $g_bUpgradeChampionEnable]
+	Local $CheckedHeroes[6] = [$g_bUpgradeKingEnable, $g_bUpgradeQueenEnable, $g_bUpgradePrinceEnable, $g_bUpgradeWardenEnable, $g_bUpgradeChampionEnable, $g_bUpgradeDukeEnable]
 	For $i = 0 To UBound($CheckedHeroes) - 1
 		If $CheckedHeroes[$i] Then $IsToUpNrbHeroes += 1
 	Next
@@ -776,11 +818,24 @@ Func btnEquipmentOrderSet()
 			_GUICtrlSetImage($g_ahImgEquipmentOrderSet, $g_sLibIconPath, $eIcnRedLight)
 		Else
 			SetLog("Equipment upgrade order changed successfully!", $COLOR_SUCCESS)
+			Local $iEquipmentLogCount = 0
 			For $i = 0 To $eEquipmentCount - 1
-				$sNewEquipmentList &= $g_asEquipmentShortNames[$aiUsedEquipment[$i]] & ", "
+				If GUICtrlRead($g_hChkCustomEquipmentOrder[$i]) <> $GUI_CHECKED Then ContinueLoop
+				$sNewEquipmentList &= $g_asEquipmentOrderList[$aiUsedEquipment[$i]][0] & ", "
+				$iEquipmentLogCount += 1
+				If $iEquipmentLogCount = 10 Then ExitLoop
 			Next
+
+			If $sNewEquipmentList = "" Then
+				For $i = 0 To $eEquipmentCount - 1
+					$sNewEquipmentList &= $g_asEquipmentOrderList[$aiUsedEquipment[$i]][0] & ", "
+					$iEquipmentLogCount += 1
+					If $iEquipmentLogCount = 10 Then ExitLoop
+				Next
+			EndIf
+
 			$sNewEquipmentList = StringTrimRight($sNewEquipmentList, 2)
-			SetLog("Equipment order= " & $sNewEquipmentList, $COLOR_INFO)
+			SetLog("Equipment Order: " & $sNewEquipmentList, $COLOR_INFO)
 		EndIf
 	Else
 		SetLog("Must use all Equipment and No duplicate equipment names!", $COLOR_ERROR)
@@ -826,6 +881,7 @@ Func chkWalls()
 		GUICtrlSetState($g_hRdoUseElixir, $GUI_ENABLE)
 		GUICtrlSetState($g_hRdoUseElixirGold, $GUI_ENABLE)
 		GUICtrlSetState($g_hCmbWalls, $GUI_ENABLE)
+		GUICtrlSetState($g_hCmbUpgradeWallStorageLimit, $GUI_ENABLE)
 		GUICtrlSetState($g_hTxtWallMinGold, $GUI_ENABLE)
 		GUICtrlSetState($g_hTxtWallMinElixir, $GUI_ENABLE)
 		cmbWalls()
@@ -835,6 +891,7 @@ Func chkWalls()
 		GUICtrlSetState($g_hRdoUseElixir, $GUI_DISABLE)
 		GUICtrlSetState($g_hRdoUseElixirGold, $GUI_DISABLE)
 		GUICtrlSetState($g_hCmbWalls, $GUI_DISABLE)
+		GUICtrlSetState($g_hCmbUpgradeWallStorageLimit, $GUI_DISABLE)
 		GUICtrlSetState($g_hTxtWallMinGold, $GUI_DISABLE)
 		GUICtrlSetState($g_hTxtWallMinElixir, $GUI_DISABLE)
 	EndIf
@@ -844,17 +901,23 @@ Func chkSaveWallBldr()
 	$g_bUpgradeWallSaveBuilder = (GUICtrlRead($g_hChkSaveWallBldr) = $GUI_CHECKED)
 EndFunc   ;==>chkSaveWallBldr
 
+Func cmbUpgradeWallStorageLimit()
+	$g_iCmbUpgradeWallStorageLimit = _GUICtrlComboBox_GetCurSel($g_hCmbUpgradeWallStorageLimit)
+	If $g_iCmbUpgradeWallStorageLimit < 0 Or $g_iCmbUpgradeWallStorageLimit > 2 Then $g_iCmbUpgradeWallStorageLimit = 1
+	SetDebugLog("Wall Storage Limit: " & UpgradeWallStorageLimitPercent() & "%", $COLOR_DEBUG)
+EndFunc   ;==>cmbUpgradeWallStorageLimit
+
 Func cmbWalls()
 	$g_iCmbUpgradeWallsLevel = _GUICtrlComboBox_GetCurSel($g_hCmbWalls)
 	$g_iWallCost = $g_aiWallCost[$g_iCmbUpgradeWallsLevel]
-	GUICtrlSetData($g_hLblWallCost, _NumberFormat(Int($g_iWallCost - ($g_iWallCost * Number($g_iBuilderBoostDiscount) / 100))))
+	GUICtrlSetData($g_hLblWallCost, _NumberFormat(Ceiling($g_iWallCost - ($g_iWallCost * Number($g_iBuilderBoostDiscount) / 100))))
 
 	For $i = 4 To $g_iCmbUpgradeWallsLevel + 5
 		GUICtrlSetState($g_ahWallsCurrentCount[$i], $GUI_SHOW)
 		GUICtrlSetState($g_ahPicWallsLevel[$i], $GUI_SHOW)
 	Next
 
-	For $i = $g_iCmbUpgradeWallsLevel + 6 To 18
+	For $i = $g_iCmbUpgradeWallsLevel + 6 To 19
 		GUICtrlSetState($g_ahWallsCurrentCount[$i], $GUI_HIDE)
 		GUICtrlSetState($g_ahPicWallsLevel[$i], $GUI_HIDE)
 	Next
@@ -870,41 +933,231 @@ Func btnWalls()
 	AndroidShield("btnWalls") ; Update shield status due to manual $g_bRunState
 EndFunc   ;==>btnWalls
 
+Func btnResetWallCounter()
+	For $i = 4 To 19
+		$g_aiWallsCurrentCount[$i] = 0
+		GUICtrlSetData($g_ahWallsCurrentCount[$i], 0)
+	Next
+	SaveConfig()
+	SetLog("Wall Counters Reset", $COLOR_SUCCESS)
+EndFunc   ;==>btnResetWallCounter
+
 Func chkAutoUpgrade()
-	If GUICtrlRead($g_hChkAutoUpgrade) = $GUI_CHECKED Then
-		$g_bAutoUpgradeEnabled = True
-		For $i = $g_hLblAutoUpgrade To $g_hTxtAutoUpgradeLog
-			GUICtrlSetState($i, $GUI_ENABLE)
-		Next
-	Else
-		$g_bAutoUpgradeEnabled = False
-		For $i = $g_hLblAutoUpgrade To $g_hTxtAutoUpgradeLog
-			GUICtrlSetState($i, $GUI_DISABLE)
-		Next
-	EndIf
+	$g_bAutoUpgradeEnabled = (GUICtrlRead($g_hChkAutoUpgrade) = $GUI_CHECKED)
+	Local $aControls[5] = [$g_hCmbAutoUpgradeResource, $g_hCmbAutoUpgradeType, $g_hCmbAutoUpgradeSorting, $g_hPicAutoUpgradeResource, $g_hPicAutoUpgradeType]
+	_AutoUpgradeSetFilterControls($g_bAutoUpgradeEnabled, $aControls)
+	Local $aSortingIcon[1] = [$g_hPicAutoUpgradeSorting]
+	_AutoUpgradeSetFilterControls($g_bAutoUpgradeEnabled, $aSortingIcon)
 EndFunc   ;==>chkAutoUpgrade
 
-Func chkResourcesToIgnore()
-	For $i = 0 To 2
-		$g_iChkResourcesToIgnore[$i] = GUICtrlRead($g_hChkResourcesToIgnore[$i]) = $GUI_CHECKED ? 1 : 0
-	Next
+Func chkAutoLabUpgrade()
+	$g_bAutoLabUpgradeAutoEnabled = (GUICtrlRead($g_hChkAutoLabUpgrade) = $GUI_CHECKED)
+	Local $aControls[6] = [$g_hCmbAutoLabUpgradeResource, $g_hCmbAutoLabUpgradeType, $g_hCmbAutoLabUpgradeSorting, $g_hPicAutoLabUpgradeResource, $g_hPicAutoLabUpgradeType, $g_hPicAutoLabUpgradeSorting]
+	_AutoUpgradeSetFilterControls($g_bAutoLabUpgradeAutoEnabled, $aControls)
+EndFunc   ;==>chkAutoLabUpgrade
 
-	Local $iIgnoredResources = 0
-	For $i = 0 To 2
-		If $g_iChkResourcesToIgnore[$i] = 1 Then $iIgnoredResources += 1
+Func chkAutoUpgradeBB()
+	$g_bAutoUpgradeBBEnabled = (GUICtrlRead($g_hChkAutoUpgradeBB) = $GUI_CHECKED)
+	Local $aControls[6] = [$g_hCmbAutoUpgradeBBResource, $g_hCmbAutoUpgradeBBType, $g_hCmbAutoUpgradeBBSorting, $g_hPicAutoUpgradeBBResource, $g_hPicAutoUpgradeBBType, $g_hPicAutoUpgradeBBSorting]
+	_AutoUpgradeSetFilterControls($g_bAutoUpgradeBBEnabled, $aControls)
+EndFunc   ;==>chkAutoUpgradeBB
+
+Func chkAutoStarUpgradeBB()
+	$g_bAutoStarUpgradeBBEnabled = (GUICtrlRead($g_hChkAutoStarUpgradeBB) = $GUI_CHECKED)
+	Local $aControls[2] = [$g_hCmbAutoLabUpgradeBBSorting, $g_hPicAutoLabUpgradeBBSorting]
+	_AutoUpgradeSetFilterControls($g_bAutoStarUpgradeBBEnabled, $aControls)
+EndFunc   ;==>chkAutoStarUpgradeBB
+
+Func _AutoUpgradeSetFilterControls($bEnabled, ByRef $aControls)
+	Local $iControlState = $bEnabled ? $GUI_ENABLE : $GUI_DISABLE
+	For $i = 0 To UBound($aControls) - 1
+		GUICtrlSetState($aControls[$i], $iControlState)
 	Next
-	Switch $iIgnoredResources
+EndFunc   ;==>_AutoUpgradeSetFilterControls
+
+Func cmbAutoUpgradeResource()
+	Local $iResource = _GUICtrlComboBox_GetCurSel($g_hCmbAutoUpgradeResource)
+	Local $iIcon = -1
+	Switch $iResource
+		Case 1
+			$iIcon = $eIcnGold
 		Case 2
-			MsgBox(0 + 16, GetTranslatedFileIni("MBR GUI Design - AutoUpgrade", "MsgBox_Warning_Title", "-1"), _
-					GetTranslatedFileIni("MBR GUI Design - AutoUpgrade", "MsgBox_Warning_Text", "-1"))
+			$iIcon = $eIcnElixir
 		Case 3
-			MsgBox(0 + 16, GetTranslatedFileIni("MBR GUI Design - AutoUpgrade", "MsgBox_Invalid_Title", "-1"), _
-					GetTranslatedFileIni("MBR GUI Design - AutoUpgrade", "MsgBox_Invalid_Text", "-1"))
+			$iIcon = $eIcnDark
 	EndSwitch
-EndFunc   ;==>chkResourcesToIgnore
+	_AutoUpgradeSetFilterIcon($g_hPicAutoUpgradeResource, $iIcon)
+EndFunc   ;==>cmbAutoUpgradeResource
 
-Func chkUpgradesToIgnore()
-	For $i = 0 To UBound($g_iChkUpgradesToIgnore) - 1
-		$g_iChkUpgradesToIgnore[$i] = GUICtrlRead($g_hChkUpgradesToIgnore[$i]) = $GUI_CHECKED ? 1 : 0
+Func cmbAutoLabUpgradeResource()
+	Local $iResource = _GUICtrlComboBox_GetCurSel($g_hCmbAutoLabUpgradeResource)
+	Local $iIcon = -1
+	Switch $iResource
+		Case 1
+			$iIcon = $eIcnElixir
+		Case 2
+			$iIcon = $eIcnDark
+	EndSwitch
+	_AutoUpgradeSetFilterIcon($g_hPicAutoLabUpgradeResource, $iIcon)
+EndFunc   ;==>cmbAutoLabUpgradeResource
+
+Func cmbAutoUpgradeType()
+	Local $iType = _GUICtrlComboBox_GetCurSel($g_hCmbAutoUpgradeType)
+	Local $iIcon = -1
+	Switch $iType
+		Case 1
+			$iIcon = $eIcnBarrack
+		Case 2
+			$iIcon = $eIcnRicochetCannon
+		Case 3
+			$iIcon = $eIcnHeroHall
+		Case 4
+			$iIcon = $eIcnDrill
+		Case 5
+			$iIcon = $eIcnTH18
+	EndSwitch
+	_AutoUpgradeSetFilterIcon($g_hPicAutoUpgradeType, $iIcon)
+EndFunc   ;==>cmbAutoUpgradeType
+
+Func cmbAutoUpgradeBBType()
+	Local $iType = _GUICtrlComboBox_GetCurSel($g_hCmbAutoUpgradeBBType)
+	Local $iIcon = -1
+	Switch $iType
+		Case 1
+			$iIcon = $eIcnBuilderBarrack
+		Case 2
+			$iIcon = $eIcnMultiMortar8
+		Case 3
+			$iIcon = $eIcnBattleMachine
+		Case 4
+			$iIcon = $eIcnGemMine
+		Case 5
+			$iIcon = $eIcnBuilderHall
+	EndSwitch
+	_AutoUpgradeSetFilterIcon($g_hPicAutoUpgradeBBType, $iIcon)
+EndFunc   ;==>cmbAutoUpgradeBBType
+
+Func cmbAutoUpgradeSorting()
+	_AutoUpgradeSetFilterIconVisibility($g_hCmbAutoUpgradeSorting, $g_hPicAutoUpgradeSorting)
+EndFunc   ;==>cmbAutoUpgradeSorting
+
+Func cmbAutoLabUpgradeSorting()
+	_AutoUpgradeSetFilterIconVisibility($g_hCmbAutoLabUpgradeSorting, $g_hPicAutoLabUpgradeSorting)
+EndFunc   ;==>cmbAutoLabUpgradeSorting
+
+Func cmbAutoUpgradeBBSorting()
+	_AutoUpgradeSetFilterIconVisibility($g_hCmbAutoUpgradeBBSorting, $g_hPicAutoUpgradeBBSorting)
+EndFunc   ;==>cmbAutoUpgradeBBSorting
+
+Func cmbAutoLabUpgradeBBSorting()
+	_AutoUpgradeSetFilterIconVisibility($g_hCmbAutoLabUpgradeBBSorting, $g_hPicAutoLabUpgradeBBSorting)
+EndFunc   ;==>cmbAutoLabUpgradeBBSorting
+
+Func cmbAutoLabUpgradeType()
+	Local $iType = _GUICtrlComboBox_GetCurSel($g_hCmbAutoLabUpgradeType)
+	Local $iIcon = -1
+	Switch $iType
+		Case 1
+			$iIcon = _AutoUpgradeGetRandomTroopIcon()
+		Case 2
+			$iIcon = $g_aSpellsIcon[Random(0, UBound($g_aSpellsIcon) - 1, 1)]
+		Case 3
+			$iIcon = $g_aSiegesIcon[Random(0, UBound($g_aSiegesIcon) - 1, 1)]
+	EndSwitch
+	_AutoUpgradeSetFilterIcon($g_hPicAutoLabUpgradeType, $iIcon)
+EndFunc   ;==>cmbAutoLabUpgradeType
+
+Func _AutoUpgradeGetRandomTroopIcon()
+	Local $aTroopIcons[$eTroopDebtCollector], $iCount = 0, $bSuper
+	For $i = 0 To $eTroopDebtCollector - 1
+		$bSuper = False
+		For $j = 0 To $iSuperTroopsCount - 1
+			If $i = $g_asSuperTroopIndex[$j] Then
+				$bSuper = True
+				ExitLoop
+			EndIf
+		Next
+		If Not $bSuper Then
+			$aTroopIcons[$iCount] = $g_aTroopsIcon[$i]
+			$iCount += 1
+		EndIf
 	Next
-EndFunc   ;==>chkUpgradesToIgnore
+	If $iCount = 0 Then Return $eIcnBarbarian
+	Return $aTroopIcons[Random(0, $iCount - 1, 1)]
+EndFunc   ;==>_AutoUpgradeGetRandomTroopIcon
+
+Func cmbAutoUpgradeBBResource()
+	Local $iResource = _GUICtrlComboBox_GetCurSel($g_hCmbAutoUpgradeBBResource)
+	Local $iIcon = -1
+	Switch $iResource
+		Case 1
+			$iIcon = $eIcnBBGold
+		Case 2
+			$iIcon = $eIcnBBElix
+	EndSwitch
+	_AutoUpgradeSetFilterIcon($g_hPicAutoUpgradeBBResource, $iIcon)
+EndFunc   ;==>cmbAutoUpgradeBBResource
+
+Func _AutoUpgradeSetFilterIcon($hIcon, $iIcon)
+	If $iIcon < 0 Then
+		GUICtrlSetState($hIcon, $GUI_HIDE)
+		Return
+	EndIf
+	_GUICtrlSetImage($hIcon, $g_sLibIconPath, $iIcon)
+	GUICtrlSetState($hIcon, $GUI_SHOW)
+EndFunc   ;==>_AutoUpgradeSetFilterIcon
+
+Func _AutoUpgradeSetFilterIconVisibility($hCombo, $hIcon)
+	If _GUICtrlComboBox_GetCurSel($hCombo) = 0 Then
+		GUICtrlSetState($hIcon, $GUI_HIDE)
+	Else
+		GUICtrlSetState($hIcon, $GUI_SHOW)
+	EndIf
+EndFunc   ;==>_AutoUpgradeSetFilterIconVisibility
+
+Func UpgradeHeroesSelectAll()
+	Local $aHeroCheckboxes[6] = [$g_hChkUpgradeKing, $g_hChkUpgradeQueen, $g_hChkUpgradePrince, $g_hChkUpgradeWarden, $g_hChkUpgradeChampion, $g_hChkUpgradeDuke]
+	For $i = 0 To UBound($aHeroCheckboxes) - 1
+		$g_abUpgradeHeroMaxLevel[$i] = False
+		If $aHeroCheckboxes[$i] <> 0 Then GUICtrlSetState($aHeroCheckboxes[$i], BitOR($GUI_ENABLE, $GUI_CHECKED))
+	Next
+	chkUpgradeKing()
+	chkUpgradeQueen()
+	chkUpgradePrince()
+	chkUpgradeWarden()
+	chkUpgradeChampion()
+	chkUpgradeDuke()
+	UpgradePetsSelectAll()
+EndFunc   ;==>UpgradeHeroesSelectAll
+
+Func UpgradeHeroesResetAll()
+	Local $aHeroCheckboxes[6] = [$g_hChkUpgradeKing, $g_hChkUpgradeQueen, $g_hChkUpgradePrince, $g_hChkUpgradeWarden, $g_hChkUpgradeChampion, $g_hChkUpgradeDuke]
+	For $i = 0 To UBound($aHeroCheckboxes) - 1
+		$g_abUpgradeHeroMaxLevel[$i] = False
+		If $aHeroCheckboxes[$i] <> 0 Then GUICtrlSetState($aHeroCheckboxes[$i], BitOR($GUI_ENABLE, $GUI_UNCHECKED))
+	Next
+	chkUpgradeKing()
+	chkUpgradeQueen()
+	chkUpgradePrince()
+	chkUpgradeWarden()
+	chkUpgradeChampion()
+	chkUpgradeDuke()
+	UpgradePetsResetAll()
+EndFunc   ;==>UpgradeHeroesResetAll
+
+Func UpgradePetsSelectAll()
+	For $i = 0 To UBound($g_hChkUpgradePets) - 1
+		$g_bPetMaxLevel[$i] = False
+		If $g_hChkUpgradePets[$i] <> 0 Then GUICtrlSetState($g_hChkUpgradePets[$i], BitOR($GUI_ENABLE, $GUI_CHECKED))
+	Next
+	chkUpgradePets()
+EndFunc   ;==>UpgradePetsSelectAll
+
+Func UpgradePetsResetAll()
+	For $i = 0 To UBound($g_hChkUpgradePets) - 1
+		$g_bPetMaxLevel[$i] = False
+		If $g_hChkUpgradePets[$i] <> 0 Then GUICtrlSetState($g_hChkUpgradePets[$i], BitOR($GUI_ENABLE, $GUI_UNCHECKED))
+	Next
+	chkUpgradePets()
+EndFunc   ;==>UpgradePetsResetAll
+

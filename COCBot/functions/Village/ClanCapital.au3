@@ -1,4 +1,4 @@
-; #FUNCTION# ====================================================================================================================
+﻿; #FUNCTION# ====================================================================================================================
 ; Name ..........: Bot Clan Capital / ClanCapital.au3
 ; Description ...: This file controls the "Clan Capital" tab
 ; Syntax ........:
@@ -14,20 +14,40 @@
 ; ===============================================================================================================================
 #include-once
 
+Func _CCCloseVillageEventBar()
+	If _ColorCheck(_GetPixelColor(396, 695, True), Hex(0xFDFDFD, 6), 20) And _
+			_ColorCheck(_GetPixelColor(400, 685, True), Hex(0xE2E2E2, 6), 20) Then
+		SetDebugLog("Closing village event bar before Clan Capital action", $COLOR_DEBUG)
+		Click(396, 695)
+		If _Sleep($DELAYRESPOND) Then Return False
+	EndIf
+	Return True
+EndFunc   ;==>_CCCloseVillageEventBar
+
 Func CollectCCGold($bTest = False)
 	If Not $g_bChkEnableCollectCCGold Then Return
+	If Not _CCCloseVillageEventBar() Then Return
 	Local $bWindowOpened = False
 	Local $CollectingCCGold = 0, $CollectedCCGold = 0
 	Local $aCollect
-	SetLog("Start Collecting Clan Capital Gold", $COLOR_INFO)
+	SetLog("Collecting Clan Capital Gold", $COLOR_INFO)
 	If _Sleep(500) Then Return
 	ZoomOut() ;ZoomOut first
 	If _Sleep(500) Then Return
 
-	If QuickMIS("BC1", $g_sImgCCGoldCollect, 250, 490 + $g_iBottomOffsetY, 400, 670 + $g_iBottomOffsetY) Then
-		Click($g_iQuickMISX - 5, $g_iQuickMISY + 30)
+	Local $bCollectFallback = False
+	Local $bCollectButtonFound = QuickMIS("BC1", $g_sImgCCGoldCollect, 250, 490 + $g_iBottomOffsetY, 400, 670 + $g_iBottomOffsetY)
+	If Not $bCollectButtonFound Then
+		SetDebugLog("Collect Clan Capital Gold image not found, using fallback click", $COLOR_DEBUG)
+		Click(335, 695)
+		$bCollectFallback = True
+		$bCollectButtonFound = True
+	EndIf
+
+	If $bCollectButtonFound Then
+		If Not $bCollectFallback Then Click($g_iQuickMISX - 5, $g_iQuickMISY + 30)
 		For $i = 1 To 5
-			SetDebugLog("Waiting for Forge Window #" & $i, $COLOR_ACTION)
+			SetDebugLog("Waiting Forge Window #" & $i, $COLOR_ACTION)
 			If QuickMIS("BC1", $g_sImgGeneralCloseButton, 770, 130 + $g_iMidOffsetY, 810, 180 + $g_iMidOffsetY) Then
 				$bWindowOpened = True
 				ExitLoop
@@ -41,14 +61,13 @@ Func CollectCCGold($bTest = False)
 				For $i = 0 To UBound($aCollect) - 1
 					If Not $bTest Then
 						$CollectingCCGold = getOcrAndCapture("coc-forge-ccgold", $aCollect[$i][1] - 75, $aCollect[$i][2] - 15, 60, 18, True)
-						SetLog("Collecting " & _NumberFormat($CollectingCCGold, True) & " Clan Capital Gold", $COLOR_INFO)
 						$CollectedCCGold += $CollectingCCGold
 						Click($aCollect[$i][1], $aCollect[$i][2]) ;Click Collect
 					Else
 						$CollectingCCGold = getOcrAndCapture("coc-forge-ccgold", $aCollect[$i][1] - 75, $aCollect[$i][2] - 15, 60, 18, True)
-						SetLog("Test Only, Should Collecting " & _NumberFormat($CollectingCCGold, True) & " Clan Capital Gold", $COLOR_INFO)
+						SetLog("Test Only: Should collect " & _NumberFormat($CollectingCCGold, True) & " Clan Capital Gold", $COLOR_INFO)
 						$CollectedCCGold += $CollectingCCGold
-						SetLog("Test Only, Should Click on [" & $aCollect[$i][1] & "," & $aCollect[$i][2] & "]")
+						SetLog("Test Only: Should click on [" & $aCollect[$i][1] & "," & $aCollect[$i][2] & "]")
 					EndIf
 					If _Sleep(1000) Then Return
 				Next
@@ -57,7 +76,6 @@ Func CollectCCGold($bTest = False)
 
 			If $g_iTownHallLevel > 11 Then
 				If $g_iTownHallLevel < 14 Then
-					SetLog("Checking 3rd forge result", $COLOR_INFO)
 					ClickDrag(770, 290 + $g_iMidOffsetY, 640, 290 + $g_iMidOffsetY)
 					If _Sleep(2000) Then Return
 					If QuickMIS("BC1", $g_sImgCCGoldCollect, 610, 350 + $g_iMidOffsetY, 790, 415 + $g_iMidOffsetY) Then
@@ -68,14 +86,13 @@ Func CollectCCGold($bTest = False)
 							Click($g_iQuickMISX, $g_iQuickMISY) ;Click Collect
 						Else
 							$CollectingCCGold = getOcrAndCapture("coc-forge-ccgold", $g_iQuickMISX - 75, $g_iQuickMISY - 15, 60, 18, True)
-							SetLog("Test Only, Should Collecting " & _NumberFormat($CollectingCCGold, True) & " Clan Capital Gold", $COLOR_INFO)
+							SetLog("Test Only: Should collect " & _NumberFormat($CollectingCCGold, True) & " Clan Capital Gold", $COLOR_INFO)
 							$CollectedCCGold += $CollectingCCGold
-							SetLog("Test Only, Should Click on [" & $g_iQuickMISX & "," & $g_iQuickMISY & "]")
+							SetLog("Test Only: Should click on [" & $g_iQuickMISX & "," & $g_iQuickMISY & "]")
 						EndIf
 						If _Sleep(1000) Then Return
 					EndIf
 				Else
-					SetLog("Checking 3rd and 4th forge result", $COLOR_INFO)
 					ClickDrag(770, 290 + $g_iMidOffsetY, 490, 290 + $g_iMidOffsetY)
 					If _Sleep(2000) Then Return
 					$aCollect = QuickMIS("CNX", $g_sImgCCGoldCollect, 450, 350 + $g_iMidOffsetY, 800, 415 + $g_iMidOffsetY)
@@ -89,9 +106,9 @@ Func CollectCCGold($bTest = False)
 								Click($aCollect[$i][1], $aCollect[$i][2]) ;Click Collect
 							Else
 								$CollectingCCGold = getOcrAndCapture("coc-forge-ccgold", $aCollect[$i][1] - 75, $aCollect[$i][2] - 15, 60, 18, True)
-								SetLog("Test Only, Should Collecting " & _NumberFormat($CollectingCCGold, True) & " Clan Capital Gold", $COLOR_INFO)
+								SetLog("Test Only: Should collect " & _NumberFormat($CollectingCCGold, True) & " Clan Capital Gold", $COLOR_INFO)
 								$CollectedCCGold += $CollectingCCGold
-								SetLog("Test Only, Should Click on [" & $aCollect[$i][1] & "," & $aCollect[$i][2] & "]")
+								SetLog("Test Only: Should click on [" & $aCollect[$i][1] & "," & $aCollect[$i][2] & "]")
 							EndIf
 							If _Sleep(1000) Then Return
 						Next
@@ -99,13 +116,17 @@ Func CollectCCGold($bTest = False)
 				EndIf
 			EndIf
 
-			SetLog("Collected " & _NumberFormat($CollectedCCGold, True) & " Clan Capital Gold Successfully !", $COLOR_SUCCESS1)
+			If $CollectedCCGold > 0 Then
+				SetLog("Collected " & _NumberFormat($CollectedCCGold, True) & " Clan Capital Gold Successfully", $COLOR_SUCCESS)
+			Else
+				SetLog("No clan capital gold available to collect")
+			EndIf
 			If _Sleep(800) Then Return
 			CloseWindow()
 		EndIf
 		$g_iStatsClanCapCollected = $g_iStatsClanCapCollected + $CollectedCCGold
 	Else
-		SetLog("No available Clan Capital Gold to be collected!", $COLOR_INFO)
+		SetLog("No clan capital gold available to collect")
 		Return
 	EndIf
 	UpdateStats()
@@ -114,9 +135,12 @@ Func CollectCCGold($bTest = False)
 EndFunc   ;==>CollectCCGold
 
 Func ClanCapitalReport($SetLog = True)
-	$g_iLootCCGold = getOcrAndCapture("coc-ms", 670, 17, 160, 25, True)
-	$g_iLootCCMedal = getOcrAndCapture("coc-ms", 670, 70, 160, 25, True)
-	$g_iCCTrophies = getOcrAndCapture("coc-cc-trophy", 75, 90, 60, 16, True)
+	Local $iCCGold = _ReadCCGoldOCR()
+	If $iCCGold >= 0 Then $g_iLootCCGold = $iCCGold
+	Local $iCCMedals = _ReadCCMedalsOCR()
+	If $iCCMedals > 0 Then $g_iLootCCMedal = $iCCMedals
+	Local $iCCTrophies = _ReadCCTrophiesOCR()
+	If $iCCTrophies > 0 Then $g_iCCTrophies = $iCCTrophies
 	PicCCTrophies()
 	GUICtrlSetData($g_lblCapitalGold, _NumberFormat($g_iLootCCGold, True))
 	GUICtrlSetData($g_lblCapitalMedal, _NumberFormat($g_iLootCCMedal, True))
@@ -133,40 +157,138 @@ Func ClanCapitalReport($SetLog = True)
 	EndIf
 EndFunc   ;==>ClanCapitalReport
 
+Func _ReadCCGoldOCR()
+	Local Const $aOffsets[3] = [0, -2, 2]
+	Local $aReads[3], $sRaw = "", $sDigits = ""
+	For $i = 0 To UBound($aOffsets) - 1
+		$sRaw = getOcrAndCapture("coc-ms", 670, 17 + $aOffsets[$i], 160, 25, True, False, True)
+		$sDigits = StringRegExpReplace($sRaw, "\D", "")
+		If StringLen($sDigits) < 1 Or StringLen($sDigits) > 7 Then
+			$sRaw = getOcrAndCapture("coc-t-b", 670, 17 + $aOffsets[$i], 160, 25, True, False, True)
+			$sDigits = StringRegExpReplace($sRaw, "\D", "")
+		EndIf
+		$aReads[$i] = (StringLen($sDigits) >= 1 And StringLen($sDigits) <= 7) ? Number($sDigits) : -1
+	Next
+
+	For $i = 0 To UBound($aReads) - 1
+		If $aReads[$i] < 0 Then ContinueLoop
+		Local $iMatches = 0
+		For $j = 0 To UBound($aReads) - 1
+			If $aReads[$i] = $aReads[$j] Then $iMatches += 1
+		Next
+		If $iMatches >= 2 Then Return $aReads[$i]
+	Next
+	If $aReads[0] >= 0 Then Return $aReads[0]
+	For $i = 1 To UBound($aReads) - 1
+		If $aReads[$i] >= 0 Then Return $aReads[$i]
+	Next
+	Return -1
+EndFunc   ;==>_ReadCCGoldOCR
+
+Func _CleanCCTrophiesOCR($sRawValue)
+	Local $sDigits = StringRegExpReplace($sRawValue, "\D", "")
+	If Not StringIsDigit($sDigits) Or StringLen($sDigits) < 3 Or StringLen($sDigits) > 5 Then Return 0
+	Return Int($sDigits)
+EndFunc   ;==>_CleanCCTrophiesOCR
+
+Func _ReadCCTrophiesOCR()
+	Local Const $aLanguages[2] = ["coc-t-b", "coc-cc-trophy"]
+	Local Const $aOffsets[3] = [0, -2, 2]
+	Local $aReads[6], $iRead = 0, $sRaw = "", $iCandidate = 0
+	For $i = 0 To UBound($aLanguages) - 1
+		For $j = 0 To UBound($aOffsets) - 1
+			$sRaw = getOcrAndCapture($aLanguages[$i], 75, 89 + $aOffsets[$j], 58, 22, True)
+			$iCandidate = _CleanCCTrophiesOCR($sRaw)
+			$aReads[$iRead] = ($iCandidate > 0) ? $iCandidate : 0
+			$iRead += 1
+		Next
+	Next
+
+	For $i = 0 To UBound($aReads) - 1
+		If $aReads[$i] = 0 Then ContinueLoop
+		Local $iMatches = 0
+		For $j = 0 To UBound($aReads) - 1
+			If $aReads[$i] = $aReads[$j] Then $iMatches += 1
+		Next
+		If $iMatches >= 2 Then Return $aReads[$i]
+	Next
+	Return 0
+EndFunc   ;==>_ReadCCTrophiesOCR
+
+Func _ReadCCMedalsOCR()
+	Local Const $aLanguages[2] = ["coc-ms", "coc-t-b"]
+	Local Const $aOffsets[3] = [0, -2, 2]
+	Local $aReads[6], $iRead = 0, $sRaw = "", $sDigits = ""
+	For $i = 0 To UBound($aLanguages) - 1
+		For $j = 0 To UBound($aOffsets) - 1
+			$sRaw = getOcrAndCapture($aLanguages[$i], 752, 70 + $aOffsets[$j], 56, 24, True)
+			$sDigits = StringRegExpReplace($sRaw, "\D", "")
+			$aReads[$iRead] = (StringLen($sDigits) >= 3 And StringLen($sDigits) <= 6) ? Number($sDigits) : 0
+			$iRead += 1
+		Next
+	Next
+
+	For $i = 0 To UBound($aReads) - 1
+		If $aReads[$i] = 0 Then ContinueLoop
+		Local $iMatches = 0
+		For $j = 0 To UBound($aReads) - 1
+			If $aReads[$i] = $aReads[$j] Then $iMatches += 1
+		Next
+		If $iMatches >= 2 Then Return $aReads[$i]
+	Next
+	Return 0
+EndFunc   ;==>_ReadCCMedalsOCR
+
+Func TestCCOCR()
+	Local $iGold = _ReadCCGoldOCR()
+	Local $iMedals = _ReadCCMedalsOCR()
+	Local $iTrophies = _ReadCCTrophiesOCR()
+
+	SetLog("[Gold]: " & ($iGold >= 0 ? _NumberFormat($iGold, True) : "OCR failed"), $iGold >= 0 ? $COLOR_INFO : $COLOR_ERROR)
+	SetLog("[Medals]: " & ($iMedals > 0 ? _NumberFormat($iMedals, True) : "OCR failed"), $iMedals > 0 ? $COLOR_INFO : $COLOR_ERROR)
+	SetLog("[Trophies]: " & ($iTrophies > 0 ? $iTrophies : "OCR failed"), $iTrophies > 0 ? $COLOR_INFO : $COLOR_ERROR)
+	Return $iGold >= 0 And $iMedals > 0 And $iTrophies > 0
+EndFunc   ;==>TestCCOCR
+
 Func OpenForgeWindow()
 	If $g_iTownHallLevel < 6 Then
-		SetLog("TH reads as Lvl " & $g_iTownHallLevel & ", has no Forge.")
+		SetLog("Town Hall Level " & $g_iTownHallLevel & " has no forge")
 		Return False
 	EndIf
+	If Not _CCCloseVillageEventBar() Then Return False
 	Local $bRet = False
 	For $z = 1 To 5
 		If QuickMIS("BC1", $g_sImgForgeHouse, 240, 510 + $g_iBottomOffsetY, 380, 670 + $g_iBottomOffsetY) Then
-			Click($g_iQuickMISX + 18, $g_iQuickMISY + 20)
-			For $i = 1 To 5
-				SetDebugLog("Waiting for Forge Window #" & $i, $COLOR_ACTION)
-				If QuickMIS("BC1", $g_sImgGeneralCloseButton, 780, 120 + $g_iMidOffsetY, 850, 170 + $g_iMidOffsetY) Then
-					$bRet = True
-					ExitLoop 2
-				EndIf
-				If _Sleep(600) Then Return
-			Next
+			Click($g_iQuickMISX, $g_iQuickMISY)
+		Else
+			SetDebugLog("Forge image not found, using fallback click", $COLOR_DEBUG)
+			Click(335, 695)
 		EndIf
-		If _Sleep(600) Then Return
+		For $i = 1 To 5
+			SetDebugLog("Waiting Forge Window #" & $i, $COLOR_ACTION)
+			If QuickMIS("BC1", $g_sImgGeneralCloseButton, 780, 120 + $g_iMidOffsetY, 850, 170 + $g_iMidOffsetY) Then
+				$bRet = True
+				ExitLoop 2
+			EndIf
+			If _Sleep(600) Then Return False
+		Next
+		If _Sleep(600) Then Return False
 	Next
+
 	Return $bRet
 EndFunc   ;==>OpenForgeWindow
 
 Func WaitStartCraftWindow()
 	Local $bRet = False
 	For $i = 1 To 5
-		SetDebugLog("Waiting for StartCraft Window #" & $i, $COLOR_ACTION)
+		SetDebugLog("Waiting StartCraft Window #" & $i, $COLOR_ACTION)
 		If QuickMIS("BC1", $g_sImgGeneralCloseButton, 620, 170 + $g_iMidOffsetY, 670, 220 + $g_iMidOffsetY) Then
 			$bRet = True
 			ExitLoop
 		EndIf
 		If _Sleep(600) Then Return
 	Next
-	If Not $bRet Then SetLog("StartCraft Window does not open", $COLOR_ERROR)
+	If Not $bRet Then SetLog("Start craft window does not open", $COLOR_ERROR)
 	Return $bRet
 EndFunc   ;==>WaitStartCraftWindow
 
@@ -199,56 +321,75 @@ Func ForgeClanCapitalGold($bTest = False)
 			ExitLoop
 		EndIf
 	Next
-	If Not $bForgeEnabled Then Return
+	Local $bForgeResourceEnabled = $bForgeEnabled
+	Local $bBuilderForgeEnabled = $bForgeResourceEnabled And $g_iCmbForgeBuilder > 0
+	If Not $bForgeResourceEnabled Then Return
+	If Not $g_bUseGoldPassForgeOnly And Not $bBuilderForgeEnabled Then Return
+	If Not _CCCloseVillageEventBar() Then Return
+	SetLog("Forging Clan Capital Gold", $COLOR_INFO)
 
 	Local $iBuilderToUse = $g_iCmbForgeBuilder
 	Local $ReservedBuilders = 0
-	Local $iUpgradeBuilders = 0
 	Local $aResource, $b_ToStopCheck = False
 	Local $SkipGold = False, $SkipElix = False, $SkipDE = False
 	If Not $g_bRunState Then Return
 
-	SetLog("Checking for Forge ClanCapital Gold", $COLOR_INFO)
 	ZoomOut()
 	getBuilderCount(True) ;check if we have available builder
 
 	If $bTest Then $g_iFreeBuilderCount = 3
-	For $iz = 0 To UBound($g_avBuildingUpgrades, 1) - 1 ; loop through all upgrades to see if any are enabled.
-		If $g_abBuildingUpgradeEnable[$iz] = True Then $iUpgradeBuilders += 1 ; count number enabled
-	Next
+	Local $iBuildingReserve = ReservedBuildersForBuildings(False)
 	Local $iWallReserve = $g_bUpgradeWallSaveBuilder ? 1 : 0
-	If $g_iFreeBuilderCount - $iWallReserve - ReservedBuildersForHeroes() - $iUpgradeBuilders < 1 Then ;check builder reserve on wall, hero upgrade, Buildings upgrade
-		If Not _CheckPixel($aPersonalChallengeOpenButton2, $g_bCapturePixel) Then
-			SetDebugLog("FreeBuilder=" & $g_iFreeBuilderCount & ", Reserved (ForHero=" & $g_iHeroReservedBuilder & " ForWall=" & $iWallReserve & " ForBuilding=" & $iUpgradeBuilders & ")", $COLOR_INFO)
-			SetLog("No available builder for Craft", $COLOR_INFO)
-			Return
+	If $bBuilderForgeEnabled Then
+		If $g_iFreeBuilderCount - $iWallReserve - ReservedBuildersForHeroes() - $iBuildingReserve < 1 Then ;check builder reserves
+			SetDebugLog("FreeBuilder=" & $g_iFreeBuilderCount & ", Reserved (ForHero=" & $g_iHeroReservedBuilder & " ForWall=" & $iWallReserve & " ForBuilding=" & $iBuildingReserve & ")", $COLOR_INFO)
+
+			If $g_bUseGoldPassForgeOnly Then
+				; Gold Pass Forge does not use builders. Run the special slot first, then stop before common forge.
+				$b_ToStopCheck = True
+			Else
+				If Not _CheckPixel($aPersonalChallengeOpenButton2, $g_bCapturePixel) Then
+					SetLog("No available builder for craft")
+					Return
+				EndIf
+				$b_ToStopCheck = True
+			EndIf
+		Else
+			$ReservedBuilders = $g_iFreeBuilderCount - $iWallReserve - ReservedBuildersForHeroes(False) - $iBuildingReserve
+			SetDebugLog("Free Builders allowed for Forge : " & $ReservedBuilders & " / " & $g_iFreeBuilderCount, $COLOR_DEBUG)
 		EndIf
-		$b_ToStopCheck = True
 	Else
-		$ReservedBuilders = $g_iFreeBuilderCount - $iWallReserve - ReservedBuildersForHeroes(False) - $iUpgradeBuilders
-		SetDebugLog("Free Builders allowed for Forge : " & $ReservedBuilders & " / " & $g_iFreeBuilderCount, $COLOR_DEBUG)
+		; Gold Pass only mode: ignore builder availability (we will use auto slot)
+		$ReservedBuilders = 0
 	EndIf
 
-	Local $iCurrentGold = getResourcesMainScreen(695, 23) ;get current Gold
-	Local $iCurrentElix = getResourcesMainScreen(695, 74) ;get current Elixir
-	Local $iCurrentDE = getResourcesMainScreen(720, 120) ;get current Dark Elixir
+	Local $iCurrentGold = getResourcesMainScreen(690, 22) ;get current Gold
+	Local $iCurrentElix = getResourcesMainScreen(690, 59) ;get current Elixir
+	Local $iCurrentDE = getResourcesMainScreen(690, 96) ;get current Dark Elixir
 	Local $isFullGold = _CheckPixel($aIsGoldFull, $g_bCapturePixel)
 	Local $isFullElix = _CheckPixel($aIsElixirFull, $g_bCapturePixel)
 	Local $isFullDark = _CheckPixel($aIsDarkElixirFull, $g_bCapturePixel)
 
-	If $isFullGold And $g_bChkEnableForgeGold Then SetLog("Gold Storages are full!", $COLOR_SUCCESS)
-	If $isFullElix And $g_bChkEnableForgeElix Then SetLog("Elixir Storages are full!", $COLOR_SUCCESS)
-	If $isFullDark And $g_bChkEnableForgeDE Then SetLog("Dark Elixir Storage is full!", $COLOR_SUCCESS)
+	If $isFullGold And $g_bChkEnableForgeGold Then SetLog("Gold Storages: Full", $COLOR_SUCCESS)
+	If $isFullElix And $g_bChkEnableForgeElix Then SetLog("Elixir Storages: Full", $COLOR_SUCCESS)
+	If $isFullDark And $g_bChkEnableForgeDE Then SetLog("Dark Elixir Storages: Full", $COLOR_SUCCESS)
 
 	If Not $g_bRunState Then Return
 	If Not OpenForgeWindow() Then
-		SetLog("Forge Window not Opened, exiting", $COLOR_ACTION)
+		SetLog("No forge available")
 		Return
 	EndIf
 
 	If _Sleep(1000) Then Return
 
-	If Not AutoForgeSlot($bTest, $iCurrentGold, $iCurrentElix, $iCurrentDE, $isFullGold, $isFullElix, $isFullDark, $SkipGold, $SkipElix, $SkipDE) Then $b_ToStopCheck = True
+	; Gold Pass Forge uses the special slot first, then continues with normal builder slots if enabled.
+	If $g_bUseGoldPassForgeOnly Then
+		AutoForgeSlot($bTest, $iCurrentGold, $iCurrentElix, $iCurrentDE, $isFullGold, $isFullElix, $isFullDark, $SkipGold, $SkipElix, $SkipDE)
+		If Not $bBuilderForgeEnabled Then
+			CloseWindow()
+			Return
+		EndIf
+	EndIf
 
 	If $b_ToStopCheck Or $g_iCmbForgeBuilder = 0 Then
 		CloseWindow()
@@ -257,10 +398,10 @@ Func ForgeClanCapitalGold($bTest = False)
 
 	If $g_iTownHallLevel > 11 Then
 		If $g_iTownHallLevel < 14 Then
-			SetDebugLog("Checking 3rd forge", $COLOR_INFO)
+			SetDebugLog("Checking 3rd forge")
 			ClickDrag(770, 290 + $g_iMidOffsetY, 640, 290 + $g_iMidOffsetY)
 		Else
-			SetDebugLog("Checking 3rd and 4th forge", $COLOR_INFO)
+			SetDebugLog("Checking 3rd and 4th forge")
 			ClickDrag(770, 290 + $g_iMidOffsetY, 490, 290 + $g_iMidOffsetY)
 		EndIf
 	EndIf
@@ -268,24 +409,24 @@ Func ForgeClanCapitalGold($bTest = False)
 
 	Select
 		Case ($g_iTownHallLevel = 13 Or $g_iTownHallLevel = 12) And $iBuilderToUse = 4
-			SetLog("TH Level Allows 3 Builders For Forge", $COLOR_DEBUG)
+			SetLog("Town Hall level allows 3 builders for forge", $COLOR_DEBUG)
 			$iBuilderToUse = 3
-			$g_iCmbForgeBuilder = $iBuilderToUse - 1
+			$g_iCmbForgeBuilder = $iBuilderToUse
 			_GUICtrlComboBox_SetCurSel($g_hCmbForgeBuilder, $g_iCmbForgeBuilder)
 		Case $g_iTownHallLevel = 11 And $iBuilderToUse > 2
-			SetLog("TH Level Allows 2 Builders For Forge", $COLOR_DEBUG)
+			SetLog("Town Hall level allows 2 builders for forge", $COLOR_DEBUG)
 			$iBuilderToUse = 2
-			$g_iCmbForgeBuilder = $iBuilderToUse - 1
+			$g_iCmbForgeBuilder = $iBuilderToUse
 			_GUICtrlComboBox_SetCurSel($g_hCmbForgeBuilder, $g_iCmbForgeBuilder)
 		Case $g_iTownHallLevel < 11 And $iBuilderToUse > 1
-			SetLog("TH Level Allows Only 1 Builder For Forge", $COLOR_DEBUG)
+			SetLog("Town Hall level allows only 1 builder for forge", $COLOR_DEBUG)
 			$iBuilderToUse = 1
-			$g_iCmbForgeBuilder = $iBuilderToUse - 1
+			$g_iCmbForgeBuilder = $iBuilderToUse
 			_GUICtrlComboBox_SetCurSel($g_hCmbForgeBuilder, $g_iCmbForgeBuilder)
 	EndSelect
 
 	If Not $g_bRunState Then Return
-	SetLog("Number of Enabled builder for Forge : " & $iBuilderToUse, $COLOR_ACTION)
+	SetLog("Number of enabled builders for forge: " & $iBuilderToUse, $COLOR_ACTION)
 
 	Local $iBuilder = 0
 
@@ -303,14 +444,14 @@ Func ForgeClanCapitalGold($bTest = False)
 	If IsArray($iActiveForge) And UBound($iActiveForge) > 0 Then
 		RemoveDupCNX($iActiveForge)
 		If UBound($iActiveForge) >= $iBuilderToUse Then
-			SetLog("We have All Builder Active for Forge", $COLOR_INFO)
+			SetLog("All builders active for forge")
 			CloseWindow()
 			Return
 		EndIf
 		$iBuilder = UBound($iActiveForge)
 	EndIf
 
-	SetLog("Already active builder Forging : " & $iBuilder, $COLOR_ACTION)
+	SetLog("Already active builder forging: " & $iBuilder, $COLOR_ACTION)
 	If Not $g_bRunState Then Return
 
 	;check if we have craft ready to start
@@ -335,25 +476,25 @@ Func ForgeClanCapitalGold($bTest = False)
 		SetDebugLog("Number of Builder(s) To Use : " & $UnactiveCraftToStart, $COLOR_DEBUG)
 		If $UnactiveCraftToStart < UBound($aCraft) Then
 			$iBuilderToAssign = $UnactiveCraftToStart ; When assigned in Gui < Crafts ready to start
-			If $bTest Then SetLog("Case 1 : Gui < Crafts", $COLOR_DEBUG)
+			If $bTest Then SetLog("Case 1: GUI < crafts", $COLOR_DEBUG)
 		Else
 			$iBuilderToAssign = UBound($aCraft)    ; When assigned in Gui >= Crafts ready to start
-			If $bTest Then SetLog("Case 2 : Gui >= Crafts", $COLOR_DEBUG)
+			If $bTest Then SetLog("Case 2: GUI >= crafts", $COLOR_DEBUG)
 		EndIf
 
 		If $ReservedBuilders < $iBuilderToAssign Then ;check builder reserve on wall and hero upgrade
 			$iBuilderToAssign = $ReservedBuilders
-			If ($g_iHeroReservedBuilder + $iWallReserve + $iUpgradeBuilders) = 1 Then
-				SetLog("Reserved Builder (ForHero=" & $g_iHeroReservedBuilder & " ForWall=" & $iWallReserve & " ForBuilding=" & $iUpgradeBuilders & ")", $COLOR_ACTION)
+			If ($g_iHeroReservedBuilder + $iWallReserve + $iBuildingReserve) = 1 Then
+				SetLog("Reserved builder (hero=" & $g_iHeroReservedBuilder & " wall=" & $iWallReserve & " building=" & $iBuildingReserve & ")", $COLOR_ACTION)
 			Else
-				SetLog("Reserved Builders (ForHero=" & $g_iHeroReservedBuilder & " ForWall=" & $iWallReserve & " ForBuilding=" & $iUpgradeBuilders & ")", $COLOR_ACTION)
+				SetLog("Reserved builders (hero=" & $g_iHeroReservedBuilder & " wall=" & $iWallReserve & " building=" & $iBuildingReserve & ")", $COLOR_ACTION)
 			EndIf
 		EndIf
 
 		If $iBuilderToAssign = 1 Then
-			SetLog("Builder to Assign : " & $iBuilderToAssign, $COLOR_SUCCESS1)
+			SetLog("Builder to assign: " & $iBuilderToAssign, $COLOR_SUCCESS1)
 		Else
-			SetLog("Builders to Assign : " & $iBuilderToAssign, $COLOR_SUCCESS1)
+			SetLog("Builders to assign: " & $iBuilderToAssign, $COLOR_SUCCESS1)
 		EndIf
 
 		Local $aResource
@@ -374,7 +515,7 @@ Func ForgeClanCapitalGold($bTest = False)
 				Case Not $g_bChkEnableForgeGold And $g_bChkEnableForgeElix And $g_bChkEnableForgeDE And Not $g_bChkEnableForgeBBGold And Not $g_bChkEnableForgeBBElix
 					If $SkipElix And $SkipDE Then ExitLoop
 				Case $g_bChkEnableForgeGold And $g_bChkEnableForgeElix And $g_bChkEnableForgeDE And Not $g_bChkEnableForgeBBGold And Not $g_bChkEnableForgeBBElix
-					If $SkipElix And $SkipElix And $SkipDE Then ExitLoop
+					If $SkipGold And $SkipElix And $SkipDE Then ExitLoop
 			EndSelect
 			SetDebugLog("Proceed with builder #" & $j)
 			Click($aCraft[$j - 1][1], $aCraft[$j - 1][2])
@@ -399,7 +540,7 @@ Func ForgeClanCapitalGold($bTest = False)
 							Case Else
 								ContinueLoop
 						EndSwitch
-						SetLog("Try Forge using " & $aResource[$i][0], $COLOR_INFO)
+						SetLog("Trying to forge using " & $aResource[$i][0], $COLOR_INFO)
 						Click($aResource[$i][2], 270 + $g_iMidOffsetY)
 						If _Sleep(1000) Then Return
 						Local $cost = getOcrAndCapture("coc-forge", 250, 350 + $g_iMidOffsetY, 110, 25, True)
@@ -413,7 +554,7 @@ Func ForgeClanCapitalGold($bTest = False)
 							Case "Dark Elixir"
 								If Number($cost) + Number($g_iacmdDarkSaveMin) <= $iCurrentDE Then $bSafeToForge = True
 						EndSwitch
-						SetLog("Forge Cost: " & _NumberFormat($cost, True) & ", gain Capital Gold: " & _NumberFormat($gain, True), $COLOR_ACTION)
+						SetLog("Forge cost: " & _NumberFormat($cost, True) & ", gain capital gold: " & _NumberFormat($gain, True), $COLOR_ACTION)
 						If Not $bSafeToForge Then
 							SetLog("Not safe to forge with " & $aResource[$i][0] & ", not enough resource to save", $COLOR_INFO)
 							Switch $aResource[$i][0]
@@ -442,23 +583,23 @@ Func ForgeClanCapitalGold($bTest = False)
 						EndIf
 						If Not $g_bRunState Then Return
 						If Not $bTest Then
-							Click(430, 450 + $g_iMidOffsetY)
-							SetLog("Success Forge with " & $aResource[$i][0] & ", will gain " & _NumberFormat($gain, True) & " Capital Gold", $COLOR_SUCCESS)
+							Click(432, 483, 1, 120)
+							SetLog("Successfully forged with " & $aResource[$i][0] & ", gained " & _NumberFormat($gain, True) & " capital gold", $COLOR_SUCCESS)
 							$IsLowResource = False
 							$g_iFreeBuilderCount -= 1
 							If _Sleep(1000) Then Return
 							Switch $aResource[$i][0]
 								Case "Gold"
 									$iCurrentGold = $iCurrentGold - Number($cost)
-									SetLog("Remaining " & $aResource[$i][0] & " : " & _NumberFormat($iCurrentGold, True) & "", $COLOR_SUCCESS)
+									SetLog("Remaining " & $aResource[$i][0] & ": " & _NumberFormat($iCurrentGold, True) & "", $COLOR_SUCCESS)
 									$isFullGold = False
 								Case "Elixir"
 									$iCurrentElix = $iCurrentElix - Number($cost)
-									SetLog("Remaining " & $aResource[$i][0] & " : " & _NumberFormat($iCurrentElix, True) & "", $COLOR_SUCCESS)
+									SetLog("Remaining " & $aResource[$i][0] & ": " & _NumberFormat($iCurrentElix, True) & "", $COLOR_SUCCESS)
 									$isFullElix = False
 								Case "Dark Elixir"
 									$iCurrentDE = $iCurrentDE - Number($cost)
-									SetLog("Remaining " & $aResource[$i][0] & " : " & _NumberFormat($iCurrentDE, True) & "", $COLOR_SUCCESS)
+									SetLog("Remaining " & $aResource[$i][0] & ": " & _NumberFormat($iCurrentDE, True) & "", $COLOR_SUCCESS)
 									$isFullDark = False
 							EndSwitch
 							ContinueLoop 2
@@ -470,15 +611,15 @@ Func ForgeClanCapitalGold($bTest = False)
 							Switch $aResource[$i][0]
 								Case "Gold"
 									$iCurrentGold = $iCurrentGold - Number($cost)
-									SetLog("Remaining " & $aResource[$i][0] & " : " & _NumberFormat($iCurrentGold, True) & "", $COLOR_SUCCESS)
+									SetLog("Remaining " & $aResource[$i][0] & ": " & _NumberFormat($iCurrentGold, True) & "", $COLOR_SUCCESS)
 									$isFullGold = False
 								Case "Elixir"
 									$iCurrentElix = $iCurrentElix - Number($cost)
-									SetLog("Remaining " & $aResource[$i][0] & " : " & _NumberFormat($iCurrentElix, True) & "", $COLOR_SUCCESS)
+									SetLog("Remaining " & $aResource[$i][0] & ": " & _NumberFormat($iCurrentElix, True) & "", $COLOR_SUCCESS)
 									$isFullElix = False
 								Case "Dark Elixir"
 									$iCurrentDE = $iCurrentDE - Number($cost)
-									SetLog("Remaining " & $aResource[$i][0] & " : " & _NumberFormat($iCurrentDE, True) & "", $COLOR_SUCCESS)
+									SetLog("Remaining " & $aResource[$i][0] & ": " & _NumberFormat($iCurrentDE, True) & "", $COLOR_SUCCESS)
 									$isFullDark = False
 							EndSwitch
 							ContinueLoop 2
@@ -501,7 +642,7 @@ Func ForgeClanCapitalGold($bTest = False)
 						Case "Dark Elixir"
 							If $SkipDE Then ContinueLoop
 					EndSwitch
-					SetLog("Try Forge using " & $aResource[$i][0], $COLOR_INFO)
+					SetLog("Try Forge Using " & $aResource[$i][0], $COLOR_INFO)
 					Click($aResource[$i][2], 270 + $g_iMidOffsetY)
 					If _Sleep(1000) Then Return
 					Local $cost = getOcrAndCapture("coc-forge", 250, 350 + $g_iMidOffsetY, 110, 25, True)
@@ -520,7 +661,7 @@ Func ForgeClanCapitalGold($bTest = False)
 							$ResCostDiff = $g_aiCurrentLootBB[$eLootElixirBB] - Number($cost)
 					EndSwitch
 					If $cost = "" Or $ResCostDiff < 0 Then
-						SetLog("Not enough resource to forge with " & $aResource[$i][0], $COLOR_INFO)
+						SetLog("Insufficient " & $aResource[$i][0], $COLOR_DEBUG)
 						Switch $aResource[$i][0]
 							Case "Gold"
 								$SkipGold = True
@@ -570,9 +711,9 @@ Func ForgeClanCapitalGold($bTest = False)
 					EndIf
 					If Not $g_bRunState Then Return
 					If Not $bTest Then
-						Click(430, 450 + $g_iMidOffsetY)
+						Click(432, 483, 1, 120)
 						If isGemOpen(True) Then
-							SetLog("Not enough resource to forge with " & $aResource[$i][0], $COLOR_INFO)
+							SetLog("Insufficient " & $aResource[$i][0], $COLOR_DEBUG)
 							Switch $aResource[$i][0]
 								Case "Gold"
 									$SkipGold = True
@@ -583,26 +724,26 @@ Func ForgeClanCapitalGold($bTest = False)
 							EndSwitch
 							ContinueLoop
 						EndIf
-						SetLog("Success Forge with " & $aResource[$i][0] & ", will gain " & _NumberFormat($gain, True) & " Capital Gold", $COLOR_SUCCESS)
+						SetLog("Successful Forge", $COLOR_SUCCESS)
 						$IsLowResource = False
 						$g_iFreeBuilderCount -= 1
 						If _Sleep(1000) Then Return
 						Switch $aResource[$i][0]
 							Case "Gold"
 								$iCurrentGold = $iCurrentGold - Number($cost)
-								SetLog("Remaining " & $aResource[$i][0] & " : " & _NumberFormat($iCurrentGold, True), $COLOR_SUCCESS)
+								SetLog("Remaining " & $aResource[$i][0] & ": " & _NumberFormat($iCurrentGold, True), $COLOR_SUCCESS)
 							Case "Elixir"
 								$iCurrentElix = $iCurrentElix - Number($cost)
-								SetLog("Remaining " & $aResource[$i][0] & " : " & _NumberFormat($iCurrentElix, True), $COLOR_SUCCESS)
+								SetLog("Remaining " & $aResource[$i][0] & ": " & _NumberFormat($iCurrentElix, True), $COLOR_SUCCESS)
 							Case "Dark Elixir"
 								$iCurrentDE = $iCurrentDE - Number($cost)
-								SetLog("Remaining " & $aResource[$i][0] & " : " & _NumberFormat($iCurrentDE, True), $COLOR_SUCCESS)
+								SetLog("Remaining " & $aResource[$i][0] & ": " & _NumberFormat($iCurrentDE, True), $COLOR_SUCCESS)
 							Case "Builder Base Gold"
 								$g_aiCurrentLootBB[$eLootGoldBB] = $g_aiCurrentLootBB[$eLootGoldBB] - Number($cost)
-								SetLog("Remaining " & $aResource[$i][0] & " : " & _NumberFormat($g_aiCurrentLootBB[$eLootGoldBB], True), $COLOR_SUCCESS)
+								SetLog("Remaining " & $aResource[$i][0] & ": " & _NumberFormat($g_aiCurrentLootBB[$eLootGoldBB], True), $COLOR_SUCCESS)
 							Case "Builder Base Elixir"
 								$g_aiCurrentLootBB[$eLootElixirBB] = $g_aiCurrentLootBB[$eLootElixirBB] - Number($cost)
-								SetLog("Remaining " & $aResource[$i][0] & " : " & _NumberFormat($g_aiCurrentLootBB[$eLootElixirBB], True), $COLOR_SUCCESS)
+								SetLog("Remaining " & $aResource[$i][0] & ": " & _NumberFormat($g_aiCurrentLootBB[$eLootElixirBB], True), $COLOR_SUCCESS)
 						EndSwitch
 						ExitLoop
 					Else
@@ -613,19 +754,19 @@ Func ForgeClanCapitalGold($bTest = False)
 						Switch $aResource[$i][0]
 							Case "Gold"
 								$iCurrentGold = $iCurrentGold - Number($cost)
-								SetLog("Remaining " & $aResource[$i][0] & " : " & _NumberFormat($iCurrentGold, True), $COLOR_SUCCESS)
+								SetLog("Remaining " & $aResource[$i][0] & ": " & _NumberFormat($iCurrentGold, True), $COLOR_SUCCESS)
 							Case "Elixir"
 								$iCurrentElix = $iCurrentElix - Number($cost)
-								SetLog("Remaining " & $aResource[$i][0] & " : " & _NumberFormat($iCurrentElix, True), $COLOR_SUCCESS)
+								SetLog("Remaining " & $aResource[$i][0] & ": " & _NumberFormat($iCurrentElix, True), $COLOR_SUCCESS)
 							Case "Dark Elixir"
 								$iCurrentDE = $iCurrentDE - Number($cost)
-								SetLog("Remaining " & $aResource[$i][0] & " : " & _NumberFormat($iCurrentDE, True), $COLOR_SUCCESS)
+								SetLog("Remaining " & $aResource[$i][0] & ": " & _NumberFormat($iCurrentDE, True), $COLOR_SUCCESS)
 							Case "Builder Base Gold"
 								$g_aiCurrentLootBB[$eLootGoldBB] = $g_aiCurrentLootBB[$eLootGoldBB] - Number($cost)
-								SetLog("Remaining " & $aResource[$i][0] & " : " & _NumberFormat($g_aiCurrentLootBB[$eLootGoldBB], True), $COLOR_SUCCESS)
+								SetLog("Remaining " & $aResource[$i][0] & ": " & _NumberFormat($g_aiCurrentLootBB[$eLootGoldBB], True), $COLOR_SUCCESS)
 							Case "Builder Base Elixir"
 								$g_aiCurrentLootBB[$eLootElixirBB] = $g_aiCurrentLootBB[$eLootElixirBB] - Number($cost)
-								SetLog("Remaining " & $aResource[$i][0] & " : " & _NumberFormat($g_aiCurrentLootBB[$eLootElixirBB], True), $COLOR_SUCCESS)
+								SetLog("Remaining " & $aResource[$i][0] & ": " & _NumberFormat($g_aiCurrentLootBB[$eLootElixirBB], True), $COLOR_SUCCESS)
 						EndSwitch
 						ExitLoop
 					EndIf
@@ -663,11 +804,25 @@ Func AutoForgeSlot($bTest, ByRef $iCurrentGold, ByRef $iCurrentElix, ByRef $iCur
 			$aResource = SortResources(Number($iCurrentGold), Number($iCurrentElix), Number($iCurrentDE), Number($g_aiCurrentLootBB[$eLootGoldBB]), Number($g_aiCurrentLootBB[$eLootElixirBB]))
 			For $i = 0 To UBound($aResource) - 1
 				If $aResource[$i][3] = True Then ;check if ForgeType Enabled
-					SetLog("Try Forge using " & $aResource[$i][0], $COLOR_INFO)
+					Switch $aResource[$i][0]
+						Case "Gold"
+							If Not $isFullGold Or $SkipGold Then ContinueLoop
+						Case "Elixir"
+							If Not $isFullElix Or $SkipElix Then ContinueLoop
+						Case "Dark Elixir"
+							If Not $isFullDark Or $SkipDE Then ContinueLoop
+						Case Else
+							ContinueLoop
+					EndSwitch
+					SetLog("Try Forge Using " & $aResource[$i][0], $COLOR_INFO)
 					Click($aResource[$i][2], 270 + $g_iMidOffsetY)
 					If _Sleep(1000) Then Return
 					Local $cost = getOcrAndCapture("coc-forge", 240, 358 + $g_iMidOffsetY, 160, 25, True)
 					Local $gain = getOcrAndCapture("coc-forge", 530, 365 + $g_iMidOffsetY, 65, 25, True)
+					If $cost = "" Then
+						SetLog("Unable to read Gold Pass Forge cost", $COLOR_WARNING)
+						ContinueLoop
+					EndIf
 					Local $bSafeToForge = False
 					Switch $aResource[$i][0]
 						Case "Gold"
@@ -706,23 +861,35 @@ Func AutoForgeSlot($bTest, ByRef $iCurrentGold, ByRef $iCurrentElix, ByRef $iCur
 					EndIf
 					If Not $g_bRunState Then Return
 					If Not $bTest Then
-						Click(430, 450 + $g_iMidOffsetY)
-						SetLog("Success Forge with " & $aResource[$i][0] & ", will gain " & _NumberFormat($gain, True) & " Capital Gold", $COLOR_SUCCESS)
+						Click(432, 483, 1, 120)
+						If isGemOpen(True) Then
+							SetLog("Insufficient " & $aResource[$i][0], $COLOR_DEBUG)
+							Switch $aResource[$i][0]
+								Case "Gold"
+									$SkipGold = True
+								Case "Elixir"
+									$SkipElix = True
+								Case "Dark Elixir"
+									$SkipDE = True
+							EndSwitch
+							ContinueLoop
+						EndIf
+						SetLog("Successful Forge", $COLOR_SUCCESS)
 						$IsLowResource = False
 						$g_CraftLaunched = True
 						If _Sleep(1000) Then Return
 						Switch $aResource[$i][0]
 							Case "Gold"
 								$iCurrentGold = $iCurrentGold - Number($cost)
-								SetLog("Remaining " & $aResource[$i][0] & " : " & _NumberFormat($iCurrentGold, True), $COLOR_SUCCESS)
+								SetLog("Remaining " & $aResource[$i][0] & ": " & _NumberFormat($iCurrentGold, True), $COLOR_SUCCESS)
 								$isFullGold = False
 							Case "Elixir"
 								$iCurrentElix = $iCurrentElix - Number($cost)
-								SetLog("Remaining " & $aResource[$i][0] & " : " & _NumberFormat($iCurrentElix, True), $COLOR_SUCCESS)
+								SetLog("Remaining " & $aResource[$i][0] & ": " & _NumberFormat($iCurrentElix, True), $COLOR_SUCCESS)
 								$isFullElix = False
 							Case "Dark Elixir"
 								$iCurrentDE = $iCurrentDE - Number($cost)
-								SetLog("Remaining " & $aResource[$i][0] & " : " & _NumberFormat($iCurrentDE, True), $COLOR_SUCCESS)
+								SetLog("Remaining " & $aResource[$i][0] & ": " & _NumberFormat($iCurrentDE, True), $COLOR_SUCCESS)
 								$isFullDark = False
 						EndSwitch
 						Return True
@@ -734,15 +901,15 @@ Func AutoForgeSlot($bTest, ByRef $iCurrentGold, ByRef $iCurrentElix, ByRef $iCur
 						Switch $aResource[$i][0]
 							Case "Gold"
 								$iCurrentGold = $iCurrentGold - Number($cost)
-								SetLog("Remaining " & $aResource[$i][0] & " : " & _NumberFormat($iCurrentGold, True), $COLOR_SUCCESS)
+								SetLog("Remaining " & $aResource[$i][0] & ": " & _NumberFormat($iCurrentGold, True), $COLOR_SUCCESS)
 								$isFullGold = False
 							Case "Elixir"
 								$iCurrentElix = $iCurrentElix - Number($cost)
-								SetLog("Remaining " & $aResource[$i][0] & " : " & _NumberFormat($iCurrentElix, True), $COLOR_SUCCESS)
+								SetLog("Remaining " & $aResource[$i][0] & ": " & _NumberFormat($iCurrentElix, True), $COLOR_SUCCESS)
 								$isFullElix = False
 							Case "Dark Elixir"
 								$iCurrentDE = $iCurrentDE - Number($cost)
-								SetLog("Remaining " & $aResource[$i][0] & " : " & _NumberFormat($iCurrentDE, True), $COLOR_SUCCESS)
+								SetLog("Remaining " & $aResource[$i][0] & ": " & _NumberFormat($iCurrentDE, True), $COLOR_SUCCESS)
 								$isFullDark = False
 						EndSwitch
 						Return True
@@ -765,7 +932,7 @@ Func AutoForgeSlot($bTest, ByRef $iCurrentGold, ByRef $iCurrentElix, ByRef $iCur
 					Case "Dark Elixir"
 						If $SkipDE Then ContinueLoop
 				EndSwitch
-				SetLog("Try Forge using " & $aResource[$i][0], $COLOR_INFO)
+				SetLog("Try Forge Using " & $aResource[$i][0], $COLOR_INFO)
 				Click($aResource[$i][2], 270 + $g_iMidOffsetY)
 				If _Sleep(1000) Then Return
 				Local $cost = getOcrAndCapture("coc-forge", 240, 358 + $g_iMidOffsetY, 160, 25, True)
@@ -784,7 +951,7 @@ Func AutoForgeSlot($bTest, ByRef $iCurrentGold, ByRef $iCurrentElix, ByRef $iCur
 						$ResCostDiff = $g_aiCurrentLootBB[$eLootElixirBB] - Number($cost)
 				EndSwitch
 				If $cost = "" Or $ResCostDiff < 0 Then
-					SetLog("Not enough resource to forge with " & $aResource[$i][0], $COLOR_INFO)
+					SetLog("Insufficient " & $aResource[$i][0], $COLOR_DEBUG)
 					Switch $aResource[$i][0]
 						Case "Gold"
 							$SkipGold = True
@@ -834,9 +1001,9 @@ Func AutoForgeSlot($bTest, ByRef $iCurrentGold, ByRef $iCurrentElix, ByRef $iCur
 				EndIf
 				If Not $g_bRunState Then Return
 				If Not $bTest Then
-					Click(430, 450 + $g_iMidOffsetY)
+					Click(432, 483, 1, 120)
 					If isGemOpen(True) Then
-						SetLog("Not enough resource to forge with " & $aResource[$i][0], $COLOR_INFO)
+						SetLog("Insufficient " & $aResource[$i][0], $COLOR_DEBUG)
 						Switch $aResource[$i][0]
 							Case "Gold"
 								$SkipGold = True
@@ -847,26 +1014,26 @@ Func AutoForgeSlot($bTest, ByRef $iCurrentGold, ByRef $iCurrentElix, ByRef $iCur
 						EndSwitch
 						ContinueLoop
 					EndIf
-					SetLog("Success Forge with " & $aResource[$i][0] & ", will gain " & _NumberFormat($gain, True) & " Capital Gold", $COLOR_SUCCESS)
+					SetLog("Successful Forge", $COLOR_SUCCESS)
 					$IsLowResource = False
 					$g_CraftLaunched = True
 					If _Sleep(1000) Then Return
 					Switch $aResource[$i][0]
 						Case "Gold"
 							$iCurrentGold = $iCurrentGold - Number($cost)
-							SetLog("Remaining " & $aResource[$i][0] & " : " & _NumberFormat($iCurrentGold, True), $COLOR_SUCCESS)
+							SetLog("Remaining " & $aResource[$i][0] & ": " & _NumberFormat($iCurrentGold, True), $COLOR_SUCCESS)
 						Case "Elixir"
 							$iCurrentElix = $iCurrentElix - Number($cost)
-							SetLog("Remaining " & $aResource[$i][0] & " : " & _NumberFormat($iCurrentElix, True), $COLOR_SUCCESS)
+							SetLog("Remaining " & $aResource[$i][0] & ": " & _NumberFormat($iCurrentElix, True), $COLOR_SUCCESS)
 						Case "Dark Elixir"
 							$iCurrentDE = $iCurrentDE - Number($cost)
-							SetLog("Remaining " & $aResource[$i][0] & " : " & _NumberFormat($iCurrentDE, True), $COLOR_SUCCESS)
+							SetLog("Remaining " & $aResource[$i][0] & ": " & _NumberFormat($iCurrentDE, True), $COLOR_SUCCESS)
 						Case "Builder Base Gold"
 							$g_aiCurrentLootBB[$eLootGoldBB] = $g_aiCurrentLootBB[$eLootGoldBB] - Number($cost)
-							SetLog("Remaining " & $aResource[$i][0] & " : " & _NumberFormat($g_aiCurrentLootBB[$eLootGoldBB], True), $COLOR_SUCCESS)
+							SetLog("Remaining " & $aResource[$i][0] & ": " & _NumberFormat($g_aiCurrentLootBB[$eLootGoldBB], True), $COLOR_SUCCESS)
 						Case "Builder Base Elixir"
 							$g_aiCurrentLootBB[$eLootElixirBB] = $g_aiCurrentLootBB[$eLootElixirBB] - Number($cost)
-							SetLog("Remaining " & $aResource[$i][0] & " : " & _NumberFormat($g_aiCurrentLootBB[$eLootElixirBB], True), $COLOR_SUCCESS)
+							SetLog("Remaining " & $aResource[$i][0] & ": " & _NumberFormat($g_aiCurrentLootBB[$eLootElixirBB], True), $COLOR_SUCCESS)
 					EndSwitch
 					ExitLoop
 				Else
@@ -877,19 +1044,19 @@ Func AutoForgeSlot($bTest, ByRef $iCurrentGold, ByRef $iCurrentElix, ByRef $iCur
 					Switch $aResource[$i][0]
 						Case "Gold"
 							$iCurrentGold = $iCurrentGold - Number($cost)
-							SetLog("Remaining " & $aResource[$i][0] & " : " & _NumberFormat($iCurrentGold, True), $COLOR_SUCCESS)
+							SetLog("Remaining " & $aResource[$i][0] & ": " & _NumberFormat($iCurrentGold, True), $COLOR_SUCCESS)
 						Case "Elixir"
 							$iCurrentElix = $iCurrentElix - Number($cost)
-							SetLog("Remaining " & $aResource[$i][0] & " : " & _NumberFormat($iCurrentElix, True), $COLOR_SUCCESS)
+							SetLog("Remaining " & $aResource[$i][0] & ": " & _NumberFormat($iCurrentElix, True), $COLOR_SUCCESS)
 						Case "Dark Elixir"
 							$iCurrentDE = $iCurrentDE - Number($cost)
-							SetLog("Remaining " & $aResource[$i][0] & " : " & _NumberFormat($iCurrentDE, True), $COLOR_SUCCESS)
+							SetLog("Remaining " & $aResource[$i][0] & ": " & _NumberFormat($iCurrentDE, True), $COLOR_SUCCESS)
 						Case "Builder Base Gold"
 							$g_aiCurrentLootBB[$eLootGoldBB] = $g_aiCurrentLootBB[$eLootGoldBB] - Number($cost)
-							SetLog("Remaining " & $aResource[$i][0] & " : " & _NumberFormat($g_aiCurrentLootBB[$eLootGoldBB], True), $COLOR_SUCCESS)
+							SetLog("Remaining " & $aResource[$i][0] & ": " & _NumberFormat($g_aiCurrentLootBB[$eLootGoldBB], True), $COLOR_SUCCESS)
 						Case "Builder Base Elixir"
 							$g_aiCurrentLootBB[$eLootElixirBB] = $g_aiCurrentLootBB[$eLootElixirBB] - Number($cost)
-							SetLog("Remaining " & $aResource[$i][0] & " : " & _NumberFormat($g_aiCurrentLootBB[$eLootElixirBB], True), $COLOR_SUCCESS)
+							SetLog("Remaining " & $aResource[$i][0] & ": " & _NumberFormat($g_aiCurrentLootBB[$eLootElixirBB], True), $COLOR_SUCCESS)
 					EndSwitch
 					ExitLoop
 				EndIf
@@ -918,16 +1085,11 @@ Func IsCCBuilderMenuOpen()
 EndFunc   ;==>IsCCBuilderMenuOpen
 
 Func ClickCCBuilder()
-	Local $bRet = False
-	If IsCCBuilderMenuOpen() Then $bRet = True
-	If Not $bRet Then
-		If QuickMIS("BC1", $g_sImgCCMap, 300, 10, 430, 40) Then
-			Click($g_iQuickMISX, $g_iQuickMISY)
-			If _Sleep(2000) Then Return
-			If IsCCBuilderMenuOpen() Then $bRet = True
-		EndIf
-	EndIf
-	Return $bRet
+	If IsCCBuilderMenuOpen() Then Return True
+	If Not QuickMIS("BC1", $g_sImgCCMap, 300, 10, 430, 40) Then Return False
+	Click($g_iQuickMISX, $g_iQuickMISY)
+	If _Sleep(2000) Then Return False
+	Return IsCCBuilderMenuOpen()
 EndFunc   ;==>ClickCCBuilder
 
 Func FindCCExistingUpgrade()
@@ -942,7 +1104,7 @@ Func FindCCExistingUpgrade()
 			If IsIgnored($aUpgrade[$i][1], $aUpgrade[$i][2], False) Then $isIgnored += 1
 		Next
 		If $isIgnored = UBound($aUpgrade) Then
-			SetLog("All upgrades in progress are to be ignored", $COLOR_ERROR)
+			SetLog("All upgrades in progress will be ignored", $COLOR_ERROR)
 			Return 0
 		EndIf
 
@@ -951,7 +1113,7 @@ Func FindCCExistingUpgrade()
 			$name = getCCBuildingName($aUpgrade[$i][1] - 275, $aUpgrade[$i][2] - 9)
 			For $y In $g_bCCPriorArmy
 				If StringInStr($name[0], $y) Then
-					SetLog("Upgrade for Army Stuff Detected", $COLOR_SUCCESS1)
+					SetLog("Upgrade for army stuff detected", $COLOR_SUCCESS1)
 					$aResult = $aBackup
 					_ArrayAdd($aResult, $name[0] & "|" & $aUpgrade[$i][1] & "|" & $aUpgrade[$i][2])
 					$IsFoundArmy = True
@@ -966,20 +1128,19 @@ Func FindCCExistingUpgrade()
 			If $g_bChkAutoUpgradeCCIgnore Then
 				For $y In $aCCBuildingIgnore
 					If StringInStr($name[0], $y) Then
-						SetLog("Upgrade for " & $name[0] & " Ignored, Skip!!", $COLOR_ACTION)
+						SetLog("Upgrade for " & $name[0] & " ignored, skipping", $COLOR_ACTION)
 						ContinueLoop 2 ;skip this upgrade, looking next
 					EndIf
 				Next
 			EndIf
 			If $g_bChkAutoUpgradeCCWallIgnore Then ; Filter for wall
 				If StringInStr($name[0], "Wall") Then
-					SetLog("Upgrade for Walls Ignored, Skip!!", $COLOR_ACTION)
+					SetLog("Upgrade for walls ignored, skipping", $COLOR_ACTION)
 					ContinueLoop ;skip this upgrade, looking next
 				EndIf
 			EndIf
 			_ArrayAdd($aResult, $name[0] & "|" & $aUpgrade[$i][1] & "|" & $aUpgrade[$i][2])
 		Next
-
 	EndIf
 	Return $aResult
 EndFunc   ;==>FindCCExistingUpgrade
@@ -1003,7 +1164,7 @@ Func FindCCSuggestedUpgrade()
 			If $g_bChkAutoUpgradeCCPriorArmy Then
 				For $y In $g_bCCPriorArmy
 					If StringInStr($name[0], $y) Then
-						SetLog("Upgrade for Army Stuff Detected", $COLOR_SUCCESS1)
+						SetLog("Upgrade for army stuff detected", $COLOR_SUCCESS1)
 						$aResult = $aBackup
 						_ArrayAdd($aResult, $name[0] & "|" & $aUpgrade[$i][1] & "|" & $aUpgrade[$i][2])
 						$IsFoundArmy = True
@@ -1026,14 +1187,14 @@ Func FindCCSuggestedUpgrade()
 			If $g_bChkAutoUpgradeCCIgnore Then
 				For $y In $aCCBuildingIgnore
 					If StringInStr($name[0], $y) Then
-						SetLog("Upgrade for " & $name[0] & " Ignored, Skip!!", $COLOR_ACTION)
+						SetLog("Upgrade for " & $name[0] & " ignored, skipping", $COLOR_ACTION)
 						ContinueLoop 2 ;skip this upgrade, looking next
 					EndIf
 				Next
 			EndIf
 			If $g_bChkAutoUpgradeCCWallIgnore Then ; Filter for wall
 				If StringInStr($name[0], "Wall") Then
-					SetLog("Upgrade for Walls Ignored, Skip!!", $COLOR_ACTION)
+					SetLog("Upgrade for walls ignored, skipping", $COLOR_ACTION)
 					ContinueLoop ;skip this upgrade, looking next
 				EndIf
 			EndIf
@@ -1047,7 +1208,7 @@ Func WaitUpgradeButtonCC()
 	Local $aRet[3] = [False, 0, 0]
 	For $i = 1 To 10
 		If Not $g_bRunState Then Return $aRet
-		SetLog("Waiting for Upgrade Button #" & $i, $COLOR_ACTION)
+		SetLog("Waiting Upgrade Button #" & $i, $COLOR_ACTION)
 		If QuickMIS("BC1", $g_sImgCCUpgradeButton, 300, 510 + $g_iBottomOffsetY, 600, 620 + $g_iBottomOffsetY) Then ;check for upgrade button (Hammer)
 			$aRet[0] = True
 			$aRet[1] = $g_iQuickMISX
@@ -1063,66 +1224,117 @@ EndFunc   ;==>WaitUpgradeButtonCC
 Func WaitUpgradeWindowCC()
 	Local $bRet = False
 	For $i = 1 To 10
-		SetLog("Waiting for Upgrade Window #" & $i, $COLOR_ACTION)
+		SetLog("Waiting Upgrade Window #" & $i, $COLOR_ACTION)
 		If _Sleep(1000) Then Return
 		If QuickMIS("BC1", $g_sImgGeneralCloseButton, 750, 60, 810, 90 + $g_iMidOffsetY) Then ;check if upgrade window opened
 			$bRet = True
 			Return $bRet
 		EndIf
 	Next
-	If Not $bRet Then SetLog("Upgrade Window doesn't open", $COLOR_ERROR)
+	If Not $bRet Then SetLog("Upgrade window doesn't open", $COLOR_ERROR)
 	Return $bRet
 EndFunc   ;==>WaitUpgradeWindowCC
 
 Func SwitchToMainVillage()
-	Local $bRet = False, $loop = 0
+	Local $bRet = False
+	SetLog("Returning To Main Village", $COLOR_ACTION)
 	SetDebugLog("Going To MainVillage", $COLOR_ACTION)
-	SwitchToCapitalMain()
-	For $i = 1 To 20
-		If QuickMIS("BC1", $g_sImgGeneralCloseButton, 780, 90, 840, 130 + $g_iMidOffsetY) Then ; check if we have window covering map, close it!
-			SetLog("Found Raid Window Covering Map, Close it!", $COLOR_INFO)
-			If _Sleep(Random(1250, 2000, 1)) Then Return
-			Click($g_iQuickMISX, $g_iQuickMISY)
-			If _Sleep(3000) Then Return
-			SwitchToCapitalMain()
-		EndIf
-		If QuickMIS("BC1", $g_sImgCCMap, 15, 550 + $g_iBottomOffsetY, 115, 640 + $g_iBottomOffsetY) Then
-			If $g_iQuickMISName = "ReturnHome" Then
-				Local $HomeCoordsX[2] = [45, 85]
-				Local $HomeCoordsY[2] = [590 + $g_iBottomOffsetY, 625 + $g_iBottomOffsetY]
-				Local $HomeButtonClickX = Random($HomeCoordsX[0], $HomeCoordsX[1], 1)
-				Local $HomeButtonClickY = Random($HomeCoordsY[0], $HomeCoordsY[1], 1)
-				Click($HomeButtonClickX, $HomeButtonClickY, 1, 120, "HomeButton") ;Click ReturnHome
+	For $iAttempt = 1 To 3
+		Local $bCapitalMain = _CCIsCapitalMainMap()
+		If Not $bCapitalMain Then SwitchToCapitalMain()
+		For $i = 1 To 10
+			If QuickMIS("BC1", $g_sImgGeneralCloseButton, 780, 90, 840, 130 + $g_iMidOffsetY) Then ; check if we have window covering map, close it!
+				SetLog("Raid Window Detected - Closing It", $COLOR_INFO)
+				If _Sleep(Random(1250, 2000, 1)) Then Return
+				Click($g_iQuickMISX, $g_iQuickMISY)
+				If _Sleep(3000) Then Return
+				ContinueLoop
+			EndIf
+			If _CCFindMapButton("ReturnHome", 0, 590, 140, $g_iGAME_HEIGHT) Then
+				SetDebugLog("Return Home button detected, attempt " & $iAttempt, $COLOR_DEBUG)
+				_CCClickMapButton("ReturnHome")
 				If _Sleep(2000) Then Return
 				ExitLoop
 			EndIf
-		EndIf
-		If _Sleep(250) Then Return
-	Next
+			If _Sleep(250) Then Return
+		Next
 
-	While 1
-		If isOnMainVillage(True) Then
-			$bRet = True
-			ExitLoop
-		EndIf
-		$loop += 1
-		If $loop = 20 Then ExitLoop
-		If _Sleep(500) Then Return
-	WEnd
+		For $iCheck = 1 To 10
+			If IsMainPage(1) Or isOnMainVillage(True) Then
+				$bRet = True
+				ExitLoop 2
+			EndIf
+			If _Sleep(500) Then Return
+		Next
+	Next
 
 	If $bRet Then
 		ZoomOut()
 	Else
-		SetLog("Main Village Not Found, Restarting COC", $COLOR_ERROR)
+		SetLog("Main village not found, restarting Clash of Clans", $COLOR_ERROR)
 	EndIf
 	Return $bRet
 EndFunc   ;==>SwitchToMainVillage
 
-Func SwitchToClanCapital()
+Func _CCIsCapitalMainMap()
+	Return _CCFindMapButton("ReturnHome", 0, 590, 140, $g_iGAME_HEIGHT)
+EndFunc   ;==>_CCIsCapitalMainMap
+
+Func TestClanCapitalNavigation()
+	SetLog("Testing Clan Capital Navigation", $COLOR_INFO)
+	If Not IsMainPage(1) Then
+		SetLog("Main Village screen not detected", $COLOR_ERROR)
+		Return False
+	EndIf
+
+	If Not SwitchToClanCapital(False) Then
+		SetLog("Could not enter Clan Capital", $COLOR_ERROR)
+		Return False
+	EndIf
+	SetLog("Clan Capital Entered", $COLOR_SUCCESS)
+	Local $bCapitalPeakReached = False
+	If _CCFindCapitalPeakEntry() Then
+		Click($g_iQuickMISX, $g_iQuickMISY, 1, 120, "CapitalPeak")
+		If _Sleep(2000) Then Return False
+		$bCapitalPeakReached = WaitForMap("Capital Peak")
+		If Not $bCapitalPeakReached Then
+			SetLog("Capital Peak map not detected", $COLOR_ERROR)
+		EndIf
+	Else
+		SetLog("Capital Peak entry not detected", $COLOR_ERROR)
+	EndIf
+
+	If $bCapitalPeakReached Then
+		If Not SwitchToClanCapital(False) Then
+			SetLog("Could not return to Clan Capital map", $COLOR_ERROR)
+			Return False
+		EndIf
+		SetLog("Returned To Clan Capital Map", $COLOR_SUCCESS)
+	EndIf
+
+	If Not SwitchToMainVillage() Then
+		SetLog("Could not return to Main Village", $COLOR_ERROR)
+		Return False
+	EndIf
+	SetLog("Returned To Main Village", $COLOR_SUCCESS)
+	Return $bCapitalPeakReached
+EndFunc   ;==>TestClanCapitalNavigation
+
+Func SwitchToClanCapital($bReadReport = True)
+	If Not _CCCloseVillageEventBar() Then Return False
+	If _CCIsCapitalMainMap() Then
+		If $bReadReport Then ClanCapitalReport()
+		Return True
+	EndIf
+	If _CCFindMapButton("MapButton", 0, 590, 140, $g_iGAME_HEIGHT) Then
+		If Not SwitchToCapitalMain() Then Return False
+		If $bReadReport Then ClanCapitalReport()
+		Return True
+	EndIf
 	Local $bRet = False
 	Local $bAirShipFound = False
 	For $z = 0 To 14
-		If QuickMIS("BC1", $g_sImgAirShip, 200, 510 + $g_iBottomOffsetY, 400, 670 + $g_iBottomOffsetY) Then
+		If QuickMIS("BC1", $g_sImgAirShip, 100, 510 + $g_iBottomOffsetY, 260, 670 + $g_iBottomOffsetY) Then
 			$bAirShipFound = True
 			Click($g_iQuickMISX, $g_iQuickMISY)
 			If _Sleep(3000) Then Return
@@ -1133,18 +1345,16 @@ Func SwitchToClanCapital()
 	If $bAirShipFound = False Then Return $bRet
 	For $i = 0 To 14
 		If QuickMIS("BC1", $g_sImgGeneralCloseButton, 780, 90, 840, 130 + $g_iMidOffsetY) Then
-			SetLog("Found Raid Window Covering Map, Close it!", $COLOR_INFO)
+			SetLog("Found raid window covering map, closing it", $COLOR_INFO)
 			If _Sleep(Random(1250, 2000, 1)) Then Return
 			Click($g_iQuickMISX, $g_iQuickMISY)
 			If _Sleep(3000) Then Return
 			ExitLoop
 		EndIf
 		If _Sleep(250) Then Return
-		If QuickMIS("BC1", $g_sImgCCMap, 15, 550 + $g_iBottomOffsetY, 115, 640 + $g_iBottomOffsetY) Then
-			If $g_iQuickMISName = "ReturnHome" Then
-				SetDebugLog("We are on Clan Capital", $COLOR_ACTION)
-				ExitLoop
-			EndIf
+		If _CCFindMapButton("ReturnHome", 0, 590, 140, $g_iGAME_HEIGHT) Then
+			SetDebugLog("We are on clan capital", $COLOR_ACTION)
+			ExitLoop
 		EndIf
 	Next
 	For $t = 0 To 14
@@ -1154,63 +1364,268 @@ Func SwitchToClanCapital()
 			ExitLoop
 		EndIf
 		If _Sleep(250) Then Return
-		If QuickMIS("BC1", $g_sImgCCMap, 15, 550 + $g_iBottomOffsetY, 115, 640 + $g_iBottomOffsetY) Then
-			If $g_iQuickMISName = "ReturnHome" Then
-				SetDebugLog("We are on Clan Capital", $COLOR_ACTION)
-				ExitLoop
-			EndIf
+		If _CCFindMapButton("ReturnHome", 0, 590, 140, $g_iGAME_HEIGHT) Then
+			SetDebugLog("We are on clan capital", $COLOR_ACTION)
+			ExitLoop
 		EndIf
 	Next
 	SwitchToCapitalMain()
 	For $i = 1 To 10
-		SetDebugLog("Waiting for Travel to Clan Capital Map #" & $i, $COLOR_ACTION)
-		If QuickMIS("BC1", $g_sImgCCMap, 300, 10, 430, 65) Then
+		SetDebugLog("Going to clan capital map #" & $i, $COLOR_ACTION)
+		If _CCIsCapitalMainMap() Then
 			$bRet = True
-			SetLog("Success Travel to Clan Capital Map", $COLOR_INFO)
 			ExitLoop
 		EndIf
 		If _Sleep(800) Then Return
 	Next
-	If $bRet Then ClanCapitalReport()
+	If $bRet And $bReadReport Then ClanCapitalReport()
 	Return $bRet
 EndFunc   ;==>SwitchToClanCapital
 
 Func SwitchToCapitalMain()
 	Local $bRet = False
-	SetDebugLog("Going to Clan Capital", $COLOR_ACTION)
+	SetDebugLog("Going to clan capital", $COLOR_ACTION)
 	For $i = 1 To 14
-		If QuickMIS("BC1", $g_sImgCCMap, 15, 550 + $g_iBottomOffsetY, 115, 640 + $g_iBottomOffsetY) Then
-			If $g_iQuickMISName = "MapButton" Then
-				Local $MapCoordsX[2] = [45, 85]
-				Local $MapCoordsY[2] = [590 + $g_iBottomOffsetY, 625 + $g_iBottomOffsetY]
-				Local $MapButtonClickX = Random($MapCoordsX[0], $MapCoordsX[1], 1)
-				Local $MapButtonClickY = Random($MapCoordsY[0], $MapCoordsY[1], 1)
-				Click($MapButtonClickX, $MapButtonClickY, 1, 120, "MapButton") ;Click Map
-				If _Sleep(3000) Then Return
-			EndIf
+		If _CCFindMapButton("MapButton", 0, 590, 140, $g_iGAME_HEIGHT) Then
+			SetLog("Returning To Clan Capital Map", $COLOR_ACTION)
+			_CCClickMapButton("MapButton")
+			If _Sleep(3000) Then Return
 		EndIf
-		If QuickMIS("BC1", $g_sImgCCMap, 15, 550 + $g_iBottomOffsetY, 115, 640 + $g_iBottomOffsetY) Then
-			If $g_iQuickMISName = "ReturnHome" Then
-				SetDebugLog("We are on Clan Capital", $COLOR_ACTION)
-				$bRet = True
-				ExitLoop
-			EndIf
+		If _CCFindMapButton("ReturnHome", 0, 590, 140, $g_iGAME_HEIGHT) Then
+			SetDebugLog("We are on clan capital", $COLOR_ACTION)
+			$bRet = True
+			ExitLoop
 		EndIf
 		If _Sleep(250) Then Return
 	Next
 	Return $bRet
 EndFunc   ;==>SwitchToCapitalMain
 
+Func _CCFindMapButton($sButton, $iLeft, $iTop, $iRight, $iBottom)
+	If $sButton <> "MapButton" And $sButton <> "ReturnHome" Then Return False
+	Return QuickMIS("BFI", $g_sImgCCMap & $sButton & "*", $iLeft, $iTop, $iRight, $iBottom)
+EndFunc   ;==>_CCFindMapButton
+
+Func _CCClickMapButton($sButton)
+	Local $iX, $iY, $sClickTag
+	Switch $sButton
+		Case "MapButton"
+			$iX = $g_iQuickMISX - 29
+			$iY = $g_iQuickMISY + 50
+			$sClickTag = "MapButton"
+		Case "ReturnHome"
+			$iX = $g_iQuickMISX + 12
+			$iY = $g_iQuickMISY + 26
+			$sClickTag = "HomeButton"
+		Case Else
+			Return False
+	EndSwitch
+
+	Click(Random($iX - 4, $iX + 4, 1), Random($iY - 4, $iY + 4, 1), 1, 120, $sClickTag)
+	Return True
+EndFunc   ;==>_CCClickMapButton
+
+Func DonateCapitalTreasury()
+	If Not _CCCloseVillageEventBar() Then Return False
+	SetLog("Donating Capital Gold", $COLOR_INFO)
+	If Not SwitchToCapitalMain() Then SwitchToClanCapital()
+	If Not _CCReadTreasuryGold() Then Return False
+	If Not _CCFindCapitalPeakEntry() Then
+		SetLog("Capital Peak entry not detected", $COLOR_ERROR)
+		Return False
+	EndIf
+	Click($g_iQuickMISX, $g_iQuickMISY, 1, 120, "CapitalPeak")
+	If _Sleep(2000) Then Return False
+	If Not WaitForMap("Capital Peak") Then
+		SetLog("Failed to open Capital Peak", $COLOR_ERROR)
+		Return False
+	EndIf
+	If Not ClickCCBuilder() Then
+		SetLog("Failed to open Clan Capital builder menu", $COLOR_ERROR)
+		Return False
+	EndIf
+	If Not _CCSelectTreasuryUpgradeOption() Then
+		SetLog("Capital Treasury upgrade option not detected in Grand Builder menu", $COLOR_ERROR)
+		Return False
+	EndIf
+	If Not _CCClickCapitalTreasuryButton() Then
+		SetLog("Capital Treasury button image not detected", $COLOR_ERROR)
+		Return False
+	EndIf
+	If _Sleep(1500) Then Return False
+
+	Local $bTreasuryOpen = False
+	For $i = 1 To 5
+		If QuickMIS("BC1", $g_sImgGeneralCloseButton, 750, 60, 810, 120 + $g_iMidOffsetY) Then
+			$bTreasuryOpen = True
+			ExitLoop
+		EndIf
+		If _Sleep(500) Then Return False
+	Next
+	If Not $bTreasuryOpen Then
+		SetLog("Capital Treasury window not found", $COLOR_ERROR)
+		Return False
+	EndIf
+
+	Local $iGoldBefore = Number($g_iLootCCGold)
+	If Not IsArray(_CCFindTreasuryDonateButton()) Then Return False
+	Click(700, 575 + $g_iMidOffsetY) ;Contribute
+	If _Sleep(1500) Then Return False
+	If QuickMIS("BC1", $g_sImgGeneralCloseButton, 750, 60, 810, 120 + $g_iMidOffsetY) Then
+		Click($g_iQuickMISX, $g_iQuickMISY)
+		If _Sleep(1500) Then Return False
+	EndIf
+	ClanCapitalReport(False)
+	Local $iContributed = $iGoldBefore - Number($g_iLootCCGold)
+	If $iContributed <= 0 Then
+		SetLog("Capital Treasury contribution failed", $COLOR_ERROR)
+		Return False
+	EndIf
+
+	$g_iStatsClanCapUpgrade += 1
+	AutoUpgradeCCLog("Capital Treasury", True)
+	SetLog("Donated " & _NumberFormat($iContributed, True) & " Capital Gold", $COLOR_SUCCESS)
+	Return True
+EndFunc   ;==>DonateCapitalTreasury
+
+Func TestDonateCapitalTreasury()
+	SetLog("Testing Capital Treasury Donation Path", $COLOR_INFO)
+	If Not _CCIsCapitalMainMap() Then
+		SetLog("Clan Capital map not detected", $COLOR_ERROR)
+		Return False
+	EndIf
+	Return _TestDonateCapitalTreasuryPath()
+EndFunc   ;==>TestDonateCapitalTreasury
+
+; #FUNCTION# ===========================================================================================================
+; Name ..........: _TestDonateCapitalTreasuryPath
+; Description ...: Verifies the Treasury donation button without spending Capital Gold.
+; Remarks .......: Accepts enabled and disabled button states; leaves the Treasury window open for inspection.
+; ======================================================================================================================
+
+Func _TestDonateCapitalTreasuryPath()
+	If Not _CCFindCapitalPeakEntry() Then
+		SetLog("Capital Peak entry not detected", $COLOR_ERROR)
+		Return False
+	EndIf
+	SetLog("Capital Peak Detected: " & $g_iQuickMISX & "," & $g_iQuickMISY, $COLOR_INFO)
+	Click($g_iQuickMISX, $g_iQuickMISY, 1, 120, "CapitalPeak")
+	If _Sleep(2000) Then Return False
+	If Not WaitForMap("Capital Peak") Then
+		SetLog("Capital Peak map not detected", $COLOR_ERROR)
+		Return False
+	EndIf
+	If Not ClickCCBuilder() Then
+		SetLog("Grand Builder menu not detected", $COLOR_ERROR)
+		Return False
+	EndIf
+	If Not _CCSelectTreasuryUpgradeOption() Then
+		SetLog("Capital Treasury upgrade option not detected in Grand Builder menu", $COLOR_ERROR)
+		Return False
+	EndIf
+	If Not _CCClickCapitalTreasuryButton() Then
+		SetLog("Capital Treasury button image not detected", $COLOR_ERROR)
+		Return False
+	EndIf
+	If _Sleep(1500) Then Return False
+
+	Local $bTreasuryWindowOpen = False
+	For $i = 1 To 5
+		If QuickMIS("BC1", $g_sImgGeneralCloseButton, 750, 60, 810, 120 + $g_iMidOffsetY) Then
+			$bTreasuryWindowOpen = True
+			ExitLoop
+		EndIf
+		If _Sleep(500) Then Return False
+	Next
+	If Not $bTreasuryWindowOpen Then
+		SetLog("Treasury window not detected", $COLOR_ERROR)
+		Return False
+	EndIf
+
+	Local $iButtonY = 575 + $g_iMidOffsetY
+	If _ColorCheck(_GetPixelColor(700, $iButtonY, True), Hex(0xADADAD, 6), 20) Then
+		SetLog("Donate button detected at 700," & $iButtonY & " (Unavailable); test stopped without donating")
+		Return True
+	EndIf
+	Local $aContribute = _PixelSearch(670, 560 + $g_iMidOffsetY, 730, 590 + $g_iMidOffsetY, Hex(0x8ED94A, 6), 45)
+	If IsArray($aContribute) Then
+		SetLog("Donate button confirmed at " & $aContribute[0] & "," & $aContribute[1] & "; test stopped without donating")
+		Return True
+	EndIf
+	SetLog("Donate button not detected", $COLOR_WARNING)
+	Return False
+EndFunc   ;==>_TestDonateCapitalTreasuryPath
+
+Func _CCReadTreasuryGold()
+	Local $iCurrentCapitalGold = _ReadCCGoldOCR()
+	If $iCurrentCapitalGold < 0 Then
+		SetLog("Capital Gold could not be read; donation skipped", $COLOR_WARNING)
+		Return False
+	EndIf
+	$g_iLootCCGold = $iCurrentCapitalGold
+	If $g_iLootCCGold = 0 Then
+		SetLog("Clan Capital Gold Insufficient", $COLOR_DEBUG)
+		Return False
+	EndIf
+	Return True
+EndFunc   ;==>_CCReadTreasuryGold
+
+Func _CCFindTreasuryDonateButton()
+	Local $sCenterColor = _GetPixelColor(700, 575 + $g_iMidOffsetY, True)
+	If _ColorCheck($sCenterColor, Hex(0xADADAD, 6), 20) Then
+		SetLog("Clan Capital Gold Insufficient", $COLOR_DEBUG)
+		If Not CloseWindow2() Then SetLog("Capital Treasury window could not be closed", $COLOR_WARNING)
+		Return False
+	EndIf
+	Local $aContribute = _PixelSearch(670, 560 + $g_iMidOffsetY, 730, 590 + $g_iMidOffsetY, Hex(0x8ED94A, 6), 45)
+	If Not IsArray($aContribute) Then
+		SetLog("Donate button not detected; pixel at expected center: " & $sCenterColor, $COLOR_WARNING)
+		Return False
+	EndIf
+	Return $aContribute
+EndFunc   ;==>_CCFindTreasuryDonateButton
+
+Func _CCFindCapitalPeakEntry()
+	Return QuickMIS("BFI", $g_sImgCCMapName & "CapitalPeak-412-235*", 300, 100, 530, 310)
+EndFunc   ;==>_CCFindCapitalPeakEntry
+
+Func _CCSelectTreasuryUpgradeOption()
+	Click(400, 122) ; Capital Treasury entry
+	If _Sleep(1500) Then Return False
+	Return True
+EndFunc   ;==>_CCSelectTreasuryUpgradeOption
+
+Func _CCClickCapitalTreasuryButton()
+	For $i = 1 To 5
+		If QuickMIS("BFI", $g_sImgCCCapitalTreasury, 430, 610, 530, 700) Then
+			Click($g_iQuickMISX + 2, $g_iQuickMISY + 6, 1, 120, "CapitalTreasury")
+			Return True
+		EndIf
+		If _Sleep(300) Then Return False
+	Next
+	Return False
+EndFunc   ;==>_CCClickCapitalTreasuryButton
+
 Func AutoUpgradeCC()
 	If Not $g_bChkEnableAutoUpgradeCC Then Return
+	If Not _CCCloseVillageEventBar() Then Return
 	Local $Failed = False
-	SetLog("Checking Clan Capital AutoUpgrade", $COLOR_INFO)
+	SetLog("Checking Clan Capital Auto Upgrade", $COLOR_INFO)
 	ZoomOut() ;ZoomOut first
 	If Not SwitchToClanCapital() Then Return
 	If _Sleep(1000) Then Return
 	If Number($g_iLootCCGold) = 0 Then
-		SetLog("No Capital Gold to spend to Contribute", $COLOR_INFO)
+		SetLog("Clan Capital Gold Insufficient", $COLOR_DEBUG)
 		If _Sleep(2500) Then Return
+		If Not SwitchToMainVillage() Then
+			CloseCoC(True)
+			checkMainScreen()
+		EndIf
+		Return
+	EndIf
+	If $g_bChkAutoUpgradeCCTreasury Then
+		DonateCapitalTreasury()
+		If Not SwitchToClanCapital() Then SetLog("Could not return to Clan Capital map after Treasury attempt", $COLOR_WARNING)
 		If Not SwitchToMainVillage() Then
 			CloseCoC(True)
 			checkMainScreen()
@@ -1224,7 +1639,7 @@ Func AutoUpgradeCC()
 			If _Sleep(1000) Then Return
 			Local $Text = getOcrAndCapture("coc-buildermenu-capital", 345, 81, 100, 25)
 			If StringInStr($Text, "No") Then
-				SetLog("No Upgrades in progress", $COLOR_INFO)
+				SetLog("No upgrades in progress", $COLOR_INFO)
 				If _Sleep(500) Then Return
 				If QuickMIS("BC1", $g_sImgCCMap, 300, 10, 430, 40) Then
 					Click($g_iQuickMISX, $g_iQuickMISY) ;close builder menu
@@ -1234,7 +1649,7 @@ Func AutoUpgradeCC()
 				ExitLoop
 			EndIf
 		Else
-			SetLog("Fail to open Builder Menu", $COLOR_ERROR)
+			SetLog("Failed to open builder menu", $COLOR_ERROR)
 			$Failed = True
 			ExitLoop
 		EndIf
@@ -1264,28 +1679,28 @@ Func AutoUpgradeCC()
 	Local $aMapCoord[9][3] = [["Goblin Mines", 580, 620], ["Skeleton Park", 375, 620], ["Golem Quarry", 185, 590], ["Dragon Cliffs", 630, 465], ["Builder's Workshop", 490, 525], ["Balloon Lagoon", 300, 490], _
 			["Wizard Valley", 410, 400], ["Barbarian Camp", 530, 340], ["Capital Peak", 400, 225]]
 	If Number($g_iLootCCGold) > 0 Then
-		SetLog("Checking Upgrades From Districts", $COLOR_INFO)
+		SetLog("Checking upgrades from districts")
 		For $i = 0 To UBound($aMapCoord) - 1
 			If _Sleep(1000) Then Return
 			SetLog("[" & $i & "] Checking " & $aMapCoord[$i][0], $COLOR_ACTION)
 			If QuickMIS("BC1", $g_sImgLock, $aMapCoord[$i][1], $aMapCoord[$i][2] - 120, $aMapCoord[$i][1] + 100, $aMapCoord[$i][2]) Then
-				SetLog($aMapCoord[$i][0] & " is Locked", $COLOR_INFO)
+				SetLog($aMapCoord[$i][0] & " is locked", $COLOR_INFO)
 				ContinueLoop
 			Else
-				SetLog($aMapCoord[$i][0] & " is UnLocked", $COLOR_INFO)
+				SetLog($aMapCoord[$i][0] & " Unlocked", $COLOR_INFO)
 			EndIf
-			SetLog("Go to " & $aMapCoord[$i][0] & " to Check Upgrades", $COLOR_ACTION)
+			SetLog("Going to " & $aMapCoord[$i][0] & " to check upgrades", $COLOR_ACTION)
 			Click($aMapCoord[$i][1], $aMapCoord[$i][2])
 			If Not $g_bRunState Then Return
 			If _Sleep(2000) Then Return
 			If Not WaitForMap($aMapCoord[$i][0]) Then
-				SetLog("Going to " & $aMapCoord[$i][0] & " Failed", $COLOR_ERROR)
+				SetLog("Going to " & $aMapCoord[$i][0] & " failed", $COLOR_ERROR)
 				SwitchToCapitalMain()
 				If _Sleep(1500) Then Return
 				ContinueLoop
 			EndIf
 			If Not ClickCCBuilder() Then
-				SetLog("Fail to open Builder Menu", $COLOR_ERROR)
+				SetLog("Failed to open builder menu", $COLOR_ERROR)
 				SwitchToCapitalMain()
 				If _Sleep(1500) Then Return
 				ContinueLoop
@@ -1303,7 +1718,7 @@ Func AutoUpgradeCC()
 				For $z In $aDone
 					If StringInStr($Text, $z) Then
 						SetDebugLog("Match with: " & $z)
-						SetLog("All Possible Upgrades Done In This District", $COLOR_INFO)
+						SetLog("All possible upgrades done in this district")
 					EndIf
 				Next
 			EndIf
@@ -1323,7 +1738,7 @@ Func CapitalMainUpgradeLoop($aUpgrade)
 	Local $aRet[3] = [False, 0, 0]
 	Local $Failed = False
 	If _Sleep(1000) Then Return
-	SetLog("Checking Upgrades From Capital Map", $COLOR_INFO)
+	SetLog("Checking upgrades from capital map")
 	For $i = 0 To UBound($aUpgrade) - 1
 		SetDebugLog("CCExistingUpgrade: " & $aUpgrade[$i][0])
 		Click($aUpgrade[$i][1], $aUpgrade[$i][2])
@@ -1331,12 +1746,12 @@ Func CapitalMainUpgradeLoop($aUpgrade)
 		$aRet = WaitUpgradeButtonCC()
 		If Not $g_bRunState Then Return
 		If Not $aRet[0] Then
-			SetLog("Upgrade Button Not Found", $COLOR_ERROR)
+			SetLog("Upgrade button not found", $COLOR_ERROR)
 			$Failed = True
 			ExitLoop
 		Else
 			If IsUpgradeCCIgnore() Then
-				SetLog("Upgrade Ignored, Back To Main Village", $COLOR_INFO) ; Should Never happen
+				SetLog("Upgrade ignored, back to main village") ; Should Never happen
 				$Failed = True
 				ExitLoop
 			EndIf
@@ -1378,11 +1793,11 @@ Func DistrictUpgrade($aUpgrade)
 		If _Sleep(3000) Then Return
 		$aRet = WaitUpgradeButtonCC()
 		If Not $aRet[0] Then
-			SetLog("Upgrade Button Not Found", $COLOR_ERROR)
+			SetLog("Upgrade button not found", $COLOR_ERROR)
 			ExitLoop
 		Else
 			If IsUpgradeCCIgnore() Then
-				SetLog("Upgrade Ignored, Looking Next Upgrade", $COLOR_INFO) ; Shouldn't happen
+				SetLog("Upgrade ignored, looking for next upgrade") ; Shouldn't happen
 				ContinueLoop
 			EndIf
 			Local $BuildingName = getOcrAndCapture("coc-build", 180, 520 + $g_iBottomOffsetY, 510, 25)
@@ -1412,7 +1827,7 @@ EndFunc   ;==>DistrictUpgrade
 Func WaitForMap($sMapName = "Capital Peak")
 	Local $bRet = False
 	For $i = 1 To 10
-		SetDebugLog("Waiting for " & $sMapName & "#" & $i, $COLOR_ACTION)
+		SetDebugLog("Waiting " & $sMapName & " #" & $i, $COLOR_ACTION)
 		If QuickMIS("BC1", $g_sImgCCMap, 300, 10, 430, 40) Then
 			If _Sleep(500) Then Return
 			ExitLoop
@@ -1421,7 +1836,7 @@ Func WaitForMap($sMapName = "Capital Peak")
 		If $i = 10 Then Return $bRet
 	Next
 	Local $aMapName = StringSplit($sMapName, " ", $STR_NOCOUNT)
-	SetDebugLog("checking with image", $COLOR_DEBUG)
+	SetDebugLog("Checking with image", $COLOR_DEBUG)
 	Local $bLoop = 0
 	While 1
 		Local $ccMap = QuickMIS("CNX", $g_sImgCCMapName, $g_iQuickMISX, $g_iQuickMISY - 10, $g_iQuickMISX + 220, $g_iQuickMISY + 20)
@@ -1437,7 +1852,7 @@ Func WaitForMap($sMapName = "Capital Peak")
 			If StringInStr($mapName, $i) Then
 				SetDebugLog("Match with: " & $i)
 				$bRet = True
-				SetLog("We are on " & $sMapName, $COLOR_INFO)
+				SetLog("On " & $sMapName, $COLOR_INFO)
 				ExitLoop
 			EndIf
 		Next
@@ -1451,7 +1866,7 @@ Func IsUpgradeCCIgnore()
 	If $g_bChkAutoUpgradeCCWallIgnore Then ; Filter for wall
 		If StringInStr($UpgradeName, "Wall") Then
 			SetDebugLog($UpgradeName & " Match with: Wall")
-			SetLog("Upgrade for wall Ignored, Skip!!", $COLOR_ACTION)
+			SetLog("Upgrade for wall ignored, skipping", $COLOR_ACTION)
 			$bRet = True
 		EndIf
 	EndIf
@@ -1459,7 +1874,7 @@ Func IsUpgradeCCIgnore()
 		For $y In $aCCBuildingIgnore
 			If StringInStr($UpgradeName, $y) Then
 				SetDebugLog($UpgradeName & " Match with: " & $y)
-				SetLog("Upgrade for " & $y & " Ignored, Skip!!", $COLOR_ACTION)
+				SetLog("Upgrade for " & $y & " ignored, skipping", $COLOR_ACTION)
 				$bRet = True
 				ExitLoop
 			Else
@@ -1470,9 +1885,9 @@ Func IsUpgradeCCIgnore()
 	Return $bRet
 EndFunc   ;==>IsUpgradeCCIgnore
 
-Func AutoUpgradeCCLog($BuildingName = "")
-	SetLog("Successfully upgrade " & $BuildingName, $COLOR_SUCCESS)
-	GUICtrlSetData($g_hTxtAutoUpgradeCCLog, @CRLF & _NowDate() & " " & _NowTime() & " [" & $g_sProfileCurrentName & "] - Upgrade " & $BuildingName, 1)
+Func AutoUpgradeCCLog($BuildingName = "", $bDonation = False)
+	SetLog(($bDonation ? "Successfully Donated To " : "Successfully Upgraded ") & $BuildingName, $COLOR_SUCCESS)
+	GUICtrlSetData($g_hTxtAutoUpgradeCCLog, @CRLF & _NowDate() & " " & _NowTime() & " [" & $g_sProfileCurrentName & "] - " & ($bDonation ? "Donation " : "Upgrade ") & $BuildingName, 1)
 EndFunc   ;==>AutoUpgradeCCLog
 
 Func IsIgnored($aUpgradeX, $aUpgradeY, $SetLog = True)
@@ -1481,14 +1896,14 @@ Func IsIgnored($aUpgradeX, $aUpgradeY, $SetLog = True)
 	$name = getCCBuildingName($aUpgradeX - 275, $aUpgradeY - 9)
 	If $g_bChkAutoUpgradeCCWallIgnore Then
 		If StringInStr($name[0], "Wall") Then
-			If $SetLog Then SetLog("Upgrade for Wall Ignored, Skip!!", $COLOR_ACTION)
+			If $SetLog Then SetLog("Upgrade for wall ignored, skipping", $COLOR_ACTION)
 			$bRet = True ;skip this upgrade, looking next
 		EndIf
 	EndIf
 	If $g_bChkAutoUpgradeCCIgnore Then
 		For $y In $aCCBuildingIgnore
 			If StringInStr($name[0], $y) Then
-				If $SetLog Then SetLog("Upgrade for " & $name[0] & " Ignored, Skip!!", $COLOR_ACTION)
+				If $SetLog Then SetLog("Upgrade for " & $name[0] & " ignored, skipping", $COLOR_ACTION)
 				$bRet = True ;skip this upgrade, looking next
 			EndIf
 		Next
@@ -1614,17 +2029,17 @@ Func SkipCraftStart($b_ResType = "Gold", $cost = 0, $iCurrentGold = 0, $iCurrent
 			Switch $b_ResType
 				Case "Gold" ; Using gold
 					If $iCurrentGold - ($iBuildingsNeedGold + $cost + Number($g_iacmdGoldSaveMin)) < 0 Then
-						SetLog("Skip - insufficient gold for selected upgrades", $COLOR_WARNING)
+						SetLog("Insufficient Gold", $COLOR_DEBUG)
 						Return True
 					EndIf
 				Case "Elixir" ; Using elixir
 					If $iCurrentElix - ($iBuildingsNeedElixir + $cost + Number($g_iacmdElixSaveMin)) < 0 Then
-						SetLog("Skip - insufficient elixir for selected upgrades", $COLOR_WARNING)
+						SetLog("Insufficient Elixir", $COLOR_DEBUG)
 						Return True
 					EndIf
 				Case "Dark Elixir" ; Using dark elixir
 					If $iCurrentDE - ($iBuildingsNeedDarkElixir + $cost + Number($g_iacmdDarkSaveMin)) < 0 Then
-						SetLog("Skip - insufficient dark elixir for selected upgrades", $COLOR_WARNING)
+						SetLog("Insufficient Dark Elixir", $COLOR_DEBUG)
 						Return True
 					EndIf
 			EndSwitch
@@ -1639,7 +2054,7 @@ Func SkipCraftStart($b_ResType = "Gold", $cost = 0, $iCurrentGold = 0, $iCurrent
 		Local $bMinWardenElixir = Number($iCurrentElix) > ($cost + $WardenFinalCost + Number($g_iacmdElixSaveMin))
 		If Not $bMinWardenElixir Then
 			If $b_ResType = "Elixir" Then
-				SetLog("Grand Warden needs " & _NumberFormat($WardenFinalCost, True) & " Elixir for next Level", $COLOR_WARNING)
+				SetLog("Grand Warden needs " & _NumberFormat($WardenFinalCost, True) & " elixir for next level", $COLOR_WARNING)
 				SetLog("Skipping", $COLOR_WARNING)
 				Return True
 			EndIf
@@ -1652,7 +2067,7 @@ Func SkipCraftStart($b_ResType = "Gold", $cost = 0, $iCurrentGold = 0, $iCurrent
 		Local $bMinQueenDarkElixir = Number($iCurrentDE) > ($cost + $QueenFinalCost + Number($g_iacmdDarkSaveMin))
 		If Not $bMinQueenDarkElixir Then
 			If $b_ResType = "Dark Elixir" Then
-				SetLog("Queen needs " & _NumberFormat($QueenFinalCost, True) & " Dark Elixir for next Level", $COLOR_WARNING)
+				SetLog("Queen needs " & _NumberFormat($QueenFinalCost, True) & " dark elixir for next level", $COLOR_WARNING)
 				SetLog("Skipping", $COLOR_WARNING)
 				Return True
 			EndIf
@@ -1665,7 +2080,7 @@ Func SkipCraftStart($b_ResType = "Gold", $cost = 0, $iCurrentGold = 0, $iCurrent
 		Local $bMinPrinceDarkElixir = Number($iCurrentDE) > ($cost + $PrinceFinalCost + Number($g_iacmdDarkSaveMin))
 		If Not $bMinPrinceDarkElixir Then
 			If $b_ResType = "Dark Elixir" Then
-				SetLog("Prince needs " & _NumberFormat($PrinceFinalCost, True) & " Dark Elixir for next Level", $COLOR_WARNING)
+				SetLog("Prince needs " & _NumberFormat($PrinceFinalCost, True) & " dark elixir for next level", $COLOR_WARNING)
 				SetLog("Skipping", $COLOR_WARNING)
 				Return True
 			EndIf
@@ -1678,7 +2093,7 @@ Func SkipCraftStart($b_ResType = "Gold", $cost = 0, $iCurrentGold = 0, $iCurrent
 		Local $bMinKingDarkElixir = Number($iCurrentDE) > ($cost + $KingFinalCost + Number($g_iacmdDarkSaveMin))
 		If Not $bMinKingDarkElixir Then
 			If $b_ResType = "Dark Elixir" Then
-				SetLog("King needs " & _NumberFormat($KingFinalCost, True) & " Dark Elixir for next Level", $COLOR_WARNING)
+				SetLog("King needs " & _NumberFormat($KingFinalCost, True) & " dark elixir for next level", $COLOR_WARNING)
 				SetLog("Skipping", $COLOR_WARNING)
 				Return True
 			EndIf
@@ -1691,7 +2106,7 @@ Func SkipCraftStart($b_ResType = "Gold", $cost = 0, $iCurrentGold = 0, $iCurrent
 		Local $bMinChampionDarkElixir = Number($iCurrentDE) > ($cost + $ChampionFinalCost + Number($g_iacmdDarkSaveMin))
 		If Not $bMinChampionDarkElixir Then
 			If $b_ResType = "Dark Elixir" Then
-				SetLog("Champion needs " & _NumberFormat($ChampionFinalCost, True) & " Dark Elixir for next Level", $COLOR_WARNING)
+				SetLog("Champion needs " & _NumberFormat($ChampionFinalCost, True) & " dark elixir for next level", $COLOR_WARNING)
 				SetLog("Skipping", $COLOR_WARNING)
 				Return True
 			EndIf
@@ -1702,7 +2117,7 @@ Func SkipCraftStart($b_ResType = "Gold", $cost = 0, $iCurrentGold = 0, $iCurrent
 	Local $bMinCraftElixir = Number($iCurrentElix) > ($cost + Number($g_iLaboratoryElixirCost) + Number($g_iacmdElixSaveMin)) ; Check if enough Elixir
 	If $g_bAutoLabUpgradeEnable And $g_iLaboratoryElixirCost > 0 And Not $bMinCraftElixir Then
 		If $b_ResType = "Elixir" Then
-			SetLog("Laboratory needs Elixir to Upgrade :  " & _NumberFormat($g_iLaboratoryElixirCost, True), $COLOR_SUCCESS1)
+			SetLog("Laboratory needs " & _NumberFormat($g_iLaboratoryElixirCost, True) & " elixir to upgrade", $COLOR_SUCCESS1)
 			SetLog("Skipping", $COLOR_SUCCESS1)
 			Return True
 		EndIf
@@ -1711,7 +2126,7 @@ Func SkipCraftStart($b_ResType = "Gold", $cost = 0, $iCurrentGold = 0, $iCurrent
 	Local $bMinCraftDarkElixir = Number($iCurrentDE) > ($cost + Number($g_iLaboratoryDElixirCost) + Number($g_iacmdDarkSaveMin)) ; Check if enough Dark Elixir
 	If $g_bAutoLabUpgradeEnable And $g_iLaboratoryDElixirCost > 0 And Not $bMinCraftDarkElixir Then
 		If $b_ResType = "Dark Elixir" Then
-			SetLog("Laboratory needs Dark Elixir to Upgrade :  " & _NumberFormat($g_iLaboratoryDElixirCost, True), $COLOR_SUCCESS1)
+			SetLog("Laboratory needs " & _NumberFormat($g_iLaboratoryDElixirCost, True) & " dark elixir to upgrade", $COLOR_SUCCESS1)
 			SetLog("Skipping", $COLOR_SUCCESS1)
 			Return True
 		EndIf

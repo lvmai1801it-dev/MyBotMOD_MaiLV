@@ -1,4 +1,4 @@
-; #FUNCTION# ====================================================================================================================
+﻿; #FUNCTION# ====================================================================================================================
 ; Name ..........: MBR GUI Action
 ; Description ...: This file Includes all functions to current GUI
 ; Syntax ........:
@@ -51,6 +51,14 @@ Func BotStart($bAutostartDelay = 0)
 	SaveConfig()
 	readConfig()
 	applyConfig(False) ; bot window redraw stays disabled!
+	If ScriptRotationIsActive() Then
+		Local $iScriptRotationAccount = ScriptRotationGetAccountIndex()
+		$g_aiScriptRotationPhase[$iScriptRotationAccount] = ScriptRotationGetRandomPhase()
+		$g_abScriptRotationPhaseInitialized[$iScriptRotationAccount] = True
+		$g_aiScriptRotationAttackCount[$iScriptRotationAccount] = 0
+		$g_aiScriptRotationAttackTarget[$iScriptRotationAccount] = 0
+		ScriptRotationInvalidateRecipe()
+	EndIf
 	CreaTableDB()
 
 	; Initial ObjEvents for the Autoit objects errors
@@ -68,7 +76,6 @@ Func BotStart($bAutostartDelay = 0)
 	GUICtrlSetState($g_hBtnPause, $GUI_SHOW)
 	GUICtrlSetState($g_hBtnResume, $GUI_HIDE)
 	GUICtrlSetState($g_hBtnSearchMode, $GUI_HIDE)
-	GUICtrlSetState($g_hChkBackgroundMode, $GUI_DISABLE)
 
 	; update task bar buttons
 	_ITaskBar_UpdateTBButton($g_hTblStop, $THBF_ENABLED)
@@ -82,19 +89,20 @@ Func BotStart($bAutostartDelay = 0)
 	TrayItemSetText($g_hTiPause, GetTranslatedFileIni("MBR GUI Design - Loading", "StatusBar_Item_Pause", "Pause bot"))
 
 	EnableControls($g_hFrmBotBottom, Default, $g_aFrmBotBottomCtrlState)
+	GUICtrlSetState($g_hChkBackgroundMode, $GUI_DISABLE)
 
 	DisableGuiControls()
 
 	SetRedrawBotWindow(True, Default, Default, Default, "BotStart")
-
+	
 	If Not ForumAuthentication() Then
 		btnStop()
 		Return FuncReturn()
 	EndIf
 
 	If $bAutostartDelay Then
-		SetLog("Bot Auto Starting in " & Round($bAutostartDelay / 1000, 0) & " seconds", $COLOR_ERROR)
-		_SleepStatus($bAutostartDelay)
+		SetLog("Auto Starting: " & Round($bAutostartDelay / 1000, 0) & " seconds", $COLOR_ACTION)
+		If _SleepStatus($bAutostartDelay) Then Return FuncReturn()
 	EndIf
 
 	$g_sClanGamesScore = "N/A"
@@ -110,16 +118,12 @@ Func BotStart($bAutostartDelay = 0)
 	$g_sAvailableAppBuilder = 0
 	$g_sAvailableLabAssistant = 0
 	$g_iBuilderBoostDiscount = 0
-	$g_bFirstStartForHiddenHero = 1
-	$g_iHeroAvailable = $eHeroNone
+	$g_bFirstStartHeroStatus = 1
 	For $i = 0 To 4
 		$g_aiHeroUpgradeFinishDate[$i] = 0
 	Next
 	For $i = 0 To 4
 		$g_aiHeroNeededResource[$i] = 0
-	Next
-	For $i = 0 To 7
-		$bCheckHeroOrder[$i] = False
 	Next
 	$g_aiAttackedCountPause = 0
 	$g_aiAttackedCount = 0
@@ -145,9 +149,11 @@ Func BotStart($bAutostartDelay = 0)
 				$Result = InitiateLayout()
 			EndIf
 		Else
-			; Not really
-			SetLog("Current " & $g_sAndroidEmulator & " Window not supported by MyBot", $COLOR_ERROR)
-			$Result = RebootAndroid(False)
+			; A wrong emulator resolution can make its render control unavailable.
+			; Use the emulator-specific screen implementation through the common
+			; dispatcher before reopening with the same unsupported configuration.
+			SetLog($g_sAndroidEmulator & " screen mismatch; applying display settings", $COLOR_ACTION)
+			$Result = RebootAndroidSetScreen()
 		EndIf
 		If Not $g_bRunState Then Return FuncReturn()
 		Local $hWndActive = $g_hAndroidWindow
@@ -186,10 +192,16 @@ Func BotStop()
 
 	ResumeAndroid()
 
+	Local $bWasPaused = $g_bBotPaused
 	$g_bRunState = False
 	$g_bBotPaused = False
 	$g_bTogglePauseAllowed = True
 	$g_bRestart = False
+	If $g_bIsHidden And Not $g_bAndroidEmbedded Then
+		HideAndroidWindow(False, False, True, "BotStop")
+		$g_bIsHidden = False
+		updateBtnHideState()
+	EndIf
 
 	;WinSetState($g_hFrmBotBottom, "", @SW_DISABLE)
 	Local $aCtrlState
@@ -200,10 +212,7 @@ Func BotStop()
 
 	;DistributorsUpdateGUI()
 	AndroidBotStopEvent() ; signal android that bot is now stopping
-	If $g_bTerminateAdbShellOnStop Then
-		AndroidAdbTerminateShellInstance() ; terminate shell instance
-	EndIf
-	AndroidShield("btnStop", Default)
+	AndroidShieldPause()
 
 	EnableControls($g_hFrmBotBottom, Default, $g_aFrmBotBottomCtrlState)
 
@@ -236,10 +245,11 @@ Func BotStop()
 	TrayItemSetText($g_hTiStartStop, GetTranslatedFileIni("MBR GUI Design - Loading", "StatusBar_Item_Start", "Start bot"))
 	TrayItemSetState($g_hTiPause, $TRAY_DISABLE)
 
-	SetLogCentered(" Bot Stop ", Default, $COLOR_ACTION)
+	If Not $g_bSilentBotStopLog Then SetLogCentered(" Bot Stop ", Default, $COLOR_ACTION)
+	$g_bSilentBotStopLog = False
 	If Not $g_bSearchMode Then
-		If Not $g_bBotPaused Then $g_iTimePassed += Int(__TimerDiff($g_hTimerSinceStarted))
-		If ProfileSwitchAccountEnabled() And Not $g_bBotPaused Then $g_aiRunTime[$g_iCurAccount] += Int(__TimerDiff($g_ahTimerSinceSwitched[$g_iCurAccount]))
+		If Not $bWasPaused Then $g_iTimePassed += Int(__TimerDiff($g_hTimerSinceStarted))
+		If ProfileSwitchAccountEnabled() And Not $bWasPaused Then $g_aiRunTime[$g_iCurAccount] += Int(__TimerDiff($g_ahTimerSinceSwitched[$g_iCurAccount]))
 		;AdlibUnRegister("SetTime")
 		;$g_bRestart = True
 
@@ -260,6 +270,10 @@ Func BotStop()
 	__ObjEventEnds()
 
 	ReduceBotMemory()
+
+	; Some stop callbacks can update control states after the initial restore.
+	; Make the editable GUI state the final state of a completed stop.
+	EnableGuiControls(True, True)
 	FuncReturn()
 EndFunc   ;==>BotStop
 
@@ -274,12 +288,12 @@ Func BotSearchMode()
 	If _Sleep(100) Then Return FuncReturn()
 	$g_aiCurrentLoot[$eLootTrophy] = getTrophyMainScreen($aTrophies[0], $aTrophies[1]) ; get OCR to read current Village Trophies
 	If _Sleep(100) Then Return FuncReturn()
-	CheckIfArmyIsReady()
+	; Search Mode skips army preparation and starts normal matchmaking immediately.
 	ClickAway()
 	If _Sleep(100) Then Return FuncReturn()
 	If IsSearchModeActive($DB) Or IsSearchModeActive($LB) Then
 		If _Sleep(100) Then Return FuncReturn()
-		PrepareSearch()
+		If Not PrepareSearch($DB, True) Then Return FuncReturn()
 		If $g_bOutOfGold Then Return ; Check flag for enough gold to search
 		If $g_bRestart Then
 			CleanSuperchargeTemplates()
@@ -291,7 +305,7 @@ Func BotSearchMode()
 		If _Sleep(100) Then Return FuncReturn()
 		CleanSuperchargeTemplates()
 	Else
-		SetLog("Your Army is not prepared, check the Attack/train options")
+		SetLog("Dead Base or Live Base search mode is not enabled", $COLOR_WARNING)
 	EndIf
 	btnStop()
 	FuncReturn()

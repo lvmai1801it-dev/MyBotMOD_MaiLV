@@ -20,6 +20,8 @@
 ;                      7 = X coordinate of tree
 ;                      8 = Y coordinate of tree
 ;                      9 = tree image file name
+;                     10 = reference village size
+;                     11 = detected scenery/tree index
 ; Author ........: Cosote (Oct 17th 2016)
 ; Modified ......: GrumpyHog (05-2022)
 ; Remarks .......: This file is part of MyBot, previously known as ClashGameBot. Copyright 2015-2025
@@ -30,6 +32,8 @@
 ; ===============================================================================================================================
 
 Func GetVillageSize($DebugLog = Default, $sStonePrefix = Default, $sTreePrefix = Default, $sFixedPrefix = Default, $bOnBuilderBase = Default, $bMeasureOnly = False)
+
+	$g_bVillageSceneryMissing = False
 
 	If $DebugLog = Default Then $DebugLog = False
 	If $sStonePrefix = Default Then $sStonePrefix = "stone"
@@ -43,7 +47,7 @@ Func GetVillageSize($DebugLog = Default, $sStonePrefix = Default, $sTreePrefix =
 	Local $iAdditionalX = 200
 	Local $iAdditionalY = 125
 
-	Local $iTreeIndex = 0
+	Local $iTreeIndex = 0, $iDetectedTree = -1
 
 	Local $bIsOnMainBase = isOnMainVillage(True)
 
@@ -95,12 +99,27 @@ Func GetVillageSize($DebugLog = Default, $sStonePrefix = Default, $sTreePrefix =
 						If UBound($a) = 2 Then
 							$x0 = Number($a[0])
 							$y0 = Number($a[1])
+
+							$scenery[0] = $x
+							$scenery[1] = $y
+							$scenery[2] = $x0
+							$scenery[3] = $y0
+							$scenery[4] = 0
+							$scenery[5] = $avTempArray[0]
+
+							Local $sVillage = StringSplit($avTempArray[0], "-")
+							$sScenery = StringRight($sVillage[1], 2)
+							SetDeBugLog("Village Scenery Found: " & $sScenery, $COLOR_OLIVE)
+
 							If $x > ($x0 + 75) Or $x < ($x0 - 75) Or $y > ($y0 + 75) Or $y < ($y0 - 75) Then
 								SetDeBugLog("Village Scenery FP X/Y is off by more than 75 pixels", $COLOR_WARNING)
 								CenterVillage($x, $y, $x - $x0, $y - $y0)
 								$bForceCapture = True ; forces new capture after align
-								ExitLoop
 							EndIf
+
+							$iAdditionalX = 100
+							$iAdditionalY = 75
+							ExitLoop
 						EndIf
 					EndIf
 				Next
@@ -161,6 +180,8 @@ Func GetVillageSize($DebugLog = Default, $sStonePrefix = Default, $sTreePrefix =
 
 		SetDeBugLog("Scenery search (in " & Round(__TimerDiff($hTimer) / 1000, 2) & " seconds)", $COLOR_INFO)
 		$hTimer = __TimerInit()
+
+		If $scenery[0] = 0 Then $g_bVillageSceneryMissing = True
 
 		If Not $bMeasureOnly Then
 			If $scenery[0] = 0 And $g_aiSearchZoomOutCounter[0] = 1 Then
@@ -253,10 +274,17 @@ Func GetVillageSize($DebugLog = Default, $sStonePrefix = Default, $sTreePrefix =
 	$hTimer = __TimerInit()
 
 	If $stone[0] = 0 Then
-		SetDeBugLog("Searching ALL tree files!", $COLOR_INFO)
-		Local $aTreeFiles = _FileListToArray($sDirectory, $sTreePrefix & "*.*", $FLTA_FILES)
-	ElseIf $asStoneScenery = "DS" Then
-		Local $aTreeFiles = _FileListToArray($sDirectory, $sTreePrefix & "D*.*", $FLTA_FILES)
+		If $sScenery <> "" Then
+			SetDeBugLog("Loading Tree Scenery: " & $sScenery, $COLOR_INFO)
+			If IsCustomScenery($bIsOnMainBase, "Scenery", $sScenery) Then
+				Local $aTreeFiles = _FileListToArray($sDirectory2, $sTreePrefix & $sScenery & "*.*", $FLTA_FILES)
+			Else
+				Local $aTreeFiles = _FileListToArray($sDirectory, $sTreePrefix & $sScenery & "*.*", $FLTA_FILES)
+			EndIf
+		Else
+			SetDeBugLog("Searching ALL tree files!", $COLOR_INFO)
+			Local $aTreeFiles = _FileListToArray($sDirectory, $sTreePrefix & "*.*", $FLTA_FILES)
+		EndIf
 	Else
 		If IsCustomScenery($bIsOnMainBase, "Scenery", $sScenery) Then
 			Local $aTreeFiles = _FileListToArray($sDirectory2, $sTreePrefix & $asStoneScenery & "*.*", $FLTA_FILES)
@@ -311,8 +339,8 @@ Func GetVillageSize($DebugLog = Default, $sStonePrefix = Default, $sTreePrefix =
 					$iTreeIndex = 5
 				EndIf
 
-				$g_iTree = Int(Eval("e" & $sTreeName))
-				If $DebugLog Then SetDeBugLog($sTreeName & " " & $g_iTree, $COLOR_INFO)
+				$iDetectedTree = Int(Eval("e" & $sTreeName))
+				If $DebugLog Then SetDeBugLog($sTreeName & " " & $iDetectedTree, $COLOR_INFO)
 				ExitLoop
 			EndIf
 
@@ -354,13 +382,17 @@ Func GetVillageSize($DebugLog = Default, $sStonePrefix = Default, $sTreePrefix =
 		$b = $stone[1] - $tree[1]
 		$c = Sqrt($a * $a + $b * $b) - $stone[4] - $tree[4]
 
-		If IsCustomScenery($bIsOnMainBase) Then
+		Local $bDetectedCustomScenery = False
+		If $bIsOnMainBase Then
 			For $i = 0 To UBound($g_afRefCustomMainVillage) - 1
-				If $g_iTree = $g_afRefCustomMainVillage[$i][5] Then $iRefSize = $g_afRefCustomMainVillage[$i][4]
+				If $iDetectedTree = $g_afRefCustomMainVillage[$i][5] Then
+					$iRefSize = $g_afRefCustomMainVillage[$i][4]
+					$bDetectedCustomScenery = True
+					ExitLoop
+				EndIf
 			Next
-		Else
-			$iRefSize = $g_afRefVillage[$g_iTree][$iTreeIndex]
 		EndIf
+		If Not $bDetectedCustomScenery Then $iRefSize = $g_afRefVillage[$iDetectedTree][$iTreeIndex]
 
 		$z = $c / $iRefSize
 
@@ -375,9 +407,10 @@ Func GetVillageSize($DebugLog = Default, $sStonePrefix = Default, $sTreePrefix =
 		SetDeBugLog("Zoom Factor : " & $z, $COLOR_INFO)
 		SetDeBugLog("Offset : " & $x & ", " & $y, $COLOR_INFO)
 		;If $DebugLog Then SetDebugLog("GetVillageSize measured: " & $c & ", Zoom factor: " & $z & ", Offset: " & $x & ", " & $y, $COLOR_INFO)
+
 	EndIf
 
-	Dim $aResult[11]
+	Dim $aResult[12]
 	$aResult[0] = $c
 	$aResult[1] = $z
 	$aResult[2] = $x
@@ -389,6 +422,7 @@ Func GetVillageSize($DebugLog = Default, $sStonePrefix = Default, $sTreePrefix =
 	$aResult[8] = $tree[1]
 	$aResult[9] = $tree[5]
 	$aResult[10] = $iRefSize
+	$aResult[11] = $iDetectedTree
 
 	$g_aVillageSize[0] = $aResult[0]
 	$g_aVillageSize[1] = $aResult[1]

@@ -1,4 +1,4 @@
-; #FUNCTION# ====================================================================================================================
+﻿; #FUNCTION# ====================================================================================================================
 ; Name ..........: Functions to interact with Android Window
 ; Description ...: This file contains the detection fucntions for the Emulator and Android version used.
 ; Syntax ........:
@@ -29,6 +29,7 @@ Global $g_iAndroidCoCPid = 0 ; Android CoC process PID for suspend and resume
 Global $g_iAndroidAdbProcess = [0, 0, 0, 0, 0] ; Single instance of ADB used for screencap, 0: PID, 1: StdIn handle, 2: StdOut handle, 3: Process handle, 4: Thread handle
 Global $g_iAndroidAdbMinitouchProcess = [0, 0, 0, 0, 0] ; Single instance of ADB used for minitouch, 0: PID, 1: StdIn handle, 2: StdOut handle, 3: Process handle, 4: Thread handle
 Global $g_aiAndroidAdbClicks[1] = [-1] ; Stores clicks after KeepClicks() called, fired and emptied with ReleaseClicks()
+Global $g_bAndroidAdbCSVBatch = False
 Global $g_aiAndroidAdbStatsTotal[2][2] = [ _
 		[0, 0], _ ; Total of screencap duration, 0 is count, 1 is sum of durations
 		[0, 0] _ ; Total of click duration, 0 is count, 1 is sum of durations
@@ -50,6 +51,7 @@ Global $g_aiMouseOffsetWindowOnly = [0, 0]
 Global $g_bPullPushSharedPrefsAbdCommand = False ; If true, push and pull with adb pull/push is tried first before falling back to use shared folder (some adb pull can create shared_prefs subfolder causing problems)
 Global $g_PushedSharedPrefsProfile = "" ; Last Profile name shared_prefs were pushed
 Global $g_PushedSharedPrefsProfile_Timer = 0 ; Last __TimerInit() shared_prefs were pushed
+Global $g_bSharedPrefsSwitchInProgress = False ; Suppress automatic current-profile push while loading a target profile
 ; Update shared_prefs when pushing
 Global $g_bUpdateSharedPrefsLanguage = True ; Reset Language to English when pushing shared_prefs
 Global $g_bUpdateSharedPrefsSnow = True ; Reset Snow when pushing shared_prefs
@@ -91,7 +93,7 @@ Func InitAndroidConfig($bRestart = False)
 	$g_bAndroidBackgroundLaunch = $g_bAndroidBackgroundLaunchEnabled = True ; Enabled Android Background launch using Windows Scheduled Task
 	$g_bAndroidBackgroundLaunched = False ; True when Android was launched in headless mode without a window
 	$g_bUpdateAndroidWindowTitle = False ; If Android has always same title instance name will be added (iTools)
-	$g_bAndroidControlUseParentPos = False ; If true, control pos is used from parent control (only used to fix docking for Nox in DirectX mode)
+	$g_bAndroidControlUseParentPos = False ; If true, control pos is used from parent control
 	$g_sAndroidAdbInstanceShellOptions = $g_sAndroidAdbInstanceShellOptionsDefault ; Additional shell options, only used by BlueStacks2 " -t -t"
 	$g_sAndroidAdbShellOptions = "" ; Additional shell options when launch shell with command, only used by BlueStacks2 " /data/anr/../../system/xbin/bstk/su root"
 	$g_iAndroidRecoverStrategy = $g_iAndroidRecoverStrategyDefault
@@ -181,6 +183,8 @@ EndFunc   ;==>GetSecureFilename
 ; Calls "Update" & $g_sAndroidEmulator & "Config()"
 Func UpdateAndroidConfig($instance = Default, $emulator = Default)
 	FuncEnter(UpdateAndroidConfig)
+	Local $sPreviousAndroidEmulator = $g_sAndroidEmulator
+	Local $sPreviousAndroidInstance = $g_sAndroidInstance
 	If $emulator <> Default Then
 		; Update $g_iAndroidConfig
 		For $i = 0 To UBound($g_avAndroidAppConfig) - 1
@@ -199,6 +203,15 @@ Func UpdateAndroidConfig($instance = Default, $emulator = Default)
 	If $instance = "" Then $instance = Default
 	If $instance = Default Then $instance = $g_avAndroidAppConfig[$g_iAndroidConfig][1]
 	SetDebugLog("UpdateAndroidConfig(""" & $instance & """)")
+
+	If $sPreviousAndroidEmulator <> $g_sAndroidEmulator Or $sPreviousAndroidInstance <> $instance Then
+		SetDebugLog("Android target changed from " & $sPreviousAndroidEmulator & " (" & $sPreviousAndroidInstance & ") to " & _
+				$g_sAndroidEmulator & " (" & $instance & "); clearing previous ADB state")
+		AndroidAdbTerminateShellInstance()
+		; A dedicated daemon belongs only to this bot/emulator target and can be
+		; safely stopped before paths and ports are initialized for the new target.
+		If $g_bAndroidAdbPortPerInstance And $g_bAndroidAdbPort Then KillAdbDaemon()
+	EndIf
 
 	InitAndroidConfig(False)
 	$g_sAndroidInstance = $instance ; Clone or instance of emulator or "" if not supported/default instance
@@ -302,7 +315,9 @@ Func WinGetAndroidHandle($bInitAndroid = Default, $bTestPid = False)
 	$g_bWinGetAndroidHandleActive = True
 	Local $currHWnD = $g_hAndroidWindow
 
-	If $g_hAndroidWindow = 0 Or $g_bAndroidBackgroundLaunched = False Then _WinGetAndroidHandle()
+	; BlueStacks 5.22.250+ can protect HD-Player process details from WMI.
+	; Prefer its configured window title/control before falling back to PID discovery.
+	If $g_hAndroidWindow = 0 Or $g_bAndroidBackgroundLaunched = False Then _WinGetAndroidHandle($g_sAndroidEmulator = "BlueStacks5")
 	If IsHWnd($g_hAndroidWindow) = 1 Then
 		; Android Window found
 		Local $aPos = WinGetPos($g_hAndroidWindow)
@@ -321,14 +336,14 @@ Func WinGetAndroidHandle($bInitAndroid = Default, $bTestPid = False)
 		EndIf
 		If $currHWnD = 0 Or $currHWnD <> $g_hAndroidWindow Then
 			; Restore original Android Window position
-			If $g_bAndroidEmbedded = False And IsArray($aPos) = 1 And ($g_bIsHidden = False Or ($aPos[0] > -30000 Or $aPos[1] > -30000)) Then
+			If $g_bAndroidEmbedded = False And IsArray($aPos) = 1 And $g_bIsHidden = False Then
 				SetDebugLog("Move Android Window '" & $g_sAndroidTitle & "' to position: " & $g_iAndroidPosX & ", " & $g_iAndroidPosY)
 				HideAndroidWindow(False, Default, Default, "WinGetAndroidHandle:1", 0)
 				$aPos[0] = $g_iAndroidPosX
 				$aPos[1] = $g_iAndroidPosY
 			EndIf
 			Local $instance = ($g_sAndroidInstance = "" ? "" : " (" & $g_sAndroidInstance & ")")
-			SetLog($g_sAndroidEmulator & $instance & " running in window mode", $COLOR_ACTION)
+			SetLog($g_sAndroidEmulator & $instance & " is running in window mode", $COLOR_SUCCESS)
 			If $currHWnD <> 0 And $currHWnD <> $g_hAndroidWindow Then
 				$g_bInitAndroid = True
 				If $bInitAndroid = True Then InitAndroid(True)
@@ -343,7 +358,7 @@ Func WinGetAndroidHandle($bInitAndroid = Default, $bTestPid = False)
 			If $posX <> $g_iAndroidPosX Or $posY <> $g_iAndroidPosY Then
 				SetDebugLog("Updating Android Window '" & $g_sAndroidTitle & "' position: " & $g_iAndroidPosX & ", " & $g_iAndroidPosY)
 			EndIf
-			If $g_bIsHidden = True And ($aPos[0] > -30000 Or $aPos[1] > -30000) Then
+			If $g_bIsHidden = True Then
 				; rehide Android
 				HideAndroidWindow(True, Default, Default, "WinGetAndroidHandle:2")
 			EndIf
@@ -454,7 +469,7 @@ Func _WinGetAndroidHandle($bFindByTitle = False)
 	EndIf
 	$g_sAppClassInstance = $g_avAndroidAppConfig[$g_iAndroidConfig][3]
 
-	; Find all controls by title and check which contains the android control (required for Nox)
+	; Find all controls by title and check which contains the Android control
 	Local $i
 	Local $t
 	Local $ReInitAndroid = $g_hAndroidWindow <> 0
@@ -578,6 +593,7 @@ Func _WinGetAndroidHandle($bFindByTitle = False)
 			EndIf
 			If IsArray($aWinList) = 1 Then
 				SetDebugLog("Found " & $aWinList[0][0] & " windows, searching for '" & $g_sAppPaneName & "' with class '" & $g_sAppClassInstance & "'")
+				Local $hMEmuWindowFallback = 0, $sMEmuWindowFallbackTitle = ""
 				For $i = 1 To $aWinList[0][0]
 					$t = $aWinList[$i][0]
 					$hWin = $aWinList[$i][1]
@@ -593,7 +609,24 @@ Func _WinGetAndroidHandle($bFindByTitle = False)
 						setAndroidPID(GetAndroidPid())
 						Return $hWin
 					EndIf
+					If $g_sAndroidEmulator = "MEmu" And $hMEmuWindowFallback = 0 And StringInStr($aWinList[$i][2], "Qt") > 0 And $aWinList[$i][3] > 400 And $aWinList[$i][4] > 400 _
+							And ($g_sAndroidInstance = "" Or StringInStr($t, $g_sAndroidInstance) > 0 Or StringInStr($t, $g_sAndroidTitle) > 0) Then
+						$hMEmuWindowFallback = $hWin
+						$sMEmuWindowFallbackTitle = $t
+					EndIf
 				Next
+				If $hMEmuWindowFallback <> 0 Then
+					SetDebugLog("Found " & $g_sAndroidEmulator & " Window '" & $sMEmuWindowFallbackTitle & "' (" & $hMEmuWindowFallback & ") by MEmu Qt fallback for PID " & $pid & " ('" & $commandLine & "')")
+					UpdateHWnD($hMEmuWindowFallback)
+					$g_sAndroidTitle = UpdateAndroidWindowTitle($g_hAndroidWindow, $sMEmuWindowFallbackTitle)
+					If $ReInitAndroid = True And $g_bInitAndroid = False Then ; Only initialize Android when not currently running
+						$g_bInitAndroid = True ; change window, re-initialize Android config
+						InitAndroid()
+					EndIf
+					AndroidEmbed(False, False)
+					setAndroidPID(GetAndroidPid())
+					Return $hMEmuWindowFallback
+				EndIf
 			EndIf
 			SetDebugLog($g_sAndroidEmulator & ($g_sAndroidInstance = "" ? "" : " (" & $g_sAndroidInstance & ")") & " Window not found for PID " & $pid)
 		EndIf
@@ -776,17 +809,18 @@ Func FindPreferredAdbPath()
 			$sAdbPath = GetBlueStacks5AdbPath()
 		Case "MEmu"
 			$sAdbPath = GetMEmuAdbPath()
-		Case "Nox"
-			$sAdbPath = GetNoxAdbPath()
 	EndSwitch
 
 	; Using From MyBotRun
 	If $g_iAndroidAdbReplace = 1 Then
-		; Stop Adb from Emulator
-		Local $aAdbProcess = ProcessesExist($sAdbPath)
-		For $i = 0 To UBound($aAdbProcess) - 1
-			KillProcess($aAdbProcess[$i], "FindPreferredAdbPath")
-		Next
+		; MEmu instances can share this executable while using independent daemon ports.
+		; With dedicated ports, do not stop another profile's daemon when selecting the bot-owned ADB client.
+		If $g_sAndroidEmulator <> "MEmu" Or Not $g_bAndroidAdbPortPerInstance Then
+			Local $aAdbProcess = ProcessesExist($sAdbPath)
+			For $i = 0 To UBound($aAdbProcess) - 1
+				KillProcess($aAdbProcess[$i], "FindPreferredAdbPath")
+			Next
+		EndIf
 
 		; Use Bot Root Folder
 		Local $sBootPathAdb = @ScriptDir & "\lib\adb\adb.exe"
@@ -822,19 +856,6 @@ Func FindPreferredAdbPath()
 					$sAdbPath = $sBootDirPath & "adb.exe"
 					SetDebugLog("Using " & $g_sAndroidEmulator & " Adb From MyBotRun", $COLOR_SUCCESS)
 				EndIf
-			Case "Nox"
-				; Check if File exist
-				If FileExists($sBootDirPath & "nox_adb.exe") = 0 Then
-					If FileCopy($sBootPathAdb, $sBootDirPath & "nox_adb.exe", $FC_CREATEPATH) = 1 Then
-						$sAdbPath = $sBootDirPath & "nox_adb.exe"
-						SetDebugLog("Replaced " & $g_sAndroidEmulator & " Adb From MyBotRun", $COLOR_SUCCESS)
-					Else
-						SetDebugLog("Cannot replace " & $g_sAndroidEmulator & " ADB with MyBotRun", $COLOR_ERROR)
-					EndIf
-				Else
-					$sAdbPath = $sBootDirPath & "nox_adb.exe"
-					SetDebugLog("Using " & $g_sAndroidEmulator & " Adb From MyBotRun", $COLOR_SUCCESS)
-				EndIf
 		EndSwitch
 
 		If FileExists($sBootDirPath & "AdbWinApi.dll") = 0 Then
@@ -861,6 +882,16 @@ Func IncrUpdate(ByRef $i, $ReturnInitial = True)
 	If $ReturnInitial Then Return $i2
 	Return $i
 EndFunc   ;==>IncrUpdate
+
+Func GetVersionNormalized($VersionString, $Chars = 5)
+	If StringLeft($VersionString, 1) = "v" Then $VersionString = StringMid($VersionString, 2)
+	Local $a = StringSplit($VersionString, ".", 2)
+	Local $i
+	For $i = 0 To UBound($a) - 1
+		If StringLen($a[$i]) < $Chars Then $a[$i] = _StringRepeat("0", $Chars - StringLen($a[$i])) & $a[$i]
+	Next
+	Return _ArrayToString($a, ".")
+EndFunc   ;==>GetVersionNormalized
 
 Func InitAndroidAdbPorts($bForce = False)
 
@@ -1007,7 +1038,7 @@ Func InitAndroid($bCheckOnly = False, $bLogChangesOnly = True)
 		EndIf
 
 		; update Virtualbox properties
-		If FileExists($__VBoxManage_Path) Then
+		If $g_sAndroidEmulator = "MEmu" And FileExists($__VBoxManage_Path) Then
 			If $__VBoxGuestProperties = "" Then $__VBoxGuestProperties = LaunchConsole($__VBoxManage_Path, "guestproperty enumerate " & $g_sAndroidInstance, $process_killed)
 			If $__VBoxExtraData = "" Then $__VBoxExtraData = LaunchConsole($__VBoxManage_Path, "getextradata " & $g_sAndroidInstance & " enumerate", $process_killed)
 		EndIf
@@ -1109,19 +1140,49 @@ Func OpenAndroid($bRestart = False, $bStartOnlyAndroid = False, $wasRunState = $
 	Static $OpenAndroidActive = 0
 
 	If $OpenAndroidActive >= $g_iOpenAndroidActiveMaxTry Then
+		If $g_sAndroidEmulator = "BlueStacks5" Then
+			SetDebugLog($g_sAndroidEmulator & " open is already active, skip nested open attempt")
+			If _Sleep(1000) Then Return FuncReturn(False)
+			Return FuncReturn(False)
+		EndIf
 		SetLog("Cannot open " & $g_sAndroidEmulator & ", tried " & $OpenAndroidActive & " times...", $COLOR_ERROR)
 		btnStop()
 		Return FuncReturn(False)
 	EndIf
 	$OpenAndroidActive += 1
+	$g_bOpenAndroidActive = True
 	If $OpenAndroidActive > 1 Then
 		SetDebugLog("Opening " & $g_sAndroidEmulator & " recursively " & $OpenAndroidActive & ". time...")
+		If $g_sAndroidEmulator = "MEmu" Then
+			If $OpenAndroidActive > 2 Then
+				$OpenAndroidActive -= 1
+				Return FuncReturn(False)
+			EndIf
+
+			SetDebugLog("MEmu startup already active; waiting for its window")
+			Local $hMEmuStartupTimer = __TimerInit()
+			While __TimerDiff($hMEmuStartupTimer) < 60000
+				If WinGetAndroidHandle() <> 0 Then
+					$OpenAndroidActive -= 1
+					Return FuncReturn(True)
+				EndIf
+				If _Sleep(500) Then
+					$OpenAndroidActive -= 1
+					Return FuncReturn(False)
+				EndIf
+			WEnd
+
+			SetLog("MEmu startup window not found", $COLOR_ERROR)
+			$OpenAndroidActive -= 1
+			Return FuncReturn(False)
+		EndIf
 	EndIf
 	If $bStartOnlyAndroid = True And $wasRunState = False Then $g_bRunState = True
 	Local $Result = _OpenAndroid($bRestart, $bStartOnlyAndroid)
 	If $bStartOnlyAndroid = True And $wasRunState = False Then $g_bRunState = False
 	WinGetAndroidHandle()
 	$OpenAndroidActive -= 1
+	If $OpenAndroidActive <= 0 Then $g_bOpenAndroidActive = False
 	Return FuncReturn($Result)
 EndFunc   ;==>OpenAndroid
 
@@ -1129,14 +1190,13 @@ Func _OpenAndroid($bRestart = False, $bStartOnlyAndroid = False)
 
 	If Not InitAndroid() Then
 		SetLog("Unable to open " & $g_sAndroidEmulator & ($g_sAndroidInstance = "" ? "" : " instance '" & $g_sAndroidInstance & "'"), $COLOR_ERROR)
-		SetLog("Please check emulator/installation", $COLOR_ERROR)
+		SetLog("Please check emulator installation", $COLOR_ERROR)
 		SetLog("To switch to another emualtor, please use bot with command line parameter", $COLOR_BLUE)
-		SetLog("Unable to continue........", $COLOR_ERROR)
+		SetLog("Unable to continue...", $COLOR_ERROR)
 		btnStop()
 		SetError(1, 1, -1)
 		Return False
 	EndIf
-
 	ResumeAndroid()
 
 	; list Android devices to ensure ADB Daemon is launched
@@ -1150,10 +1210,18 @@ Func _OpenAndroid($bRestart = False, $bStartOnlyAndroid = False)
 	; Close any existing WerFault windows for this emulator
 	WerFaultClose($g_sAndroidProgramPath)
 
-	; Close crashed android when $g_bAndroidBackgroundLaunch = False
-	If $g_bAndroidBackgroundLaunch = False And WinGetAndroidHandle(Default, True) <> 0 Or GetAndroidSvcPid() <> 0 Then
-		CloseAndroid("_OpenAndroid")
+	; Close crashed android when $g_bAndroidBackgroundLaunch = False.
+	Local $hExistingAndroidWindow = WinGetAndroidHandle(Default, True)
+	If ($g_bAndroidBackgroundLaunch = False And $hExistingAndroidWindow <> 0) Or GetAndroidSvcPid() <> 0 Then
+		If Not CloseAndroid("_OpenAndroid") And $g_sAndroidEmulator = "MEmu" Then Return False
 		If _Sleep(1000) Then Return False
+		$hExistingAndroidWindow = 0
+	EndIf
+
+	; Validate persistent emulator display settings before a cold start.
+	; Each backend keeps its own CheckScreen/SetScreen implementation.
+	If $hExistingAndroidWindow = 0 Then
+		If Not ConfigureScreenBeforeStartAndroid($bRestart) Then Return False
 	EndIf
 
 	InitAndroidRebootCondition(False)
@@ -1185,44 +1253,34 @@ Func _OpenAndroid($bRestart = False, $bStartOnlyAndroid = False)
 	; Press home button to start default launcher (e.g. for BS 4 with Nova Launcher)
 	AndroidHomeButton()
 
-	If _Sleep(3000) Then Return False ; wait 3 seconds or delayed home button execution "kill" games (maybe more seconds required?)
+	If _Sleep(3000) Then Return False ; wait for delayed home button execution before launching the game
 
 	If Not $g_bRunState Then Return False
-	; Launch CcC
+	; Launch CoC
 	If Not StartAndroidCoC() Then Return False
 
-	If $bRestart = False Then
-		waitMainScreenMini()
-		If Not $g_bRunState Then Return False
-		ZoomOut()
-	Else
-		WaitMainScreenMini()
-		If Not $g_bRunState Then Return False
-		If @error = 1 Then
-			Return False
-		EndIf
-		ZoomOut()
-	EndIf
-
+	waitMainScreenSimple()
 	If Not $g_bRunState Then Return False
+	If @error = 1 Then Return False
+	ZoomOut()
 	Return True
 EndFunc   ;==>_OpenAndroid
 
-Func StartAndroidCoC()
+Func StartAndroidCoC($bSetLaunchLog = True)
 	FuncEnter(StartAndroidCoC)
-	Return FuncReturn(RestartAndroidCoC(False, False, False))
+	Return FuncReturn(RestartAndroidCoC(False, False, False, 0, $bSetLaunchLog))
 EndFunc   ;==>StartAndroidCoC
 
-Func RestartAndroidCoC($bInitAndroid = True, $bRestart = True, $bStopCoC = True, $iRetry = 0)
+Func RestartAndroidCoC($bInitAndroid = True, $bRestart = True, $bStopCoC = True, $iRetry = 0, $bSetLaunchLog = True)
 	Static $iRecursive = -1
 	FuncEnter(RestartAndroidCoC)
 	$iRecursive += 1
-	Local $Result = _RestartAndroidCoC($bInitAndroid, $bRestart, $bStopCoC, $iRetry, $iRecursive)
+	Local $Result = _RestartAndroidCoC($bInitAndroid, $bRestart, $bStopCoC, $iRetry, $iRecursive, $bSetLaunchLog)
 	$iRecursive -= 1
-	Return FuncReturn()
+	Return FuncReturn($Result)
 EndFunc   ;==>RestartAndroidCoC
 
-Func _RestartAndroidCoC($bInitAndroid = True, $bRestart = True, $bStopCoC = True, $iRetry = 0, $iRecursive = 0)
+Func _RestartAndroidCoC($bInitAndroid = True, $bRestart = True, $bStopCoC = True, $iRetry = 0, $iRecursive = 0, $bSetLaunchLog = True)
 	ClearClicks() ; it can happen the clicks are hold back, ensure it's cleared
 	$g_bSkipFirstZoomout = False
 	ResumeAndroid()
@@ -1242,20 +1300,20 @@ Func _RestartAndroidCoC($bInitAndroid = True, $bRestart = True, $bStopCoC = True
 	Local $sRestart = ""
 	If $bRestart = True Then
 		If $bStopCoC Then
-			SetLog("Please wait for CoC restart.....", $COLOR_INFO) ; Let user know we need time...
+			SetLog("Restarting Game Instance", $COLOR_ACTION)
 			$sRestart = "-S "
 		Else
-			SetLog("Please wait for CoC restart....", $COLOR_INFO) ; Let user know we need time...
+			SetLog("Restarting Game Instance", $COLOR_ACTION)
 		EndIf
-	Else
-		SetLog("Launch Clash of Clans now...", $COLOR_SUCCESS)
+	ElseIf $bSetLaunchLog Then
+		SetLog("Launching Clash of Clans!", $COLOR_ACTION)
 	EndIf
 	ConnectAndroidAdb()
 	If Not $g_bRunState Then Return False
 	;AndroidAdbTerminateShellInstance()
 	If Not $g_bRunState Then Return False
 	;$cmdOutput = LaunchConsole($g_sAndroidAdbPath, "-s " & $g_sAndroidAdbDevice & " shell am start " & $sRestart & "-n " & $g_sAndroidGamePackage & "/" & $g_sAndroidGameClass, $process_killed, 30 * 1000) ; removed "-W" option and added timeout (didn't exit sometimes)
-	If ((ProfileSwitchAccountEnabled() And $g_bChkSharedPrefs) Or $g_bUpdateSharedPrefs) And HaveSharedPrefs() And _
+	If Not $g_bSharedPrefsSwitchInProgress And ((ProfileSwitchAccountEnabled() And $g_bChkSharedPrefs) Or $g_bUpdateSharedPrefs) And HaveSharedPrefs() And _
 			($g_bUpdateSharedPrefs Or $g_PushedSharedPrefsProfile <> $g_sProfileCurrentName Or ($g_PushedSharedPrefsProfile_Timer = 0 Or __TimerDiff($g_PushedSharedPrefsProfile_Timer) > 120000)) Then PushSharedPrefs()
 
 	$cmdOutput = AndroidAdbSendShellCommand("set export=$(am start " & $sRestart & "-n " & $g_sAndroidGamePackage & "/" & $g_sAndroidGameClass & " >&2)", 15000) ; timeout of 15 Seconds
@@ -1263,7 +1321,7 @@ Func _RestartAndroidCoC($bInitAndroid = True, $bRestart = True, $bStopCoC = True
 		SetLog("Unable to load Clash of Clans, possible solutions:", $COLOR_ERROR)
 		SetLog("1) install/reinstall the game.", $COLOR_ERROR)
 		SetLog("2) select Bot->Android->Reset to reset the game distributor", $COLOR_ERROR)
-		SetLog("Unable to continue........", $COLOR_ERROR)
+		SetLog("Unable to continue...", $COLOR_ERROR)
 		btnStop()
 		SetError(1, 1, -1)
 		Return False
@@ -1282,16 +1340,26 @@ Func _RestartAndroidCoC($bInitAndroid = True, $bRestart = True, $bStopCoC = True
 
 	; reset time lag
 	InitAndroidTimeLag()
-
-	; wait 3 sec. CoC might have just crashed
-	If _SleepStatus(3000) Then Return False
+	
+	If _SleepStatus(15000) Then Return False
+	For $i = 1 To 5
+		SetDebugLog("Waiting CoC process start #" & $i)
+		Local $iCoCPID = GetAndroidProcessPID(Default, False)
+		If $iCoCPID > 0 Then
+			$g_iAndroidCoCPid = $iCoCPID
+			$g_iAdroidProcNotRunning = 0
+			SetDebugLog("Android PID: " & $iCoCPID)
+			Return True
+		EndIf
+		If _SleepStatus(1000) Then Return False
+	Next
 
 	If GetAndroidProcessPID(Default, False) = 0 And @error = 0 Then
 		If $iRetry > 2 And $iRecursive > 2 Then
-			SetLog("Unable to load Clash of Clans ! ! !", $COLOR_ERROR)
-			SetLog("Please check Clash of Clans and Android installation.", $COLOR_ERROR)
-			SetLog("Reinstalling Clash of Clans or Android might fix the problem.", $COLOR_ERROR)
-			SetLog("Unable to continue........", $COLOR_ERROR)
+			SetLog("Unable to load Clash of Clans!", $COLOR_ERROR)
+			SetLog("Please check Clash of Clans and Android installation", $COLOR_ERROR)
+			SetLog("Reinstalling Clash of Clans or Android might fix the problem", $COLOR_ERROR)
+			SetLog("Unable to continue...", $COLOR_ERROR)
 			btnStop()
 			SetError(1, 1, -1)
 			Return False
@@ -1299,13 +1367,13 @@ Func _RestartAndroidCoC($bInitAndroid = True, $bRestart = True, $bStopCoC = True
 			If $iRetry > 2 Then
 				; restart Android, enter recursion...
 				SetLog("Unable to load Clash of Clans, close Android and retry...", $COLOR_ERROR)
-				CloseAndroid("_RestartAndroidCoC")
+				If Not CloseAndroid("_RestartAndroidCoC") And $g_sAndroidEmulator = "MEmu" Then Return False
 				Return OpenAndroid(True)
 			EndIf
 			$iRetry += 1
 			SetLog("Unable to load Clash of Clans, " & $iRetry & ". retry...", $COLOR_ERROR)
 			If _SleepStatus(5000) Then Return False
-			Return _RestartAndroidCoC($bInitAndroid, $bRestart, $bStopCoC, $iRetry, $iRecursive)
+			Return _RestartAndroidCoC($bInitAndroid, $bRestart, $bStopCoC, $iRetry, $iRecursive, $bSetLaunchLog)
 		EndIf
 	EndIf
 
@@ -1318,13 +1386,13 @@ Func ResetAndroidProcess()
 	$g_bMainWindowOk = False
 EndFunc   ;==>ResetAndroidProcess
 
-Func CloseAndroid($sSource)
+Func CloseAndroid($sSource, $bCheckRunState = True)
 	FuncEnter(CloseAndroid)
 	ResumeAndroid()
 
 	ResetAndroidProcess()
 
-	SetLog("Stopping " & $g_sAndroidEmulator & "....", $COLOR_INFO)
+	SetLog("Stopping " & $g_sAndroidEmulator, $COLOR_INFO)
 	SetDebugLog("CloseAndroid, caller: " & $sSource)
 
 	; Un-dock Android
@@ -1332,28 +1400,30 @@ Func CloseAndroid($sSource)
 
 	AndroidAdbTerminateShellInstance()
 
-	If Not $g_bRunState Then Return FuncReturn(False)
+	If $bCheckRunState And Not $g_bRunState Then Return FuncReturn(False)
 
-	SetLog("Please wait for full " & $g_sAndroidEmulator & " shutdown...", $COLOR_SUCCESS)
+	SetLog("Please wait for full " & $g_sAndroidEmulator & " shutdown", $COLOR_SUCCESS)
 	Local $pid = GetAndroidPid()
 	If ProcessExists2($pid) Then
 		KillProcess($pid, "CloseAndroid")
-		If _SleepStatus(1000) Then Return FuncReturn(False)
+		If _SleepStatus(1000, True, True, $bCheckRunState) Then Return FuncReturn(False)
 	EndIf
 
 	; Call special Android close
 	Local $Result = Execute("Close" & $g_sAndroidEmulator & "()")
+	Local $iCloseAdapterError = @error
 
-	If Not $g_bRunState Then Return FuncReturn(False)
-	If ProcessExists($pid) Then
+	If $bCheckRunState And Not $g_bRunState Then Return FuncReturn(False)
+	Local $bMEmuCloseFailed = $g_sAndroidEmulator = "MEmu" And ($iCloseAdapterError Or Not $Result Or ProcessExists($pid))
+	If ProcessExists($pid) Or $bMEmuCloseFailed Then
 		SetLog("Failed to stop " & $g_sAndroidEmulator, $COLOR_ERROR)
 	Else
 		SetLog($g_sAndroidEmulator & " stopped successfully", $COLOR_SUCCESS)
 	EndIf
 
-	If Not $g_bRunState Then Return FuncReturn(False)
+	If $bCheckRunState And Not $g_bRunState Then Return FuncReturn(False)
 	RemoveGhostTrayIcons() ; Remove ghost icon if left behind
-	Return FuncReturn(True)
+	Return FuncReturn(Not $bMEmuCloseFailed)
 EndFunc   ;==>CloseAndroid
 
 Func CloseVboxAndroidSvc()
@@ -1367,7 +1437,8 @@ EndFunc   ;==>CloseVboxAndroidSvc
 Func CheckAndroidRunning($bQuickCheck = True, $bStartIfRequired = True, $bStartOnlyAndroid = False)
 	FuncEnter(CheckAndroidRunning)
 	Local $hWin = $g_hAndroidWindow
-	If WinGetAndroidHandle() = 0 Or ($bQuickCheck = False And $g_bAndroidBackgroundLaunched = False And AndroidControlAvailable() = 0) Then
+	Local $hCurrentAndroidWindow = WinGetAndroidHandle()
+	If $hCurrentAndroidWindow = 0 Or ($bQuickCheck = False And $g_bAndroidBackgroundLaunched = False And AndroidControlAvailable() = 0) Then
 		SetDebugLog($g_sAndroidEmulator & " not running")
 		If $bStartIfRequired = True Then
 			If $hWin = 0 Then
@@ -1385,14 +1456,23 @@ Func SetScreenAndroid()
 	ResumeAndroid()
 	If Not $g_bRunState Then Return False
 	; Set Android screen size and dpi
-	SetLog("Set " & $g_sAndroidEmulator & " screen resolution to " & $g_iAndroidClientWidth & " x " & $g_iAndroidClientHeight, $COLOR_INFO)
+	SetLog("Set " & $g_sAndroidEmulator & " Screen Resolution: " & $g_iAndroidClientWidth & " x " & $g_iAndroidClientHeight, $COLOR_INFO)
 	Local $Result = Execute("SetScreen" & $g_sAndroidEmulator & "()")
-	If $Result Then
-		SetLog("A restart of your computer might be required", $COLOR_ACTION)
-		SetLog("for the applied changes to take effect.", $COLOR_ACTION)
-	EndIf
 	Return $Result
 EndFunc   ;==>SetScreenAndroid
+
+Func ConfigureScreenBeforeStartAndroid($bRestart = False)
+	; MEmu can retain the expected guest properties while its next boot still uses
+	; the previous display mode. Rewrite them before every cold start.
+	; A resolution-triggered restart has already written these settings.
+	If $g_sAndroidEmulator = "MEmu" Then Return $bRestart ? True : SetScreenAndroid()
+
+	SetError(0, 0, 0)
+	Local $bScreenConfigurationOk = Execute("CheckScreen" & $g_sAndroidEmulator & "(False)")
+	If $bScreenConfigurationOk = "" And @error <> 0 Then Return True ; Backend does not implement offline validation
+	If $bScreenConfigurationOk Then Return True
+	Return SetScreenAndroid()
+EndFunc   ;==>ConfigureScreenBeforeStartAndroid
 
 Func CloseUnsupportedAndroid()
 	ResumeAndroid()
@@ -1488,6 +1568,7 @@ Func WaitForAndroidBootCompleted($WaitInSec = 120, $hTimer = 0)
 	ResumeAndroid()
 	If Not $g_bRunState Then Return True
 	Local $cmdOutput, $connected_to, $booted, $process_killed, $hMyTimer
+	Local $iAdbOfflineCount = 0, $bAdbDaemonRecovered = False
 	; Wait for boot completed
 	$hMyTimer = ($hTimer = 0 ? __TimerInit() : $hTimer)
 	While True
@@ -1497,6 +1578,19 @@ Func WaitForAndroidBootCompleted($WaitInSec = 120, $hTimer = 0)
 			$cmdOutput = LaunchConsole($g_sAndroidAdbPath, AddSpace($g_sAndroidAdbGlobalOptions) & "-s " & $g_sAndroidAdbDevice & " shell" & $g_sAndroidAdbShellOptions & " getprop sys.boot_completed", $process_killed)
 		EndIf
 		If Not $g_bRunState Then Return True
+		If StringInStr($cmdOutput, "device offline") > 0 Then
+			$iAdbOfflineCount += 1
+		Else
+			$iAdbOfflineCount = 0
+		EndIf
+		If $iAdbOfflineCount >= 3 And Not $bAdbDaemonRecovered And $g_bAndroidAdbPortPerInstance And $g_bAndroidAdbPort Then
+			SetLog("ADB Device Offline - Restarting Dedicated ADB Daemon", $COLOR_ERROR)
+			If KillAdbDaemon() Then
+				$bAdbDaemonRecovered = True
+				$iAdbOfflineCount = 0
+				IsAdbConnected()
+			EndIf
+		EndIf
 		; Test ADB is connected
 		$connected_to = IsAdbConnected($cmdOutput)
 		If Not $g_bRunState Then Return True
@@ -1540,7 +1634,7 @@ Func IsAdbConnected($cmdOutput = Default)
 		EndIf
 	Else
 		; $cmdOutput was specified
-		$connected_to = StringInStr($cmdOutput, " not ") = 0 And StringInStr($cmdOutput, "unable") = 0 And StringInStr($cmdOutput, "error: ") = 0
+		$connected_to = StringInStr($cmdOutput, " not ") = 0 And StringInStr($cmdOutput, "unable") = 0 And StringInStr($cmdOutput, "error: ") = 0 And StringInStr($cmdOutput, "device offline") = 0
 	EndIf
 	Return $connected_to
 EndFunc   ;==>IsAdbConnected
@@ -1647,11 +1741,15 @@ Func _ConnectAndroidAdb($rebootAndroidIfNeccessary = $g_bRunState, $bStartOnlyAn
 		Case 1
 			ReleaseAdbDaemonMutex($hMutex)
 			If $rebootAndroidIfNeccessary Then
-				SetDebugLog("ConnectAndroidAdb: Reboot Android due to ADB connection problems...", $COLOR_ERROR)
+				If $g_bOpenAndroidActive Then
+					SetDebugLog("ConnectAndroidAdb: ADB Recovery Skipped - Android Launching")
+					Return 0
+				EndIf
+				SetLog("ConnectAndroidAdb: Reboot Android - ADB Connection Problem", $COLOR_ERROR)
 				$bRebooted = RebootAndroid()
 				If Not $bRebooted Then Return 0
 			Else
-				SetDebugLog("ConnectAndroidAdb: Reboot Android nor ADB Daemon not allowed", $COLOR_ERROR)
+				SetDebugLog("ConnectAndroidAdb: ADB Recovery Skipped - Reboot Not Allowed", $COLOR_ERROR)
 				Return 0
 			EndIf
 
@@ -1685,20 +1783,41 @@ EndFunc   ;==>_ConnectAndroidAdb
 
 Func RebootAndroid($bRestart = True, $bStartOnlyAndroid = False)
 	FuncEnter(RebootAndroid)
+	Static $bRebootAndroidActive = False
+	If $bRebootAndroidActive Then
+		SetDebugLog("RebootAndroid already active, skip nested reboot")
+		Return FuncReturn(False)
+	EndIf
+	$bRebootAndroidActive = True
 	ResumeAndroid()
-	If Not $g_bRunState Then Return FuncReturn(False)
+	If Not $g_bRunState Then
+		$bRebootAndroidActive = False
+		Return FuncReturn(False)
+	EndIf
 
 	; Close Android
-	If CloseUnsupportedAndroid() Then
-		; Unsupport Emulator now closed, screen config is now adjusted
+	Local $hAndroidWindow = WinGetAndroidHandle()
+	Local $iAndroidPid = GetAndroidPid()
+	If $hAndroidWindow = 0 And Not ProcessExists2($iAndroidPid) Then
+		SetDebugLog($g_sAndroidEmulator & " already stopped, skip shutdown before restart")
+	ElseIf CloseUnsupportedAndroid() Then
+		; Unsupported Emulator now closed, screen config is now adjusted
 	Else
 		; Close Emulator
-		CloseAndroid("RebootAndroid")
+		If Not CloseAndroid("RebootAndroid") And $g_sAndroidEmulator = "MEmu" Then
+			$bRebootAndroidActive = False
+			Return FuncReturn(False)
+		EndIf
 	EndIf
-	If _Sleep(1000) Then Return FuncReturn(False)
+	If _Sleep(1000) Then
+		$bRebootAndroidActive = False
+		Return FuncReturn(False)
+	EndIf
 
 	; Start Android
-	Return FuncReturn(OpenAndroid($bRestart, $bStartOnlyAndroid))
+	Local $Result = OpenAndroid($bRestart, $bStartOnlyAndroid)
+	$bRebootAndroidActive = False
+	Return FuncReturn($Result)
 EndFunc   ;==>RebootAndroid
 
 Func RebootAndroidSetScreenDefault()
@@ -1710,10 +1829,10 @@ Func RebootAndroidSetScreenDefault()
 	If Not $g_bRunState Then Return False
 
 	; Close Android
-	CloseAndroid("RebootAndroidSetScreenDefault")
+	If Not CloseAndroid("RebootAndroidSetScreenDefault") And $g_sAndroidEmulator = "MEmu" Then Return False
 	If _Sleep(1000) Then Return False
 
-	SetScreenAndroid()
+	If Not SetScreenAndroid() Then Return False
 	If Not $g_bRunState Then Return False
 
 	; Start Android
@@ -1738,7 +1857,7 @@ Func CheckScreenAndroid($ClientWidth, $ClientHeight, $bSetLog = True)
 
 	Local $ok = ($ClientWidth = $g_iAndroidClientWidth) And ($ClientHeight = $g_iAndroidClientHeight)
 	If Not $ok Then
-		If $bSetLog Then SetLog("MyBot doesn't work with " & $g_sAndroidEmulator & " screen resolution of " & $ClientWidth & " x " & $ClientHeight & "!", $COLOR_ERROR)
+		If $bSetLog Then SetLog($g_sAndroidEmulator & " screen is " & $ClientWidth & " x " & $ClientHeight & "; applying display settings", $COLOR_ACTION)
 		SetDebugLog("CheckScreenAndroid: " & $ClientWidth & " x " & $ClientHeight & " <> " & $g_iAndroidClientWidth & " x " & $g_iAndroidClientHeight)
 		Return False
 	EndIf
@@ -1783,7 +1902,7 @@ EndFunc   ;==>CheckScreenAndroid
 Func AndroidSetFontSizeNormal()
 	ResumeAndroid()
 	AndroidAdbLaunchShellInstance($g_bRunState, False)
-	SetLog("Set " & $g_sAndroidEmulator & " Display Font Scale to normal", $COLOR_INFO)
+	SetLog("Set " & $g_sAndroidEmulator & " Display Font Scale", $COLOR_INFO)
 	AndroidAdbSendShellCommand("settings put system font_scale 1.0", Default, Default, False)
 EndFunc   ;==>AndroidSetFontSizeNormal
 
@@ -1832,10 +1951,13 @@ EndFunc   ;==>AndroidAdbLaunchShellInstance
 Func _AndroidAdbLaunchShellInstance($wasRunState = Default, $rebootAndroidIfNeccessary = $g_bRunState)
 	;If Not $g_bAndroidInitialized Then Return
 	If $wasRunState = Default Then $wasRunState = $g_bRunState
-	Local $iConnected, $process_killed
+	Local $iConnected, $process_killed, $iApiRetry
+	Static $sBlueStacks5SharedFolderRecoveryAttempted = ""
+	Local $sBlueStacks5SharedFolderRecoveryKey
 	If Not $g_bAndroidInitialized Or $g_iAndroidAdbProcess[0] = 0 Or ProcessExists2($g_iAndroidAdbProcess[0]) <> $g_iAndroidAdbProcess[0] Then
 		Local $SuspendMode = ResumeAndroid()
 		InitAndroid()
+		$sBlueStacks5SharedFolderRecoveryKey = $g_sAndroidEmulator & "|" & $g_sAndroidInstance
 		Local $s
 
 		; check ADB device connection
@@ -1850,8 +1972,16 @@ Func _AndroidAdbLaunchShellInstance($wasRunState = Default, $rebootAndroidIfNecc
 
 		; check shared folder
 		Local $pathFound = False
+		If Not $g_sAndroidPicturesHostPath Or Not FileExists($g_sAndroidPicturesHostPath) Then
+			If $g_bAndroidPicturesPathAutoConfig And $rebootAndroidIfNeccessary And _
+					($g_sAndroidEmulator <> "BlueStacks5" Or $sBlueStacks5SharedFolderRecoveryAttempted <> $sBlueStacks5SharedFolderRecoveryKey) Then
+				If $g_sAndroidEmulator = "BlueStacks5" Then $sBlueStacks5SharedFolderRecoveryAttempted = $sBlueStacks5SharedFolderRecoveryKey
+				If RebootAndroidSetScreenDefault() Then Return SetError(0, 0)
+			EndIf
+			Return SetError(4, 0)
+		EndIf
 		Local $iMount
-		For $iMount = 0 To 2
+			For $iMount = 0 To 2
 			$s = LaunchConsole($g_sAndroidAdbPath, AddSpace($g_sAndroidAdbGlobalOptions) & "-s " & $g_sAndroidAdbDevice & " shell" & $g_sAndroidAdbShellOptions & " mount|grep -E 'vboxsf|sharefolder'", $process_killed)
 			Local $path = $g_sAndroidPicturesPath
 			If StringRight($path, 1) = "/" Then $path = StringLeft($path, StringLen($path) - 1)
@@ -1861,16 +1991,29 @@ Func _AndroidAdbLaunchShellInstance($wasRunState = Default, $rebootAndroidIfNecc
 			Local $aMounts[0]
 			If $path Then _ArrayConcatenate($aMounts, StringSplit(((StringLeft($path, 1) = "(" And StringRight($path, 1) = ")") ? StringMid($path, 2, StringLen($path) - 2) : $path), "|", $STR_NOCOUNT))
 			If UBound($aRegExResult) > 0 Then _ArrayConcatenate($aMounts, $aRegExResult)
-			; check which path contains dummy file
-			Local $dummyFile = StringMid(_Crypt_HashData($g_sBotTitle & _Now(), $CALG_SHA1), 3)
-			If FileWriteLine($g_sAndroidPicturesHostPath & $dummyFile, _Now()) Then
-				SetDebugLog("Created dummy file: " & $g_sAndroidPicturesHostPath & $dummyFile)
-			Else
-				SetLog("Cannot create dummy file: " & $g_sAndroidPicturesHostPath & $dummyFile, $COLOR_ERROR)
+			; Check which path contains a dummy file. The MEmu shared folder can be
+			; briefly locked while its service starts, so do not fail ADB initialization
+			; after a single failed host-side write.
+			Local $dummyFile = ""
+			Local $bDummyFileCreated = False
+			For $iDummyWriteAttempt = 1 To 3
+				; Use a new name on each attempt in case a previous attempt left a file behind.
+				$dummyFile = StringMid(_Crypt_HashData($g_sBotTitle & _Now() & @AutoItPID & $iDummyWriteAttempt, $CALG_SHA1), 3)
+				If FileWriteLine($g_sAndroidPicturesHostPath & $dummyFile, _Now()) Then
+					$bDummyFileCreated = True
+					SetDebugLog("Created dummy file: " & $g_sAndroidPicturesHostPath & $dummyFile)
+					ExitLoop
+				EndIf
+				SetDebugLog("Cannot create dummy file (attempt " & $iDummyWriteAttempt & "/3): " & $g_sAndroidPicturesHostPath & $dummyFile)
+				If $iDummyWriteAttempt < 3 And _Sleep(1000) Then Return
+			Next
+			If Not $bDummyFileCreated Then
+				SetDebugLog("Cannot create dummy file after 3 attempts: " & $g_sAndroidPicturesHostPath, $COLOR_ERROR)
 				Return SetError(4, 0)
 			EndIf
-			$s = LaunchConsole($g_sAndroidAdbPath, AddSpace($g_sAndroidAdbGlobalOptions) & "-s " & $g_sAndroidAdbDevice & " shell" & $g_sAndroidAdbShellOptions & " ls '" & $g_sAndroidPicturesPath & $dummyFile & "'", $process_killed)
-			If StringInStr($s, $dummyFile) > 0 And StringInStr($s, $dummyFile & ":") = 0 And StringInStr($s, "No such file or directory") = 0 And StringInStr($s, "syntax error") = 0 And StringInStr($s, "Permission denied") = 0 Then
+			Local $sExpectedFile = $g_sAndroidPicturesPath & $dummyFile
+			$s = LaunchConsole($g_sAndroidAdbPath, AddSpace($g_sAndroidAdbGlobalOptions) & "-s " & $g_sAndroidAdbDevice & " shell" & $g_sAndroidAdbShellOptions & " ls '" & $sExpectedFile & "'", $process_killed)
+			If StringStripWS($s, $STR_STRIPTRAILING) = $sExpectedFile Then
 				$pathFound = True
 				SetDebugLog("Using " & $g_sAndroidPicturesPath & " for Android shared folder")
 				ExitLoop
@@ -1879,8 +2022,9 @@ Func _AndroidAdbLaunchShellInstance($wasRunState = Default, $rebootAndroidIfNecc
 				$path = $aMounts[$i]
 				If $path = "" Then ContinueLoop
 				If StringRight($path, 1) <> "/" Then $path &= "/"
-				$s = LaunchConsole($g_sAndroidAdbPath, AddSpace($g_sAndroidAdbGlobalOptions) & "-s " & $g_sAndroidAdbDevice & " shell" & $g_sAndroidAdbShellOptions & " ls '" & $path & $dummyFile & "'", $process_killed)
-				If StringInStr($s, $dummyFile) > 0 And StringInStr($s, $dummyFile & ":") = 0 And StringInStr($s, "No such file or directory") = 0 And StringInStr($s, "syntax error") = 0 And StringInStr($s, "Permission denied") = 0 Then
+				$sExpectedFile = $path & $dummyFile
+				$s = LaunchConsole($g_sAndroidAdbPath, AddSpace($g_sAndroidAdbGlobalOptions) & "-s " & $g_sAndroidAdbDevice & " shell" & $g_sAndroidAdbShellOptions & " ls '" & $sExpectedFile & "'", $process_killed)
+				If StringStripWS($s, $STR_STRIPTRAILING) = $sExpectedFile Then
 					$pathFound = True
 					$g_sAndroidPicturesPath = $path
 					SetDebugLog("Using " & $g_sAndroidPicturesPath & " for Android shared folder")
@@ -1896,24 +2040,29 @@ Func _AndroidAdbLaunchShellInstance($wasRunState = Default, $rebootAndroidIfNecc
 				SetDebugLog("Still waiting for shared folder to get mounted...")
 			EndIf
 			If _Sleep(6000) Then Return
-		Next
+			Next
 		$g_sAndroidPicturesPathAvailable = $pathFound
+		If $pathFound And $sBlueStacks5SharedFolderRecoveryAttempted = $sBlueStacks5SharedFolderRecoveryKey Then _
+			$sBlueStacks5SharedFolderRecoveryAttempted = ""
 		If $pathFound = False Then
 			SetLog($g_sAndroidEmulator & " cannot use ADB on shared folder, """ & $g_sAndroidPicturesPath & """ not found", $COLOR_ERROR)
 		EndIf
 
 		; if shared folder is not available, configure it
-		If (Not $g_sAndroidPicturesHostPath Or Not $g_bAndroidSharedFolderAvailable) And $g_bAndroidPicturesPathAutoConfig And $rebootAndroidIfNeccessary Then
-			RebootAndroidSetScreenDefault()
-			Return SetError(0, 0)
+		If (Not $g_sAndroidPicturesHostPath Or Not $g_bAndroidSharedFolderAvailable Or Not $pathFound) And $g_bAndroidPicturesPathAutoConfig And $rebootAndroidIfNeccessary And _
+				($g_sAndroidEmulator <> "BlueStacks5" Or $sBlueStacks5SharedFolderRecoveryAttempted <> $sBlueStacks5SharedFolderRecoveryKey) Then
+			If $g_sAndroidEmulator = "BlueStacks5" Then $sBlueStacks5SharedFolderRecoveryAttempted = $sBlueStacks5SharedFolderRecoveryKey
+			If RebootAndroidSetScreenDefault() Then Return SetError(0, 0)
+			Return SetError(4, 0)
 		EndIf
+		If Not $pathFound And $g_sAndroidEmulator = "BlueStacks5" Then Return SetError(4, 0)
 
 		; sync android tools to shared folder
 		Local $hostFolder = $g_sAndroidPicturesHostPath & $g_sAndroidPicturesHostFolder
+		Local $aTools = ["toybox", "minitouch"]
+		Local $tool
 		If FileExists($hostFolder) = 1 Then
 			SetDebugLog($hostFolder & " exists")
-			Local $aTools = ["toybox", "minitouch"]
-			Local $tool
 			For $tool In $aTools
 				Local $srcFile = $g_sAdbScriptsPath & "\" & $tool
 				Local $dstFile = $hostFolder & $tool
@@ -1962,6 +2111,18 @@ Func _AndroidAdbLaunchShellInstance($wasRunState = Default, $rebootAndroidIfNecc
 					Sleep(500)
 				EndIf
 			EndIf
+			If ($g_iAndroidAdbProcess[0] = 0 Or ProcessExists2($g_iAndroidAdbProcess[0]) <> $g_iAndroidAdbProcess[0]) And ($g_sAndroidEmulator = "MEmu" Or $g_sAndroidEmulator = "BlueStacks5") Then
+				SetDebugLog($g_sAndroidEmulator & " steady ADB shell unavailable; retrying up to 3 times", $COLOR_WARNING)
+				For $iShellRetry = 1 To 3
+					If $g_iAndroidAdbProcess[0] <> 0 Then ClosePipe($g_iAndroidAdbProcess[0], $g_iAndroidAdbProcess[1], $g_iAndroidAdbProcess[2], $g_iAndroidAdbProcess[3], $g_iAndroidAdbProcess[4])
+					$g_iAndroidAdbProcess[0] = 0
+					Sleep(750)
+					ConnectAndroidAdb(False, False, 3000)
+					$g_iAndroidAdbProcess[0] = RunPipe($cmd, "", @SW_HIDE, BitOR($STDIN_CHILD, $STDERR_MERGED), $g_iAndroidAdbProcess[1], $g_iAndroidAdbProcess[2], $g_iAndroidAdbProcess[3], $g_iAndroidAdbProcess[4])
+					Sleep(750)
+					If $g_iAndroidAdbProcess[0] <> 0 And ProcessExists2($g_iAndroidAdbProcess[0]) = $g_iAndroidAdbProcess[0] Then ExitLoop
+				Next
+			EndIf
 			If $g_iAndroidAdbProcess[0] = 0 Or ProcessExists2($g_iAndroidAdbProcess[0]) <> $g_iAndroidAdbProcess[0] Then
 				SetLog($g_sAndroidEmulator & " error launching ADB for background mode, zoom-out, mouse click and input", $COLOR_ERROR)
 				$g_iAndroidAdbProcess[0] = 0
@@ -2004,6 +2165,14 @@ Func _AndroidAdbLaunchShellInstance($wasRunState = Default, $rebootAndroidIfNecc
 		;AndroidAdbSendShellCommand("", Default, $wasRunState, False)
 		; update $g_iAndroidSystemAPI ; getprop ro.build.version.sdk
 		$g_iAndroidVersionAPI = Int(AndroidAdbSendShellCommand("getprop ro.build.version.sdk", Default, $wasRunState, False))
+		If $g_sAndroidEmulator = "MEmu" And $g_iAndroidVersionAPI <= 0 Then
+			For $iApiRetry = 1 To 3
+				SetDebugLog("MEmu Android API not detected, retrying #" & $iApiRetry, $COLOR_ERROR)
+				If _Sleep(500) Then Return SetError(4, 0)
+				$g_iAndroidVersionAPI = Int(AndroidAdbSendShellCommand("getprop ro.build.version.sdk", Default, $wasRunState, False))
+				If $g_iAndroidVersionAPI > 0 Then ExitLoop
+			Next
+		EndIf
 		SetDebugLog("Android Version API = " & $g_iAndroidVersionAPI)
 		Switch $g_iAndroidVersionAPI
 			Case $g_iAndroidJellyBean
@@ -2016,20 +2185,27 @@ Func _AndroidAdbLaunchShellInstance($wasRunState = Default, $rebootAndroidIfNecc
 				SetDebugLog("Android Version 7.0")
 			Case $g_iAndroidPie
 				SetDebugLog("Android Version 9.0")
-				If $g_sAndroidEmulator = "Memu" Then
-					; minitouch binary is usually placed in the same shared folder as the screencap but Andriod Pie om Memu has this folder mounted with noexec flag
-					; will push minitounch binary to /data/local/tmp the same place as the minitouch README example
-					Local $cmdOutput = LaunchConsole($g_sAndroidAdbPath, AddSpace($g_sAndroidAdbGlobalOptions) & "-s " & $g_sAndroidAdbDevice & " push """ & $g_sAdbScriptsPath & "\minitouch"" /data/local/tmp/", $process_killed)
-					SetLog($cmdOutput, $COLOR_INFO)
-
-					If _Sleep(3000) Then Return
-
-					Local $cmdOutput = AndroidAdbSendShellCommand("chmod 555 /data/local/tmp/minitouch", $wasRunState, False)
-					SetLog($cmdOutput, $COLOR_INFO)
-				EndIf
 			Case Else
 				SetDebugLog("Android Version not detected!")
 		EndSwitch
+
+		If $g_sAndroidEmulator = "MEmu" Then
+			; MEmu can mount its shared folder with noexec. Always use /data/local/tmp
+			; so a transient API detection failure cannot select the unusable path.
+			Local $cmdOutput = LaunchConsole($g_sAndroidAdbPath, AddSpace($g_sAndroidAdbGlobalOptions) & "-s " & $g_sAndroidAdbDevice & " push """ & $g_sAdbScriptsPath & "\minitouch"" /data/local/tmp/", $process_killed)
+			SetDebugLog($cmdOutput, $COLOR_INFO)
+			If $process_killed Or StringInStr($cmdOutput, "error:") Or StringInStr($cmdOutput, "failed") Then
+				SetLog($g_sAndroidEmulator & " failed to install minitouch", $COLOR_ERROR)
+				Return SetError(5, 0)
+			EndIf
+
+			$cmdOutput = LaunchConsole($g_sAndroidAdbPath, AddSpace($g_sAndroidAdbGlobalOptions) & "-s " & $g_sAndroidAdbDevice & " shell ""chmod 555 /data/local/tmp/minitouch && test -x /data/local/tmp/minitouch && echo MINITOUCH_READY""", $process_killed)
+			If $process_killed Or StringInStr($cmdOutput, "MINITOUCH_READY") = 0 Then
+				SetLog($g_sAndroidEmulator & " failed to make minitouch executable: " & $cmdOutput, $COLOR_ERROR)
+				Return SetError(5, 0)
+			EndIf
+			SetDebugLog($g_sAndroidEmulator & " minitouch installed and executable")
+		EndIf
 
 		; check mouse device
 		If StringLen($g_sAndroidMouseDevice) > 0 And $g_sAndroidMouseDevice = $g_avAndroidAppConfig[$g_iAndroidConfig][13] Then
@@ -2045,6 +2221,17 @@ Func _AndroidAdbLaunchShellInstance($wasRunState = Default, $rebootAndroidIfNecc
 				; use getevent to find mouse input device
 				$s = AndroidAdbSendShellCommand("getevent -p", Default, $wasRunState, False)
 				SetDebugLog($g_sAndroidEmulator & " getevent -p: " & $s)
+				If $g_sAndroidEmulator = "BlueStacks5" And StringInStr($s, $g_sAndroidMouseDevice) = 0 Then
+					; The steady shell can still be initializing immediately after BlueStacks reports boot completed.
+					; Query the device through a separate ADB command before treating it as unavailable.
+					Local $bGetEventProcessKilled = False
+					For $iGetEventRetry = 1 To 3
+						$s = LaunchConsole($g_sAndroidAdbPath, AddSpace($g_sAndroidAdbGlobalOptions) & "-s " & $g_sAndroidAdbDevice & " shell" & $g_sAndroidAdbShellOptions & " getevent -p", $bGetEventProcessKilled, 10000)
+						SetDebugLog($g_sAndroidEmulator & " getevent -p direct attempt " & $iGetEventRetry & ": " & $s)
+						If Not $bGetEventProcessKilled And StringInStr($s, $g_sAndroidMouseDevice) > 0 Then ExitLoop
+						If _Sleep(1000) Then Return SetError(3, 0)
+					Next
+				EndIf
 				Local $aRegExResult = StringRegExp($s, "(\/dev\/input\/event\d+)[\r\n]+.+""" & $g_sAndroidMouseDevice & """((?!\/dev\/input\/event)[\s\S])+ABS", $STR_REGEXPARRAYMATCH)
 				If @error = 0 Then
 					$g_sAndroidMouseDevice = $aRegExResult[0]
@@ -2052,6 +2239,14 @@ Func _AndroidAdbLaunchShellInstance($wasRunState = Default, $rebootAndroidIfNecc
 				Else
 					; ok, now use first device with 35/36 expected dimensions
 					$aRegExResult = StringRegExp($s, "(\/dev\/input\/event\d+)[\r\n]+.+"".+""((?!\/dev\/input\/event)[\s\S])+ABS \(\d+\): 0035.+max " & $g_iGAME_WIDTH & ".+\n.+0036.+max " & $g_iGAME_HEIGHT, $STR_REGEXPARRAYMATCH)
+					If @error <> 0 And $g_sAndroidEmulator = "MEmu" Then
+						SetDebugLog("MEmu mouse device not found, retrying getevent once", $COLOR_ERROR)
+						Sleep(1500)
+						$s = AndroidAdbSendShellCommand("getevent -p", Default, $wasRunState, False)
+						SetDebugLog($g_sAndroidEmulator & " getevent -p retry: " & $s)
+						$aRegExResult = StringRegExp($s, "(\/dev\/input\/event\d+)[\r\n]+.+""" & $g_sAndroidMouseDevice & """((?!\/dev\/input\/event)[\s\S])+ABS", $STR_REGEXPARRAYMATCH)
+						If @error <> 0 Then $aRegExResult = StringRegExp($s, "(\/dev\/input\/event\d+)[\r\n]+.+"".+""((?!\/dev\/input\/event)[\s\S])+ABS \(\d+\): 0035.+max " & $g_iGAME_WIDTH & ".+\n.+0036.+max " & $g_iGAME_HEIGHT, $STR_REGEXPARRAYMATCH)
+					EndIf
 					If @error = 0 Then
 						SetDebugLog("Using " & $aRegExResult[0] & " for mouse events (" & $g_sAndroidMouseDevice & " not found)")
 						$g_sAndroidMouseDevice = $aRegExResult[0]
@@ -2066,51 +2261,51 @@ Func _AndroidAdbLaunchShellInstance($wasRunState = Default, $rebootAndroidIfNecc
 			SetDebugLog($g_sAndroidEmulator & " ADB use " & $g_sAndroidMouseDevice & " for mouse events")
 		EndIf
 
-		If $g_bAndroidAdbMinitouchSocket Then
-			TCPCloseSocket($g_bAndroidAdbMinitouchSocket)
-			$g_bAndroidAdbMinitouchSocket = 0
-		EndIf
-		If $g_iAndroidAdbMinitouchMode = 0 Then
-			If $g_bAndroidAdbMinitouchPort Then
-				SetDebugLog($g_sAndroidEmulator & " initialize minitouch on port " & $g_bAndroidAdbMinitouchPort)
-				; launch minitouch
-				Local $androidPath = $g_sAndroidPicturesPath & StringReplace($g_sAndroidPicturesHostFolder, "\", "/")
-
-				If $g_iAndroidVersionAPI = $g_iAndroidPie And $g_sAndroidEmulator = "Memu" Then
-					SetDebugLog("Pie")
-					Local $output = AndroidAdbSendShellCommand("/data/local/tmp/minitouch -d " & $g_sAndroidMouseDevice & " >/dev/null 2>&1 &", -1000, $wasRunState, False)
-					SetDebugLog("[1] : " & $output, $COLOR_RED)
-				Else
-					Local $output = AndroidAdbSendShellCommand($androidPath & "minitouch -d " & $g_sAndroidMouseDevice & " >/dev/null 2>&1 &", -1000, $wasRunState, False)
-				EndIf
-
-				; clear output
-				AndroidAdbSendShellCommand("", Default, $wasRunState, False)
-				; forward minitouch port
-				Local $process_killed
-				Local $output = LaunchConsole($g_sAndroidAdbPath, AddSpace($g_sAndroidAdbGlobalOptions) & "-s " & $g_sAndroidAdbDevice & " forward tcp:" & $g_bAndroidAdbMinitouchPort & " localabstract:minitouch", $process_killed)
-				If StringInStr($output, "cannot bind") > 0 Then
-					; cannot bind TCP port, not available "anymore"
-					SetLog("Initialize Android ADB ports...")
-					; try again
-					AndroidAdbTerminateShellInstance()
-					InitAndroidAdbPorts(True)
-					_AndroidAdbLaunchShellInstance($wasRunState, $rebootAndroidIfNeccessary)
-					Return
-				EndIf
-				; connect socket
-				$g_bAndroidAdbMinitouchSocket = TCPConnect("127.0.0.1", $g_bAndroidAdbMinitouchPort)
-			EndIf
-			If $g_bAndroidAdbMinitouchSocket < 1 Then
-				SetDebugLog($g_sAndroidEmulator & " minitouch not available, switch to STDIN", $COLOR_ERROR)
+			If $g_bAndroidAdbMinitouchSocket Then
+				TCPCloseSocket($g_bAndroidAdbMinitouchSocket)
 				$g_bAndroidAdbMinitouchSocket = 0
-				$g_iAndroidAdbMinitouchMode = 1
 			EndIf
-		EndIf
-		If $g_iAndroidAdbMinitouchMode = 1 Then
-			; use STDIN
-			AndroidAdbLaunchMinitouchShellInstance($wasRunState, $rebootAndroidIfNeccessary)
-		EndIf
+			If $g_iAndroidAdbMinitouchMode = 0 Then
+				If $g_bAndroidAdbMinitouchPort Then
+					SetDebugLog($g_sAndroidEmulator & " initialize minitouch on port " & $g_bAndroidAdbMinitouchPort)
+					; launch minitouch
+					Local $androidPath = $g_sAndroidPicturesPath & StringReplace($g_sAndroidPicturesHostFolder, "\", "/")
+
+					If $g_sAndroidEmulator = "MEmu" Then
+						SetDebugLog("MEmu local minitouch")
+						Local $output = AndroidAdbSendShellCommand("/data/local/tmp/minitouch -d " & $g_sAndroidMouseDevice & " >/dev/null 2>&1 &", -1000, $wasRunState, False)
+						SetDebugLog("[1] : " & $output, $COLOR_RED)
+					Else
+						Local $output = AndroidAdbSendShellCommand($androidPath & "minitouch -d " & $g_sAndroidMouseDevice & " >/dev/null 2>&1 &", -1000, $wasRunState, False)
+					EndIf
+
+					; clear output
+					AndroidAdbSendShellCommand("", Default, $wasRunState, False)
+					; forward minitouch port
+					Local $process_killed
+					Local $output = LaunchConsole($g_sAndroidAdbPath, AddSpace($g_sAndroidAdbGlobalOptions) & "-s " & $g_sAndroidAdbDevice & " forward tcp:" & $g_bAndroidAdbMinitouchPort & " localabstract:minitouch", $process_killed)
+					If StringInStr($output, "cannot bind") > 0 Then
+						; cannot bind TCP port, not available "anymore"
+						SetLog("Initialize Android ADB ports...")
+						; try again
+						AndroidAdbTerminateShellInstance()
+						InitAndroidAdbPorts(True)
+						_AndroidAdbLaunchShellInstance($wasRunState, $rebootAndroidIfNeccessary)
+						Return
+					EndIf
+					; connect socket
+					$g_bAndroidAdbMinitouchSocket = TCPConnect("127.0.0.1", $g_bAndroidAdbMinitouchPort)
+				EndIf
+				If $g_bAndroidAdbMinitouchSocket < 1 Then
+					SetDebugLog($g_sAndroidEmulator & " minitouch not available, switch to STDIN", $COLOR_ERROR)
+					$g_bAndroidAdbMinitouchSocket = 0
+					$g_iAndroidAdbMinitouchMode = 1
+				EndIf
+			EndIf
+			If $g_iAndroidAdbMinitouchMode = 1 Then
+				; use STDIN
+				AndroidAdbLaunchMinitouchShellInstance($wasRunState, $rebootAndroidIfNeccessary)
+			EndIf
 		SuspendAndroid($SuspendMode)
 	EndIf
 	SetError(0, 0)
@@ -2229,11 +2424,14 @@ Func _AndroidAdbSendShellCommand($cmd = Default, $timeout = Default, $wasRunStat
 	If $error <> 0 Then
 		SetDebugLog("(" & $iCommandErrors & "): ADB shell command error " & $error & " (" & $g_sAndroidAdbPrompt & "): " & $s, $COLOR_ERROR)
 		$iCommandErrors += 1
+	Else
+		$iCommandErrors = 0 ; only consecutive command failures may trigger emulator recovery
 	EndIf
 	If $__TEST_ERROR_SLOW_ADB_SHELL_COMMAND_DELAY > 0 Then Sleep($__TEST_ERROR_SLOW_ADB_SHELL_COMMAND_DELAY)
 	$g_iAndroidAdbAutoTerminateCount += 1
-	If $iCommandErrors > $g_iAndroidRebootAdbCommandErrorCount Or (Mod($g_iAndroidAdbAutoTerminateCount, $g_iAndroidAdbAutoTerminate) = 0 And $EnsureShellInstance = True) Then
-		If $iCommandErrors > $g_iAndroidRebootAdbCommandErrorCount Then
+	Local $iAdbErrorLimit = (($g_sAndroidEmulator = "MEmu") ? 3 : $g_iAndroidRebootAdbCommandErrorCount)
+	If $iCommandErrors >= $iAdbErrorLimit Or (Mod($g_iAndroidAdbAutoTerminateCount, $g_iAndroidAdbAutoTerminate) = 0 And $EnsureShellInstance = True) Then
+		If $iCommandErrors >= $iAdbErrorLimit Then
 			$iCommandErrors = 0
 			RebootAndroid() ; reboot
 		Else
@@ -2245,7 +2443,7 @@ Func _AndroidAdbSendShellCommand($cmd = Default, $timeout = Default, $wasRunStat
 	Return SetError($error, Int(__TimerDiff($hTimer)), $s)
 EndFunc   ;==>_AndroidAdbSendShellCommand
 
-Func AndroidAdbLaunchMinitouchShellInstance($wasRunState = Default, $rebootAndroidIfNeccessary = $g_bRunState, $bUseMouseDevice = True)
+Func AndroidAdbLaunchMinitouchShellInstance($wasRunState = Default, $rebootAndroidIfNeccessary = $g_bRunState, $bUseMouseDevice = True, $bMinitouchRestarted = False, $bAdbDaemonRecovered = False)
 	If Not $g_bAndroidInitialized Then Return SetError(2, 0)
 	If $wasRunState = Default Then $wasRunState = $g_bRunState
 	Local $iConnected
@@ -2265,15 +2463,15 @@ Func AndroidAdbLaunchMinitouchShellInstance($wasRunState = Default, $rebootAndro
 		; minitouch: Uses STDIN and doesn't start socket
 
 		If $bUseMouseDevice Then
-			If $g_iAndroidVersionAPI = $g_iAndroidPie And $g_sAndroidEmulator = "Memu" Then
-				SetDebugLog("Pie with Mouse")
+			If $g_sAndroidEmulator = "MEmu" Then
+				SetDebugLog("MEmu local minitouch with mouse")
 				Local $cmdMinitouch = "/data/local/tmp/minitouch -d " & $g_sAndroidMouseDevice & " -i"
 			Else
 				Local $cmdMinitouch = $g_sAndroidPicturesPath & StringReplace($g_sAndroidPicturesHostFolder, "\", "/") & "minitouch -d " & $g_sAndroidMouseDevice & " -i"
 			EndIf
 		Else
-			If $g_iAndroidVersionAPI = $g_iAndroidPie And $g_sAndroidEmulator = "Memu" Then
-				SetDebugLog("Pie")
+			If $g_sAndroidEmulator = "MEmu" Then
+				SetDebugLog("MEmu local minitouch")
 				Local $cmdMinitouch = "/data/local/tmp/minitouch -i"
 			Else
 				Local $cmdMinitouch = $g_sAndroidPicturesPath & StringReplace($g_sAndroidPicturesHostFolder, "\", "/") & "minitouch -i"
@@ -2292,7 +2490,7 @@ Func AndroidAdbLaunchMinitouchShellInstance($wasRunState = Default, $rebootAndro
 				ClosePipe($g_iAndroidAdbMinitouchProcess[0], $g_iAndroidAdbMinitouchProcess[1], $g_iAndroidAdbMinitouchProcess[2], $g_iAndroidAdbMinitouchProcess[3], $g_iAndroidAdbMinitouchProcess[4])
 				$cmd = '"' & $g_sAndroidAdbPath & '"' & AddSpace($g_sAndroidAdbGlobalOptions, 1) & " -s " & $g_sAndroidAdbDevice & " shell" & $g_sAndroidAdbInstanceShellOptions & $g_sAndroidAdbShellOptions & " " & $cmdMinitouch
 				SetDebugLog("Run pipe ADB shell for minituch: " & $cmd)
-				$g_iAndroidAdbMinitouchProcess[0] = RunPipe($cmd, "", @SW_HIDE, BitOR($STDIN_CHILD, $STDERR_MERGED), $g_iAndroidAdbProcess[1], $g_iAndroidAdbProcess[2], $g_iAndroidAdbProcess[3], $g_iAndroidAdbProcess[4])
+				$g_iAndroidAdbMinitouchProcess[0] = RunPipe($cmd, "", @SW_HIDE, BitOR($STDIN_CHILD, $STDERR_MERGED), $g_iAndroidAdbMinitouchProcess[1], $g_iAndroidAdbMinitouchProcess[2], $g_iAndroidAdbMinitouchProcess[3], $g_iAndroidAdbMinitouchProcess[4])
 				Sleep(500)
 			EndIf
 		EndIf
@@ -2304,7 +2502,7 @@ Func AndroidAdbLaunchMinitouchShellInstance($wasRunState = Default, $rebootAndro
 				ClosePipe($g_iAndroidAdbMinitouchProcess[0], $g_iAndroidAdbMinitouchProcess[1], $g_iAndroidAdbMinitouchProcess[2], $g_iAndroidAdbMinitouchProcess[3], $g_iAndroidAdbMinitouchProcess[4])
 				$cmd = '"' & $g_sAndroidAdbPath & '"' & AddSpace($g_sAndroidAdbGlobalOptions, 1) & " -s " & $g_sAndroidAdbDevice & " shell" & $g_sAndroidAdbInstanceShellOptions & $g_sAndroidAdbShellOptions & " " & $cmdMinitouch
 				SetDebugLog("Run pipe ADB shell for minituch: " & $cmd)
-				$g_iAndroidAdbMinitouchProcess[0] = RunPipe($cmd, "", @SW_HIDE, BitOR($STDIN_CHILD, $STDERR_MERGED), $g_iAndroidAdbProcess[1], $g_iAndroidAdbProcess[2], $g_iAndroidAdbProcess[3], $g_iAndroidAdbProcess[4])
+				$g_iAndroidAdbMinitouchProcess[0] = RunPipe($cmd, "", @SW_HIDE, BitOR($STDIN_CHILD, $STDERR_MERGED), $g_iAndroidAdbMinitouchProcess[1], $g_iAndroidAdbMinitouchProcess[2], $g_iAndroidAdbMinitouchProcess[3], $g_iAndroidAdbMinitouchProcess[4])
 				Sleep(500)
 			EndIf
 		EndIf
@@ -2313,15 +2511,58 @@ Func AndroidAdbLaunchMinitouchShellInstance($wasRunState = Default, $rebootAndro
 		Else
 			If $bUseMouseDevice Then
 				; failed with mouse device, now try without
-				Return AndroidAdbLaunchMinitouchShellInstance($wasRunState, $rebootAndroidIfNeccessary, False)
+				Return AndroidAdbLaunchMinitouchShellInstance($wasRunState, $rebootAndroidIfNeccessary, False, $bMinitouchRestarted, $bAdbDaemonRecovered)
 			EndIf
-			SetLog($g_sAndroidEmulator & " error launching ADB shell for minitouch", $COLOR_ERROR)
+			Local $aReadPipe = $g_iAndroidAdbMinitouchProcess[2]
+			Local $sMinitouchError = ReadPipe($aReadPipe[0])
+			CleanLaunchOutput($sMinitouchError)
+			If StringLen($sMinitouchError) > 0 Then SetDebugLog("Minitouch process output: " & $sMinitouchError, $COLOR_ERROR)
 			$g_iAndroidAdbMinitouchProcess[0] = 0
+
+			; An interrupted bot start can leave minitouch running inside MEmu after the host ADB pipe is gone.
+			; Kill only the stale Android-side minitouch process and retry the normal launch once.
+			If $g_sAndroidEmulator = "MEmu" And Not $bMinitouchRestarted Then
+				SetDebugLog("Restarting stale MEmu minitouch process", $COLOR_DEBUG)
+				AndroidAdbRestartMinitouchProcess()
+				If _Sleep(500) Then Return SetError(1, 0)
+				Return AndroidAdbLaunchMinitouchShellInstance($wasRunState, $rebootAndroidIfNeccessary, True, True, $bAdbDaemonRecovered)
+			EndIf
+
+			If $g_sAndroidEmulator = "MEmu" And $g_bAndroidAdbPortPerInstance And $g_bAndroidAdbPort And Not $bAdbDaemonRecovered Then
+				SetLog("MEmu Minitouch Failed - Restarting Dedicated ADB Daemon", $COLOR_ERROR)
+				AndroidAdbTerminateShellInstance()
+				If KillAdbDaemon() Then
+					If ConnectAndroidAdb(False) Then
+						If _Sleep(500) Then Return SetError(1, 0)
+						Return AndroidAdbLaunchMinitouchShellInstance($wasRunState, $rebootAndroidIfNeccessary, True, False, True)
+					EndIf
+				EndIf
+			EndIf
+
+			SetLog($g_sAndroidEmulator & " error launching ADB shell for minitouch", $COLOR_ERROR)
 			Return SetError(1, 0)
 		EndIf
 	EndIf
 	SetError(0, 0)
 EndFunc   ;==>AndroidAdbLaunchMinitouchShellInstance
+
+
+Func AndroidAdbRestartMinitouchProcess()
+	AndroidAdbTerminateMinitouchShellInstance()
+	Local $process_killed
+	Local $sPids = LaunchConsole($g_sAndroidAdbPath, AddSpace($g_sAndroidAdbGlobalOptions) & "-s " & $g_sAndroidAdbDevice & " shell pidof minitouch", $process_killed)
+	CleanLaunchOutput($sPids)
+	$sPids = StringStripWS($sPids, 7)
+
+	If StringLen($sPids) > 0 Then
+		Local $aPids = StringSplit($sPids, " ", $STR_NOCOUNT)
+		For $i = 0 To UBound($aPids) - 1
+			If StringIsDigit($aPids[$i]) Then LaunchConsole($g_sAndroidAdbPath, AddSpace($g_sAndroidAdbGlobalOptions) & "-s " & $g_sAndroidAdbDevice & " shell kill -9 " & $aPids[$i], $process_killed)
+		Next
+	EndIf
+
+	$g_iAndroidAdbMinitouchProcess[0] = 0
+EndFunc   ;==>AndroidAdbRestartMinitouchProcess
 
 Func AndroidAdbTerminateMinitouchShellInstance()
 	Local $SuspendMode = ResumeAndroid()
@@ -2347,13 +2588,18 @@ Func AndroidAdbSendMinitouchShellCommand($cmd = Default, $iDelay = 0, $wasRunSta
 	If $EnsureShellInstance = True Then
 		AndroidAdbLaunchMinitouchShellInstance($wasRunState) ; recursive call in AndroidAdbLaunchShellInstance!
 	EndIf
-	If @error <> 0 Then Return SetError(@error, 0, "")
+	If @error <> 0 Then
+		Local $iLaunchError = @error
+		SuspendAndroid($SuspendMode)
+		Return SetError($iLaunchError, 0, "")
+	EndIf
 	Local $loopCount = 0
 	; use steady ADB shell
 	Local $aReadPipe = $g_iAndroidAdbMinitouchProcess[2]
 	Local $aWritePipe = $g_iAndroidAdbMinitouchProcess[1]
 	If UBound($aReadPipe) < 2 Or UBound($aWritePipe) < 2 Then
 		SetDebugLog("ADB Minitiuch Shell instance not initialized, cannot execute: " & $cmd, $COLOR_ERROR)
+		SuspendAndroid($SuspendMode)
 		Return SetError(1, 0, "")
 	EndIf
 	ReadPipe($aReadPipe[0]) ; clear anything in read pipe first
@@ -2366,6 +2612,14 @@ Func AndroidAdbSendMinitouchShellCommand($cmd = Default, $iDelay = 0, $wasRunSta
 			;$g_bSilentSetLog = $_SilentSetLog
 		EndIf
 		$sentBytes = WritePipe($aWritePipe[1], $cmd)
+		Local $iWriteError = @error
+		Local $iExpectedBytes = StringLen($cmd)
+		If $iWriteError Or $sentBytes <> $iExpectedBytes Then
+			If $iWriteError = 0 Then $iWriteError = 1
+			SetDebugLog("ADB minitouch shell write incomplete: " & $sentBytes & "/" & $iExpectedBytes & " bytes", $COLOR_ERROR)
+			SuspendAndroid($SuspendMode)
+			Return SetError($iWriteError, $sentBytes, "")
+		EndIf
 	EndIf
 	If $iDelay Then Sleep($iDelay)
 	; read pipe once
@@ -2569,7 +2823,7 @@ Func AndroidAdbSendShellCommandScript($scriptFile, $variablesArray = Default, $c
 			If FileWrite($hostPath & $scriptFileSh, $script) = 1 Then
 				If BitAND($g_iAndroidSecureFlags, 3) = 0 Then SetLog("ADB script file created: " & $hostPath & $scriptFileSh)
 			Else
-				SetLog("ADB cannot create script file: " & $hostPath & $scriptFileSh, $COLOR_ERROR)
+				SetLog("ADB Cannot Create Script File: " & $hostPath & $scriptFileSh, $COLOR_ERROR)
 				Return SetError(7, 0)
 			EndIf
 			FileSetTime($hostPath & $scriptFileSh, $scriptModifiedTime, $FT_MODIFIED) ; set modification date of source
@@ -2657,6 +2911,9 @@ Func _AndroidScreencap($iLeft, $iTop, $iWidth, $iHeight, $iRetryCount = 0)
 	If $iLeft + $iWidth > $g_iGAME_WIDTH Then $iWidth = $g_iGAME_WIDTH - $iLeft
 	If $iTop + $iHeight > $g_iGAME_HEIGHT Then $iHeight = $g_iGAME_HEIGHT - $iTop
 	Local $startTimer = __TimerInit()
+	Local $bReuseCapture = ($g_iAndroidAdbScreencapTimer <> 0 And $g_bForceCapture = False And _
+		__TimerDiff($g_iAndroidAdbScreencapTimer) < $g_iAndroidAdbScreencapTimeout And _
+		$g_bRunState = True And $iRetryCount = 0)
 	Local $hostPath = $g_sAndroidPicturesHostPath & $g_sAndroidPicturesHostFolder
 	Local $androidPath = $g_sAndroidPicturesPath & StringReplace($g_sAndroidPicturesHostFolder, "\", "/")
 
@@ -2696,7 +2953,7 @@ Func _AndroidScreencap($iLeft, $iTop, $iWidth, $iHeight, $iRetryCount = 0)
 	Local $pBits = 0
 	Local $hHBitmap = 0
 
-	If $g_iAndroidAdbScreencapTimer <> 0 And $g_bForceCapture = False And __TimerDiff($g_iAndroidAdbScreencapTimer) < $g_iAndroidAdbScreencapTimeout And $g_bRunState = True And $iRetryCount = 0 Then
+	If $bReuseCapture Then
 		If $g_bAndroidAdbScreencapPngEnabled = False Then
 			$hHBitmap = _WinAPI_CreateDIBSection(0, $tBIV5HDR, $DIB_RGB_COLORS, $pBits)
 			$tBIV5HDR = 0 ; Release the resources used by the structure
@@ -2737,13 +2994,24 @@ Func _AndroidScreencap($iLeft, $iTop, $iWidth, $iHeight, $iRetryCount = 0)
 		Local $iDataSize = DllStructGetSize($g_aiAndroidAdbScreencapBuffer)
 
 		$ExpectedFileSize = $g_iAndroidClientWidth * $g_iAndroidClientHeight * 4 + $iHeaderSize
-		If $hFile = 0 Then $hFile = _WinAPI_CreateFile($hostPath & $Filename, 2, 2, 7)
-		If $hFile <> 0 Then $iSize = _WinAPI_GetFileSizeEx($hFile)
-		Sleep(10)
-		If $wasRunState And Not $g_bRunState Then
-			If $hFile <> 0 Then _WinAPI_CloseHandle($hFile)
-			Return SetError(1, 0)
-		EndIf
+		Local $bScreencapFileSeen = False
+		Local $iWaitFileAppearTimeout = ($g_iAndroidAdbScreencapWaitFileTimeout > 1500 ? 1500 : $g_iAndroidAdbScreencapWaitFileTimeout)
+		$hTimer = __TimerInit()
+		While __TimerDiff($hTimer) < $iWaitFileAppearTimeout
+			If $hFile = 0 Then $hFile = _WinAPI_CreateFile($hostPath & $Filename, 2, 2, 7)
+			If $hFile <> 0 Then
+				$bScreencapFileSeen = True
+				$iSize = _WinAPI_GetFileSizeEx($hFile)
+				If $iSize >= $ExpectedFileSize Then ExitLoop
+				_WinAPI_CloseHandle($hFile)
+				$hFile = 0
+			EndIf
+			If $wasRunState And Not $g_bRunState Then
+				If $hFile <> 0 Then _WinAPI_CloseHandle($hFile)
+				Return SetError(1, 0)
+			EndIf
+			Sleep(50)
+		WEnd
 
 		Local $iReadHeader = 0
 		$g_iAndroidAdbScreencapWidth = 0
@@ -2787,7 +3055,7 @@ Func _AndroidScreencap($iLeft, $iTop, $iWidth, $iHeight, $iRetryCount = 0)
 			EndIf
 		EndIf
 		If $hFile = 0 Or $iSize < $ExpectedFileSize Or $iReadHeader < $iHeaderSize Or $iReadData < $iDataSize Then
-			If $hFile = 0 Then
+			If $hFile = 0 And Not $bScreencapFileSeen Then
 				SetLog("File not found: " & $hostPath & $Filename, $COLOR_ERROR)
 			Else
 				If $iSize <> $ExpectedFileSize Then SetDebugLog("File size " & $iSize & " is not " & $ExpectedFileSize & " for " & $hostPath & $Filename, $COLOR_ERROR)
@@ -2918,7 +3186,6 @@ Func _AndroidScreencap($iLeft, $iTop, $iWidth, $iHeight, $iRetryCount = 0)
 	;SetDebugLog("AndroidScreencap (" & $duration & "ms," & $shellLogInfo & "," & $iLoopCountFile & "): l=" & $iLeft & ",t=" & $iTop & ",w=" & $iWidth & ",h=" & $iHeight & ", " & $filename & ": w=" & $g_iAndroidAdbScreencapWidth & ",h=" & $g_iAndroidAdbScreencapHeight & ",f=" & $iF)
 
 	$g_iAndroidAdbScreencapTimer = __TimerInit() ; timeout starts now
-
 	; update total stats
 	$g_aiAndroidAdbStatsTotal[$AdbStatsType][0] += 1
 	$g_aiAndroidAdbStatsTotal[$AdbStatsType][1] += $duration
@@ -2973,17 +3240,17 @@ Func AndroidAdbScript($scriptTag, $variablesArray = Default, $timeout = Default,
 	Local $scriptFile = ""
 	If $bMinitouch And $scriptFile = "" And FileExists($g_sAdbScriptsPath & "\" & $scriptTag & "." & $g_sAndroidEmulator & ".minitouch") = 1 Then $scriptFile = $scriptTag & "." & $g_sAndroidEmulator & ".minitouch"
 	If $scriptFile = "" And FileExists($g_sAdbScriptsPath & "\" & $scriptTag & "." & $g_sAndroidEmulator & ".script") = 1 Then $scriptFile = $scriptTag & "." & $g_sAndroidEmulator & ".script"
-	;	If $scriptFile = "" And FileExists($g_sAdbScriptsPath & "\" & $scriptTag & "." & $g_sAndroidEmulator & ".getevent") = 1 Then $scriptFile = $scriptTag & "." & $g_sAndroidEmulator & ".getevent"
+	If $scriptFile = "" And FileExists($g_sAdbScriptsPath & "\" & $scriptTag & "." & $g_sAndroidEmulator & ".getevent") = 1 Then $scriptFile = $scriptTag & "." & $g_sAndroidEmulator & ".getevent"
 	If Not $bMinitouch And $scriptFile = "" And FileExists($g_sAdbScriptsPath & "\" & $scriptTag & "." & $g_sAndroidEmulator & ".minitouch") = 1 Then $scriptFile = $scriptTag & "." & $g_sAndroidEmulator & ".minitouch"
 	If $bMinitouch And $scriptFile = "" And FileExists($g_sAdbScriptsPath & "\" & $scriptTag & ".minitouch") = 1 Then $scriptFile = $scriptTag & ".minitouch"
 	If $scriptFile = "" And FileExists($g_sAdbScriptsPath & "\" & $scriptTag & ".script") = 1 Then $scriptFile = $scriptTag & ".script"
-	;	If $scriptFile = "" And FileExists($g_sAdbScriptsPath & "\" & $scriptTag & ".getevent") = 1 Then $scriptFile = $scriptTag & ".getevent"
+	If $scriptFile = "" And FileExists($g_sAdbScriptsPath & "\" & $scriptTag & ".getevent") = 1 Then $scriptFile = $scriptTag & ".getevent"
 	If Not $bMinitouch And $scriptFile = "" And FileExists($g_sAdbScriptsPath & "\" & $scriptTag & ".minitouch") = 1 Then $scriptFile = $scriptTag & ".minitouch"
 	AndroidAdbSendShellCommandScript($scriptFile, $variablesArray, Default, $timeout, $wasRunState)
 	Return SetError(@error, @extended, (@error = 0 ? 1 : 0))
 EndFunc   ;==>AndroidAdbScript
 
-Func AndroidClickDrag($x1, $y1, $x2, $y2, $wasRunState = Default, $bSCIDSwitch = False)
+Func AndroidClickDrag($x1, $y1, $x2, $y2, $wasRunState = Default, $bSCIDSwitch = False, $bFastDrag = False)
 	$x1 = Int($x1) + $g_aiMouseOffset[0]
 	$y1 = Int($y1) + $g_aiMouseOffset[1]
 	$x2 = Int($x2) + $g_aiMouseOffset[0]
@@ -2991,11 +3258,17 @@ Func AndroidClickDrag($x1, $y1, $x2, $y2, $wasRunState = Default, $bSCIDSwitch =
 	Execute($g_sAndroidEmulator & "AdjustClickCoordinates($x1,$y1)")
 	Execute($g_sAndroidEmulator & "AdjustClickCoordinates($x2,$y2)")
 	Local $swipe_coord[4][2] = [["{$x1}", $x1], ["{$y1}", $y1], ["{$x2}", $x2], ["{$y2}", $y2]]
-	;Return AndroidAdbScript("clickdrag", $swipe_coord, Default, Default, $wasRunState)
-	Return AndroidMinitouchClickDrag($x1, $y1, $x2, $y2, $wasRunState, $bSCIDSwitch)
+	Local $iResult = AndroidMinitouchClickDrag($x1, $y1, $x2, $y2, $wasRunState, $bSCIDSwitch, $bFastDrag)
+	If $iResult Then Return $iResult
+	If $bFastDrag And StringLeft($g_sAndroidEmulator, 10) = "BlueStacks" Then
+		SetDebugLog("Minitouch fast click drag failed; using ADB input swipe", $COLOR_WARNING)
+		Return AndroidInputSwipe($x1, $y1, $x2, $y2, $wasRunState, Random(350, 500, 1))
+	EndIf
+	SetDebugLog("Minitouch click drag failed; using clickdrag ADB script", $COLOR_WARNING)
+	Return AndroidAdbScript("clickdrag", $swipe_coord, Default, False, $wasRunState)
 EndFunc   ;==>AndroidClickDrag
 
-Func AndroidMinitouchClickDrag($x1, $y1, $x2, $y2, $wasRunState = Default, $bSCIDSwitch = False)
+Func AndroidMinitouchClickDrag($x1, $y1, $x2, $y2, $wasRunState = Default, $bSCIDSwitch = False, $bFastDrag = False)
 	AndroidAdbLaunchShellInstance($wasRunState)
 	If $g_iAndroidAdbMinitouchMode = 0 Then
 		If $g_bAndroidAdbMinitouchSocket < 1 Then
@@ -3012,7 +3285,7 @@ Func AndroidMinitouchClickDrag($x1, $y1, $x2, $y2, $wasRunState = Default, $bSCI
 				SetLog("Cannot send minitouch data to " & $g_sAndroidEmulator & ", received " & $recv_state[1] & ", send " & $send_state[1], $COLOR_ERROR)
 				; restart adb session that hopefully fixes the tcp issues
 				AndroidAdbTerminateShellInstance()
-				Return AndroidMinitouchClickDrag($x1, $y1, $x2, $y2, False)
+				Return AndroidMinitouchClickDrag($x1, $y1, $x2, $y2, False, $bSCIDSwitch, $bFastDrag)
 			EndIf
 			Return SetError(1, 0, 0)
 		EndIf
@@ -3021,13 +3294,21 @@ Func AndroidMinitouchClickDrag($x1, $y1, $x2, $y2, $wasRunState = Default, $bSCI
 	Local $sleepStart = 250
 	Local $sleepMove = 10
 	Local $sleepEnd = 1000
+	Local $iCurveY = 0
+	If $bFastDrag Then
+		$sleepStart = Random(80, 120, 1)
+		$sleepMove = Random(4, 6, 1)
+		$sleepEnd = Random(70, 110, 1)
+		If Abs($x2 - $x1) > Abs($y2 - $y1) Then $iCurveY = Random(-2, 2, 1)
+	EndIf
 	Local $sleep = $sleepStart
 	Local $botSleep = 0
 	Local $send = ""
 	Local $screen_w = $g_iGAME_WIDTH
 	Local $screen_h = $g_iGAME_HEIGHT
 	If $screen_h Then Execute($g_sAndroidEmulator & "AdjustClickCoordinates($screen_w,$screen_h)") ; use $screen_h so it doesn't get sripped away
-	Local $steps = Int(($screen_w * 10) / $g_iGAME_WIDTH)
+	; Use the largest transformed axis and never allow a zero movement step.
+	Local $steps = _Max(1, Int((_Max(Abs($screen_w), Abs($screen_h)) * 10) / $g_iGAME_WIDTH))
 	Local $loops = Int(_Max(Abs($x2 - $x1), Abs($y2 - $y1)) / $steps) + 1
 	Local $x_steps = ($x2 - $x1) / $loops
 	Local $y_steps = ($y2 - $y1) / $loops
@@ -3059,8 +3340,12 @@ Func AndroidMinitouchClickDrag($x1, $y1, $x2, $y2, $wasRunState = Default, $bSCI
 			$i = $loops
 			; keep touch down longer to avoid further moves
 			$sleep = $sleepEnd
+		ElseIf $bFastDrag Then
+			$sleep = Random(4, 6, 1)
 		EndIf
-		$send = "m 0 " & Int($x) & " " & Int($y) & " 50" & @LF & "c" & @LF & "w " & $sleep & @LF
+		Local $iSendY = Int($y)
+		If $bFastDrag And $i < $loops Then $iSendY += Int(Sin(($i / $loops) * 3.14159265358979) * $iCurveY)
+		$send = "m 0 " & Int($x) & " " & $iSendY & " 50" & @LF & "c" & @LF & "w " & $sleep & @LF
 		$botSleep += $sleep
 		If $g_bDebugAndroid Then SetDebugLog("minitouch: " & StringReplace($send, @LF, ";"))
 		If $g_iAndroidAdbMinitouchMode = 0 Then
@@ -3091,29 +3376,51 @@ Func IsKeepClicksActive($Really = True)
 	Return $g_bAndroidAdbKeepClicksActive
 EndFunc   ;==>IsKeepClicksActive
 
-Func KeepClicks()
+Func KeepClicks($bCSVBatch = False)
 	$g_bAndroidAdbKeepClicksActive = True
 	If $g_bAndroidAdbClick = False Or $g_bAndroidAdbClicksEnabled = False Then Return False
+	$g_bAndroidAdbCSVBatch = $bCSVBatch
 	If $g_aiAndroidAdbClicks[0] = -1 Then $g_aiAndroidAdbClicks[0] = 0
 EndFunc   ;==>KeepClicks
 
+Func AddQueuedClickDelay($iDelay)
+	If $iDelay <= 0 Or Not IsKeepClicksActive() Or $g_aiAndroidAdbClicks[0] < 1 Then Return
+	Local $iLastClick = $g_aiAndroidAdbClicks[0]
+	Local $aClick = $g_aiAndroidAdbClicks[$iLastClick]
+	If Not IsArray($aClick) Then Return
+	If UBound($aClick) < 5 Then ReDim $aClick[5]
+	$aClick[4] += $iDelay
+	$g_aiAndroidAdbClicks[$iLastClick] = $aClick
+EndFunc   ;==>AddQueuedClickDelay
+
 Func ReleaseClicks($minClicksToRelease = 0, $ReleaseClicksEnabled = $g_bAndroidAdbClicksEnabled)
+	Local $iClickError = 0
+	Local $iClickExtended = 0
 	If $g_bAndroidAdbClick = False Or $ReleaseClicksEnabled = False Then
 		$g_bAndroidAdbKeepClicksActive = False
+		$g_bAndroidAdbCSVBatch = False
 		Return False
 	EndIf
 	If $g_aiAndroidAdbClicks[0] > 0 And $g_bRunState = True Then
 		If $g_aiAndroidAdbClicks[0] >= $minClicksToRelease Then
 			AndroidClick(Default, Default, $g_aiAndroidAdbClicks[0], 0)
+			$iClickError = @error
+			$iClickExtended = @extended
 		Else
 			Return False
 		EndIf
 	EndIf
 	ClearClicks()
+	If $iClickError Then
+		$g_bAndroidAdbClicksEnabled = False
+		SetDebugLog("Disabled ADB click batching after release failure", $COLOR_ERROR)
+		Return SetError($iClickError, $iClickExtended, False)
+	EndIf
 EndFunc   ;==>ReleaseClicks
 
 Func ClearClicks()
 	$g_bAndroidAdbKeepClicksActive = False
+	$g_bAndroidAdbCSVBatch = False
 	ReDim $g_aiAndroidAdbClicks[1]
 	$g_aiAndroidAdbClicks[0] = -1
 EndFunc   ;==>ClearClicks
@@ -3128,7 +3435,10 @@ Func AndroidClick($x, $y, $times = 1, $speed = 150, $checkProblemAffect = True)
 	ForceCaptureRegion()
 	;AndroidSlowClick($x, $y, $times, $speed)
 	;AndroidFastClick($x, $y, $times, $speed, $checkProblemAffect)
-	AndroidMinitouchClick($x, $y, $times, $speed, $checkProblemAffect)
+	Local $vResult = AndroidMinitouchClick($x, $y, $times, $speed, $checkProblemAffect)
+	Local $iError = @error
+	Local $iExtended = @extended
+	Return SetError($iError, $iExtended, $vResult)
 EndFunc   ;==>AndroidClick
 
 Func AndroidSlowClick($x, $y, $times = 1, $speed = 0)
@@ -3217,7 +3527,7 @@ Func _AndroidFastClick($x, $y, $times = 1, $speed = 0, $checkProblemAffect = Tru
 	Local $hDuration = __TimerInit()
 	If $times < 1 Then Return SetError(0, 0)
 	Local $i = 0, $j = 0
-	Local $Click = [$x, $y, "down-up"]
+	Local $Click = [$x, $y, "down-up", $speed, 0]
 	Local $aiAndroidAdbClicks
 	Local $ReleaseClicks = ($x = Default And $y = Default And $g_aiAndroidAdbClicks[0] > 0)
 	If $ReleaseClicks = False And $g_aiAndroidAdbClicks[0] > -1 Then
@@ -3679,6 +3989,11 @@ Func AndroidMinitouchClick($x, $y, $times = 1, $speed = 150, $checkProblemAffect
 	;SetDebugLog("AndroidFastClick: $times=" & $times & ", $loops=" & $loops & ", $remaining=" & $remaining)
 	Local $AdbStatsType = 1 ; click stats
 	Local $timeSlept = 0
+	If $ReleaseClicks And $g_bAndroidAdbCSVBatch And $g_sAndroidEmulator = "BlueStacks5" And $g_iAndroidAdbMinitouchMode = 1 Then
+		$loops = 1
+		$timeSlept = AndroidMinitouchReleaseCSVBatch($aiAndroidAdbClicks, $minSleep, $iDelay)
+		If @error Then Return SetError(@error, 0)
+	Else
 	For $i = 1 To $loops
 		If IsKeepClicksActive(False) = False Then
 			If $checkProblemAffect = True Then
@@ -3798,6 +4113,7 @@ Func AndroidMinitouchClick($x, $y, $times = 1, $speed = 150, $checkProblemAffect
 		If $__TEST_ERROR_SLOW_ADB_CLICK_DELAY > 0 Then Sleep($__TEST_ERROR_SLOW_ADB_CLICK_DELAY)
 		;If $speed > 0 Then Sleep($speed)
 	Next
+	EndIf
 	;TCPSend($g_bAndroidAdbMinitouchSocket, "r" & @CRLF)
 	;TCPSend($g_bAndroidAdbMinitouchSocket, "c" & @CRLF)
 	;_SleepMicro($minSleep * 1000)
@@ -3833,6 +4149,61 @@ Func AndroidMinitouchClick($x, $y, $times = 1, $speed = 150, $checkProblemAffect
 		EndIf
 	EndIf
 EndFunc   ;==>AndroidMinitouchClick
+
+Func AndroidMinitouchReleaseCSVBatch(ByRef $aClicks, $iMinSleep, $iClickUpDelay)
+	Local $sBatch = ""
+	Local $iTotalSleep = 0
+	Local $iBatchSleep = 0
+	Local $iBatchClicks = 0
+	Local $iMaxBatchClicks = $g_iAndroidAdbClickGroup > 0 ? $g_iAndroidAdbClickGroup : 1
+	If $iMaxBatchClicks > 50 Then $iMaxBatchClicks = 50
+
+	For $i = 1 To $aClicks[0]
+		Local $aClick = $aClicks[$i]
+		If Not IsArray($aClick) Then ContinueLoop
+		If UBound($aClick) < 3 Then ContinueLoop
+
+		Local $iX = $aClick[0]
+		Local $iY = $aClick[1]
+		Execute($g_sAndroidEmulator & "AdjustClickCoordinates($iX,$iY)")
+
+		Local $sAction = $aClick[2]
+		Local $iSpeed = $iMinSleep
+		If UBound($aClick) > 3 Then
+			If $aClick[3] > $iSpeed Then $iSpeed = $aClick[3]
+		EndIf
+		Local $iAfterDelay = 0
+		If UBound($aClick) > 4 Then $iAfterDelay = $aClick[4]
+
+		If StringInStr($sAction, "down") Then
+			$sBatch &= "d 0 " & $iX & " " & $iY & " 50" & @LF & "c" & @LF
+		EndIf
+		If StringInStr($sAction, "up") Then
+			$sBatch &= "w " & $iSpeed & @LF & "u 0" & @LF & "c" & @LF
+			$sBatch &= "w " & ($iClickUpDelay + $iAfterDelay) & @LF
+			$iBatchSleep += $iSpeed + $iClickUpDelay + $iAfterDelay
+			$iBatchClicks += 1
+		EndIf
+
+		If $iBatchClicks >= $iMaxBatchClicks Then
+			AndroidAdbSendMinitouchShellCommand($sBatch)
+			If @error Then Return SetError(@error, 0, 0)
+			_SleepMicro($iBatchSleep * 1000)
+			$iTotalSleep += $iBatchSleep
+			$sBatch = ""
+			$iBatchSleep = 0
+			$iBatchClicks = 0
+		EndIf
+	Next
+
+	If $sBatch <> "" Then
+		AndroidAdbSendMinitouchShellCommand($sBatch)
+		If @error Then Return SetError(@error, 0, 0)
+		_SleepMicro($iBatchSleep * 1000)
+		$iTotalSleep += $iBatchSleep
+	EndIf
+	Return $iTotalSleep
+EndFunc   ;==>AndroidMinitouchReleaseCSVBatch
 
 Func AndroidSendText($sText, $SymbolFix = False, $wasRunState = $g_bRunState)
 	AndroidAdbLaunchShellInstance($wasRunState)
@@ -3915,10 +4286,11 @@ Func AndroidSwipeNotWorking($x1, $y1, $x2, $y2, $wasRunState = $g_bRunState) ; T
 	EndIf
 EndFunc   ;==>AndroidSwipeNotWorking
 
-Func AndroidInputSwipe($x1, $y1, $x2, $y2, $wasRunState = $g_bRunState) ; Only used for BlueStacks/BlueStacks2
+Func AndroidInputSwipe($x1, $y1, $x2, $y2, $wasRunState = $g_bRunState, $iDuration = Default) ; Only used for BlueStacks/BlueStacks2
 	AndroidAdbLaunchShellInstance($wasRunState)
 	If @error = 0 Then
-		AndroidAdbSendShellCommand("input swipe " & $x1 & " " & $y1 & " " & $x2 & " " & $y2 & ";input tap " & $x2 & " " & $y2, 6000, $wasRunState) ; use 6 secs for additional timeout
+		Local $sDuration = $iDuration = Default ? "" : " " & Int($iDuration)
+		AndroidAdbSendShellCommand("input swipe " & $x1 & " " & $y1 & " " & $x2 & " " & $y2 & $sDuration, 6000, $wasRunState) ; use 6 secs for additional timeout
 		SetError(0, 0)
 	Else
 		Local $error = @error
@@ -4145,6 +4517,8 @@ EndFunc   ;==>CheckAndroidReboot
 
 Func GetAndroidProcessPID($sPackage = Default, $bForeground = True, $iRetryCount = 0)
 	Local $cmd = "", $sDumpsys = "", $iRetryMax = 5
+	Static $hProcessMissingTimer = 0
+	Static $hLastProcessMissing = 0
 
 	If $sPackage = Default Then $sPackage = $g_sAndroidGamePackage
 	; - USER  - PID - PPID  - VSS  - RSS  -   PRIO - NICE - RTPRIO - SCHED - WCHAN  - EIP    - STATE - NAME
@@ -4156,13 +4530,13 @@ Func GetAndroidProcessPID($sPackage = Default, $bForeground = True, $iRetryCount
 	;u0_a54    13303 84    1338548 188464 16    -4    0     0     sys_epoll_ b7725424 S com.supercell.clashofclans
 	If AndroidInvalidState() Then Return 0
 
-	If $g_iAndroidVersionAPI = $g_iAndroidPie Then
-		$cmd = "set result=$(ps -A -o USER,PID,NAME|grep """ & $g_sAndroidGamePackage & """ >&2)"
+	If $g_iAndroidVersionAPI >= $g_iAndroidPie Then
+		$cmd = "set result=$(ps -A -o USER,PID,NAME|grep """ & $sPackage & """ >&2)"
 		; ps -A|grep "com.supercell.clashofclans" >&2
 		;USER           PID  PPID     VSZ    RSS WCHAN            ADDR S NAME
 		;u0_a69        8572   104 4358212 265080 __do_sys_+          0 S com.supercell.clashofclans
 	Else
-		$cmd = "set result=$(ps -p|grep """ & $g_sAndroidGamePackage & """ >&2)"
+		$cmd = "set result=$(ps|grep """ & $sPackage & """ >&2)"
 	EndIf
 
 	Local $output = AndroidAdbSendShellCommand($cmd)
@@ -4204,6 +4578,9 @@ Func GetAndroidProcessPID($sPackage = Default, $bForeground = True, $iRetryCount
 					SetDebugLog("Android process " & $sPackage & " not running in foreground")
 					Return 0
 				EndIf
+				$g_iAdroidProcNotRunning = 0
+				$hProcessMissingTimer = 0
+				$hLastProcessMissing = 0
 				Return Int($aPkgList[$i - 1][1])
 			EndIf
 
@@ -4212,7 +4589,7 @@ Func GetAndroidProcessPID($sPackage = Default, $bForeground = True, $iRetryCount
 				$sDumpsys = AndroidAdbSendShellCommand("dumpsys window windows | grep -E 'mCurrentFocus'")
 				;SetLog("Dumpsys : " & $sDumpsys)
 
-				If $bForeground = True And StringInStr($sDumpsys, $g_sAndroidGamePackage) = 0 Then
+				If $bForeground = True And StringInStr($sDumpsys, $sPackage) = 0 Then
 					; not foreground
 					If $iRetryCount < $iRetryMax Then
 						; retry 2 times
@@ -4222,6 +4599,9 @@ Func GetAndroidProcessPID($sPackage = Default, $bForeground = True, $iRetryCount
 					SetLog("Android process " & $sPackage & " not running in foreground")
 					Return 0
 				EndIf
+				$g_iAdroidProcNotRunning = 0
+				$hProcessMissingTimer = 0
+				$hLastProcessMissing = 0
 				Return Int($aPkgList[$i - 1][1]) ; return PID
 			EndIf
 		Next
@@ -4233,14 +4613,24 @@ Func GetAndroidProcessPID($sPackage = Default, $bForeground = True, $iRetryCount
 		Return GetAndroidProcessPID($sPackage, $bForeground, $iRetryCount + 1)
 	EndIf
 
-	SetLog("Android process " & $sPackage & " not running")
+	If $g_bDebugAndroid Then SetDebugLog("Android process " & $sPackage & " not running")
 	If $g_bDebugAndroid Then SaveDebugImage("GetAndroidProcessPID")
-	$g_iAdroidProcNotRunning += 1
-	If $g_iAdroidProcNotRunning = 10 Then ; HArchH arbitrary limit
-		SetLog("Too many not running errors.  Restarting emulator.", $COLOR_INFO)
+	If $hLastProcessMissing <> 0 And __TimerDiff($hLastProcessMissing) > 5000 Then
 		$g_iAdroidProcNotRunning = 0
+		$hProcessMissingTimer = 0
+	EndIf
+	If $hProcessMissingTimer = 0 Then $hProcessMissingTimer = __TimerInit()
+	$hLastProcessMissing = __TimerInit()
+	$g_iAdroidProcNotRunning += 1
+	If $g_iAdroidProcNotRunning >= 10 And __TimerDiff($hProcessMissingTimer) >= 30000 Then
+		SetLog("Too many not running errors, restarting emulator", $COLOR_INFO)
+		$g_iAdroidProcNotRunning = 0
+		$hProcessMissingTimer = 0
+		$hLastProcessMissing = 0
 		If _sleep(2000) Then Return False
 		RestartBOT()
+	ElseIf $g_iAdroidProcNotRunning > 10 Then
+		$g_iAdroidProcNotRunning = 10
 	EndIf
 	Return SetError($error, 0, 0)
 EndFunc   ;==>GetAndroidProcessPID
@@ -4299,7 +4689,6 @@ EndFunc   ;==>ShowAndroidWindow
 Func HideAndroidWindow($bHide = True, $bRestorePosAndActivateWhenShow = Default, $bFastCheck = Default, $sSource = "Unknown", $hHWndAfter = Default)
 	If $bFastCheck = Default Then $bFastCheck = True
 	If $hHWndAfter = Default Then $hHWndAfter = $HWND_TOPMOST
-	SetDebugLog("HideAndroidWindow: " & $bHide & ", " & $bRestorePosAndActivateWhenShow & ", " & $bFastCheck & ", " & $sSource)
 	ResumeAndroid()
 	SetError(0)
 	If $bFastCheck Then
@@ -4310,28 +4699,48 @@ Func HideAndroidWindow($bHide = True, $bRestorePosAndActivateWhenShow = Default,
 	EndIf
 	If @error <> 0 Or AndroidEmbedded() Then Return SetError(0, 0, 0)
 
+	Local $bGenericResult = True
 	If $bHide = True Then
-		WinMove($g_hAndroidWindow, "", -32000, -32000)
+		; MEmu must remain at its real position so every instance keeps an
+		; independently composed DirectX render surface. HideMEmuWindow() makes
+		; it transparent, non-interactive and absent from the taskbar.
+		If $g_sAndroidEmulator <> "MEmu" Then $bGenericResult = WinMove($g_hAndroidWindow, "", -32000, -32000) <> 0
 	ElseIf $bHide = False Then
 		Switch $bRestorePosAndActivateWhenShow
 			Case True
 				; move and activate
-				WinMove($g_hAndroidWindow, "", $g_iAndroidPosX, $g_iAndroidPosY)
-				WinActivate($g_hAndroidWindow)
+				$bGenericResult = WinMove($g_hAndroidWindow, "", $g_iAndroidPosX, $g_iAndroidPosY) <> 0
+				If $bGenericResult Then
+					WinActivate($g_hAndroidWindow)
+					$bGenericResult = WinActive($g_hAndroidWindow) <> 0
+				EndIf
 			Case False
 				; don't move, only when hidden
 				Local $a = WinGetPos($g_hAndroidWindow)
-				If UBound($a) > 1 And ($a[0] < -30000 Or $a[1] < -30000) Then WinMove($g_hAndroidWindow, "", $g_iAndroidPosX, $g_iAndroidPosY)
+				If Not IsArray($a) Then
+					$bGenericResult = False
+				ElseIf $a[0] < -30000 Or $a[1] < -30000 Then
+					$bGenericResult = WinMove($g_hAndroidWindow, "", $g_iAndroidPosX, $g_iAndroidPosY) <> 0
+				EndIf
 				_WinAPI_ShowWindow($g_hAndroidWindow, @SW_SHOWNOACTIVATE)
+				$bGenericResult = $bGenericResult And _WinAPI_IsWindowVisible($g_hAndroidWindow)
 			Case Default
 				; just move
 				Local $a = WinGetPos($g_hAndroidWindow)
-				If UBound($a) > 1 And ($a[0] <> $g_iAndroidPosX Or $a[1] <> $g_iAndroidPosY) Then WinMove($g_hAndroidWindow, "", $g_iAndroidPosX, $g_iAndroidPosY)
+				If Not IsArray($a) Then
+					$bGenericResult = False
+				ElseIf $a[0] <> $g_iAndroidPosX Or $a[1] <> $g_iAndroidPosY Then
+					$bGenericResult = WinMove($g_hAndroidWindow, "", $g_iAndroidPosX, $g_iAndroidPosY) <> 0
+				EndIf
 		EndSwitch
 		If $hHWndAfter <> $g_hAndroidWindow Then AndroidToFront($hHWndAfter, $sSource & "->HideAndroidWindow")
 	EndIf
-	Execute("Hide" & $g_sAndroidEmulator & "Window($bHide, $hHWndAfter)")
-	SetError(0)
+	Local $vHideResult = Execute("Hide" & $g_sAndroidEmulator & "Window($bHide, $hHWndAfter)")
+	Local $iHideError = @error
+	If $sSource <> "WinGetAndroidHandle:2" Then SetDebugLog("HideAndroidWindow: " & $bHide & ", " & $bRestorePosAndActivateWhenShow & ", " & $bFastCheck & ", " & $sSource)
+	; Emulators without a specific Hide*Window adapter use the generic move above.
+	If $iHideError Then Return SetError($bGenericResult ? 0 : 1, 0, $bGenericResult)
+	Return SetError($vHideResult ? 0 : 1, 0, $vHideResult)
 EndFunc   ;==>HideAndroidWindow
 
 Func AndroidPicturePathAutoConfig($myPictures = Default, $subDir = Default, $bSetLog = Default)
@@ -4397,6 +4806,10 @@ Func ConfigureSharedFolder($iMode = 0, $bSetLog = Default)
 	Switch $iMode
 		Case 0 ; check that shared folder is configured in VM
 			Local $aRegExResult = StringRegExp($__VBoxVMinfo, "Name: '" & $g_sAndroidSharedFolderName & "', Host path: '(.*)'.*", $STR_REGEXPARRAYGLOBALMATCH)
+			If @error And $g_sAndroidEmulator = "MEmu" Then
+				Local $sMEmuVmConfig = $g_sAndroidPath & "MemuHyperv VMs\" & $g_sAndroidInstance & "\" & $g_sAndroidInstance & ".memu"
+				If FileExists($sMEmuVmConfig) Then $aRegExResult = StringRegExp(FileRead($sMEmuVmConfig), '<SharedFolder\s+name="' & $g_sAndroidSharedFolderName & '"[^>]*\shostPath="([^"]+)"', $STR_REGEXPARRAYGLOBALMATCH)
+			EndIf
 			If Not @error Then
 				$bResult = True
 				$g_bAndroidSharedFolderAvailable = True
@@ -4513,9 +4926,9 @@ Func LaunchAndroid($sProgramPath, $sCmdParam, $sPath, $iWaitInSecAfterLaunch = D
 	EndIf
 	; if shared folder is not available, configure it
 	If Not $g_sAndroidPicturesHostPath Then
-		SetScreenAndroid()
+		If Not SetScreenAndroid() Then Return False
 	EndIf
-	SetLog("Please wait while " & $g_sAndroidEmulator & " and CoC start...", $COLOR_SUCCESS)
+	SetLog("Please wait while " & $g_sAndroidEmulator & " and Clash of Clans start", $COLOR_SUCCESS)
 	Local $pid = 0
 	;$PID = ShellExecute($g_sAndroidProgramPath, $cmdPar, $__MEmu_Path)
 	For $i = 1 To 3
@@ -4528,8 +4941,8 @@ Func LaunchAndroid($sProgramPath, $sCmdParam, $sPath, $iWaitInSecAfterLaunch = D
 
 	SetDebugLog("$PID= " & $pid)
 	If $pid = 0 And $bStopIfLaunchFails = True Then ; IF ShellExecute failed
-		SetLog("Unable to load " & $g_sAndroidEmulator & ($g_sAndroidInstance = "" ? "" : "(" & $g_sAndroidInstance & ")") & ", please check emulator/installation.", $COLOR_ERROR)
-		SetLog("Unable to continue........", $COLOR_WARNING)
+		SetLog("Unable to load " & $g_sAndroidEmulator & ($g_sAndroidInstance = "" ? "" : "(" & $g_sAndroidInstance & ")") & ", please check emulator installation.", $COLOR_ERROR)
+		SetLog("Unable to continue...", $COLOR_WARNING)
 		btnStop()
 		SetError(1, 1, -1)
 		Return 0
@@ -4580,7 +4993,7 @@ Func UpdateAndroidBackgroundMode()
 					Case $g_iAndroidBackgroundModeOpenGL
 						$sMode = "OpenGL/ADB screencap"
 				EndSwitch
-				SetLog($g_sAndroidEmulator & " (" & $g_sAndroidInstance & ") unsupported Graphics Engine / Render Mode, using " & $sMode, $COLOR_WARNING)
+			SetLog($g_sAndroidEmulator & " (" & $g_sAndroidInstance & ") unsupported Graphics Engine / Render Mode, using " & $sMode, $COLOR_WARNING)
 		EndSwitch
 	EndIf
 
@@ -4599,7 +5012,14 @@ Func UpdateAndroidBackgroundMode()
 			EndIf
 		Case 2 ; ADB screencap mode (slower, but alwasy works even if Monitor is off -> "True Brackground Mode")
 			If $g_bAndroidAdbScreencapEnabled <> True Or $g_bAndroidSharedFolderAvailable <> True Then
-				SetLog("Android ADB screencap disabled, please check Android Options", $COLOR_ERROR)
+				If BitAND($g_iAndroidSupportFeature, 1) > 0 Then
+					SetLog("Android ADB screencap disabled, using WinAPI for background capture", $COLOR_WARNING)
+					$g_bAndroidAdbScreencap = False
+				Else
+					SetLog("Android ADB screencap disabled and DirectX not available, Background Mode not supported", $COLOR_ERROR)
+					$g_bAndroidAdbScreencap = False
+					DisableChkBackground()
+				EndIf
 			Else
 				If BitAND($g_iAndroidSupportFeature, 2) = 0 Then
 					If BitAND($g_iAndroidSupportFeature, 1) > 0 Then
@@ -5004,11 +5424,10 @@ Func CheckEmuNewVersions()
 
 	Switch $g_sAndroidEmulator
 		Case "BlueStacks5"
-			$NewVersion = GetVersionNormalized("5.22.55.1007")
+			$NewVersion = GetVersionNormalized("5.22.250.1016")
 		Case "MEmu"
-			$NewVersion = GetVersionNormalized("9.0.8.0")
-		Case "Nox"
-			$NewVersion = GetVersionNormalized("7.0.6.1")
+			; Current Clash of Clans builds require newer MEmu releases; avoid false unsupported-version warnings for MEmu 9.x updates.
+			$NewVersion = GetVersionNormalized("9.9.99.0")
 		Case Else
 			; diabled of the others
 			$NewVersion = GetVersionNormalized("99.0.0.0")

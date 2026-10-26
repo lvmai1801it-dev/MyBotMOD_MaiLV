@@ -19,26 +19,25 @@ Global $g_hGUI_SEARCH = 0
 ; These global arrays are used at multiple levels in the GUI hierarchy, and must be defined at this common level.  They are referenced in
 ;   MBR GUI Design Child Attack - Deadbase-Search.au3
 ;   MBR GUI Design Child Attack - Activebase-Search.au3
-Global $g_ahChkMaxMortar[$g_iModeCount] = [0, 0, 0], $g_ahChkMaxWizTower[$g_iModeCount] = [0, 0, 0], $g_ahChkMaxAirDefense[$g_iModeCount] = [0, 0, 0], _
-	   $g_ahChkMaxXBow[$g_iModeCount] = [0, 0, 0], $g_ahChkMaxInferno[$g_iModeCount] = [0, 0, 0], $g_ahChkMaxEagle[$g_iModeCount] = [0, 0, 0], $g_ahChkMaxScatter[$g_iModeCount] = [0, 0, 0], _
-	   $g_ahChkMaxMonolith[$g_iModeCount] = [0, 0, 0]
-Global $g_ahCmbWeakMortar[$g_iModeCount] = [0, 0, 0], $g_ahCmbWeakWizTower[$g_iModeCount] = [0, 0, 0],  $g_ahCmbWeakAirDefense[$g_iModeCount] = [0, 0, 0], _
-	   $g_ahCmbWeakXBow[$g_iModeCount] = [0, 0, 0], $g_ahCmbWeakInferno[$g_iModeCount] = [0, 0, 0], $g_ahCmbWeakEagle[$g_iModeCount] = [0, 0, 0], $g_ahCmbWeakScatter[$g_iModeCount] = [0, 0, 0], _
-	   $g_ahCmbWeakMonolith[$g_iModeCount] = [0, 0, 0]
+Global $g_ahChkMaxMortar[$g_iModeCount] = [0, 0], $g_ahChkMaxWizTower[$g_iModeCount] = [0, 0], $g_ahChkMaxAirDefense[$g_iModeCount] = [0, 0], _
+	   $g_ahChkMaxXBow[$g_iModeCount] = [0, 0], $g_ahChkMaxInferno[$g_iModeCount] = [0, 0], $g_ahChkMaxEagle[$g_iModeCount] = [0, 0], $g_ahChkMaxScatter[$g_iModeCount] = [0, 0], _
+	   $g_ahChkMaxMonolith[$g_iModeCount] = [0, 0]
+Global $g_ahCmbWeakMortar[$g_iModeCount] = [0, 0], $g_ahCmbWeakWizTower[$g_iModeCount] = [0, 0],  $g_ahCmbWeakAirDefense[$g_iModeCount] = [0, 0], _
+	   $g_ahCmbWeakXBow[$g_iModeCount] = [0, 0], $g_ahCmbWeakInferno[$g_iModeCount] = [0, 0], $g_ahCmbWeakEagle[$g_iModeCount] = [0, 0], $g_ahCmbWeakScatter[$g_iModeCount] = [0, 0], _
+	   $g_ahCmbWeakMonolith[$g_iModeCount] = [0, 0]
 
-Global $g_ahPicWeakMortar[$g_iModeCount] = [0, 0, 0], $g_ahPicWeakWizTower[$g_iModeCount] = [0, 0, 0], $g_ahPicWeakAirDefense[$g_iModeCount] = [0, 0, 0], _
-	   $g_ahPicWeakXBow[$g_iModeCount] = [0, 0, 0], $g_ahPicWeakInferno[$g_iModeCount] = [0, 0, 0], $g_ahPicWeakEagle[$g_iModeCount] = [0, 0, 0], $g_ahPicWeakScatter[$g_iModeCount] = [0, 0, 0], _
-	   $g_ahPicWeakMonolith[$g_iModeCount] = [0, 0, 0]
-Global $g_ahChkMeetOne[$g_iModeCount] = [0, 0, 0]
+Global $g_ahPicWeakMortar[$g_iModeCount] = [0, 0], $g_ahPicWeakWizTower[$g_iModeCount] = [0, 0], $g_ahPicWeakAirDefense[$g_iModeCount] = [0, 0], _
+	   $g_ahPicWeakXBow[$g_iModeCount] = [0, 0], $g_ahPicWeakInferno[$g_iModeCount] = [0, 0], $g_ahPicWeakEagle[$g_iModeCount] = [0, 0], $g_ahPicWeakScatter[$g_iModeCount] = [0, 0], _
+	   $g_ahPicWeakMonolith[$g_iModeCount] = [0, 0]
+Global $g_ahChkMeetOne[$g_iModeCount] = [0, 0]
 
 #include "MBR GUI Design Child Attack - Deadbase.au3"
 #include "MBR GUI Design Child Attack - Activebase.au3"
-#include "MBR GUI Design Child Attack - Bully.au3"
 #include "MBR GUI Design Child Attack - Options.au3"
 
-Global $g_hGUI_SEARCH_TAB = 0, $g_hGUI_SEARCH_TAB_ITEM1 = 0, $g_hGUI_SEARCH_TAB_ITEM2 = 0, $g_hGUI_SEARCH_TAB_ITEM3 = 0, $g_hGUI_SEARCH_TAB_ITEM4 = 0
-Global $g_hChkDeadbase = 0, $g_hChkActivebase = 0, $g_hChkBully = 0
-Global $g_hLblDeadbaseDisabled = 0, $g_hLblActivebaseDisabled = 0, $g_hLblBullyDisabled = 0
+Global $g_hGUI_SEARCH_TAB = 0, $g_hGUI_SEARCH_TAB_ITEM1 = 0, $g_hGUI_SEARCH_TAB_ITEM2 = 0, $g_hGUI_SEARCH_TAB_ITEM3 = 0
+Global $g_hChkDeadbase = 0, $g_hChkActivebase = 0
+Global $g_hLblDeadbaseDisabled = 0, $g_hLblActivebaseDisabled = 0
 
 Func CreateAttackSearch()
 	$g_hGUI_SEARCH = _GUICreate("", $g_iSizeWGrpTab2, $g_iSizeHGrpTab2, 5, 25, BitOR($WS_CHILD, $WS_TABSTOP), -1, $g_hGUI_ATTACK)
@@ -55,14 +54,10 @@ Func CreateAttackSearch()
 	$g_hChkActivebase = GUICtrlCreateCheckbox("", $x + 100, 4, 13, 13)
 		GUICtrlSetState(-1, $GUI_UNCHECKED)
 		GUICtrlSetOnEvent(-1, "Abcheck")
-	$g_hChkBully = GUICtrlCreateCheckbox("", $x + 180, 4, 13, 13)
-		GUICtrlSetState(-1, $GUI_UNCHECKED)
-		GUICtrlSetOnEvent(-1, "Bullycheck")
 
 	;creating subchilds first!
 	CreateAttackSearchDeadBase()
 	CreateAttackSearchActiveBase()
-	CreateAttackSearchBully()
 	CreateAttackSearchOptions()
 
 	GUISwitch($g_hGUI_SEARCH)
@@ -85,14 +80,7 @@ Func CreateAttackSearch()
 													   GetTranslatedFileIni("MBR Main GUI", "disabled_Tab_03_STab_02_STab_Info_02", -1), 20, 30, $_GUI_MAIN_WIDTH - 40, -1)
 		GUICtrlSetState(-1, $GUI_HIDE)
 
-	$g_hGUI_SEARCH_TAB_ITEM3 = GUICtrlCreateTabItem(GetTranslatedFileIni("MBR Main GUI", "Tab_03_STab_02_STab_04", "Bully") & "    ")
-	; this tab will be empty because it is only used to display a child GUI
-		$g_hLblBullyDisabled = GUICtrlCreateLabel(GetTranslatedFileIni("MBR Main GUI", "disabled_Tab_03_STab_02_STab_Info_01", -1) & " " & _
-												  GetTranslatedFileIni("MBR Main GUI", "Tab_03_STab_02_STab_04", -1) & " " & _
-												  GetTranslatedFileIni("MBR Main GUI", "disabled_Tab_03_STab_02_STab_Info_02", -1), 20, 30, $_GUI_MAIN_WIDTH - 40, -1)
-		GUICtrlSetState(-1, $GUI_HIDE)
-
-	$g_hGUI_SEARCH_TAB_ITEM4 = GUICtrlCreateTabItem(GetTranslatedFileIni("MBR Main GUI", "Tab_03_STab_02_STab_05", "Options"))
+	$g_hGUI_SEARCH_TAB_ITEM3 = GUICtrlCreateTabItem(GetTranslatedFileIni("MBR Main GUI", "Tab_03_STab_02_STab_05", "Settings"))
 	; this tab will be empty because it is only used to display a child GUI
 	GUICtrlCreateTabItem("")
 

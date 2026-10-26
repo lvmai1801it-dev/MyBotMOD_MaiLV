@@ -23,7 +23,12 @@ Func btnAtkLogCopyClipboard()
 	Local $text = _GUICtrlRichEdit_GetText($g_hTxtAtkLog)
 	$text = StringReplace($text, @CR, @CRLF)
 	ClipPut($text)
+	SetLog("Attack Log Copied", $COLOR_SUCCESS)
 EndFunc   ;==>btnAtkLogCopyClipboard
+
+Func btnOpenProfileFolder()
+	ShellExecute($g_sProfilePath & "\" & $g_sProfileCurrentName)
+EndFunc   ;==>btnOpenProfileFolder
 
 Func cmbLog()
 	If $g_iGuiMode <> 1 Then Return
@@ -90,6 +95,8 @@ Func cmbLog()
 EndFunc   ;==>cmbLog
 
 Func MoveDivider()
+	If $g_iGuiMode = 2 Then Return MoveMiniLogDivider()
+
 	Local $PPos = ControlGetPos($g_hFrmBot, "", $g_hGUI_LOG)
 	Local $TPos = ControlGetPos($g_hGUI_LOG, "", $g_hTxtLog)
 	Local $BPos = ControlGetPos($g_hGUI_LOG, "", $g_hTxtAtkLog)
@@ -139,3 +146,30 @@ Func MoveDivider()
 	SetDebugLog("MoveDivider exit", Default, True)
 
 EndFunc   ;==>MoveDivider
+
+Func MoveMiniLogDivider()
+	Local $aLogPos = ControlGetPos($g_hGUI_LOG, "", $g_hTxtLog)
+	Local $aAttackLogPos = ControlGetPos($g_hGUI_LOG, "", $g_hTxtAtkLog)
+	If Not IsArray($aLogPos) Or Not IsArray($aAttackLogPos) Then Return False
+
+	Local $iWidth = $aLogPos[2]
+	Local $iTotalHeight = $aLogPos[3] + $g_iLogDividerHeight + $aAttackLogPos[3]
+	Local $iMinHeight = Int($iTotalHeight / 4)
+
+	Do
+		Local $aCursor = GUIGetCursorInfo($g_hGUI_LOG)
+		If Not IsArray($aCursor) Then ExitLoop
+		$g_iMiniLogDividerY = $aCursor[1] - Ceiling($g_iLogDividerHeight / 2)
+		If $g_iMiniLogDividerY < $iMinHeight Then $g_iMiniLogDividerY = $iMinHeight
+		If $g_iMiniLogDividerY > $iTotalHeight - $iMinHeight - $g_iLogDividerHeight Then $g_iMiniLogDividerY = $iTotalHeight - $iMinHeight - $g_iLogDividerHeight
+
+		ControlMove($g_hGUI_LOG, "", $g_hTxtLog, 0, 0, $iWidth, $g_iMiniLogDividerY)
+		ControlMove($g_hGUI_LOG, "", $g_hDivider, 0, $g_iMiniLogDividerY, $iWidth, $g_iLogDividerHeight)
+		ControlMove($g_hGUI_LOG, "", $g_hTxtAtkLog, 0, $g_iMiniLogDividerY + $g_iLogDividerHeight, $iWidth, $iTotalHeight - $g_iMiniLogDividerY - $g_iLogDividerHeight)
+		_WinAPI_UpdateWindow($g_hGUI_LOG)
+	Until $aCursor[2] = 0
+
+	_GUICtrlRichEdit_SetSel($g_hTxtLog, -1, -1)
+	_GUICtrlRichEdit_SetSel($g_hTxtAtkLog, -1, -1)
+	Return True
+EndFunc   ;==>MoveMiniLogDivider

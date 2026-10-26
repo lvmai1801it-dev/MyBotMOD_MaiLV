@@ -16,7 +16,7 @@
 
 Global $g_hGUI_DEADBASE_ATTACK_SMARTFARM = 0
 
-Global $g_hTxtInsidePercentage = 0 , $g_hTxtOutsidePercentage = 0 , $g_hChkDebugSmartFarm = 0
+Global $g_hTxtInsidePercentage = 0, $g_hTxtOutsidePercentage = 0, $g_hCmbSmartFarmDropTiming = 0, $g_hChkDebugSmartFarm = 0
 
 Func CreateAttackSearchDeadBaseSmartFarm()
 
@@ -25,9 +25,8 @@ Func CreateAttackSearchDeadBaseSmartFarm()
 
 	Local $sTxtTip = ""
 	Local $x = 35, $y = 20
-		GUICtrlCreateGroup(GetTranslatedFileIni("MBR GUI Design Child Attack - Attack Smart Farm", "Group_01", "Options"), $x - 20, $y - 20, 270, $g_iSizeHGrpTab4)
+		GUICtrlCreateGroup(GetTranslatedFileIni("MBR GUI Design Child Attack - Attack Smart Farm", "Group_01", "Options"), $x - 35, $y - 20, 276, $g_iSizeHGrpTab4)
 
-		$y += 40
 			GUICtrlCreateLabel(GetTranslatedFileIni("MBR GUI Design Child Attack - Attack Smart Farm", "Lbl-TxtInsidePercentage", "Inside resources") & ":", $x, $y + 2, -1, -1)
 			$g_hTxtInsidePercentage = GUICtrlCreateInput("65" , $x + 90, $y , 25 , -1)
 				_GUICtrlSetTip(-1, GetTranslatedFileIni("MBR GUI Design Child Attack - Attack Smart Farm", "txt-TxtInsidePercentage", "Percentage to force attack in one side only"))
@@ -37,6 +36,12 @@ Func CreateAttackSearchDeadBaseSmartFarm()
 			$g_hTxtOutsidePercentage = GUICtrlCreateInput("80" , $x + 90 , $y , 25 , -1)
 				_GUICtrlSetTip(-1, GetTranslatedFileIni("MBR GUI Design Child Attack - Attack Smart Farm", "txt-TxtOutsidePercentage", "Percentage to force attack in 4 sides"))
 			GUICtrlCreateLabel("%" , $x + 117 , $y + 3)
+		$y += 22
+			GUICtrlCreateLabel(GetTranslatedFileIni("MBR GUI Design Child Attack - Attack Smart Farm", "LblDropTiming", "Deploy Timing") & ":", $x, $y + 2, -1, -1)
+			$g_hCmbSmartFarmDropTiming = GUICtrlCreateCombo("", $x + 90, $y, 80, 25, BitOR($CBS_DROPDOWNLIST, $CBS_AUTOHSCROLL))
+				GUICtrlSetData(-1, "1 (Fast)|2|3|4|5 (Mid)|6|7|8|9 (Slow)", "1 (Fast)")
+				_GUICtrlSetTip(-1, GetTranslatedFileIni("MBR GUI Design Child Attack - Attack Smart Farm", "CmbDropTiming_Info_01", "Set troop drop timing. 1 fastest to 9 slowest."))
+				GUICtrlSetOnEvent(-1, "cmbAttackDropTiming")
 		$y += 40
 		$x = 98
 			$g_hBtnCustomDropOrderDB = GUICtrlCreateButton(GetTranslatedFileIni("MBR GUI Design Child Attack - Attack", "BtnCustomDropOrder", "Drop Order"), $x, $y, 85, 25)

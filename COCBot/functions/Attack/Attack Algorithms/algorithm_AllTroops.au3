@@ -24,16 +24,16 @@ Func algorithm_AllTroops() ;Attack Algorithm for all existing troops
 	Local $nbSides = 0
 	Switch $g_aiAttackStdDropSides[$g_iMatchMode]
 		Case 0 ;Single sides ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-			SetLog("Attacking on a single side", $COLOR_INFO)
+			SetLog("Attacking: Single Side", $COLOR_INFO)
 			$nbSides = 1
 		Case 1 ;Two sides ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-			SetLog("Attacking on two sides", $COLOR_INFO)
+			SetLog("Attacking: Two Sides", $COLOR_INFO)
 			$nbSides = 2
 		Case 2 ;Three sides ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-			SetLog("Attacking on three sides", $COLOR_INFO)
+			SetLog("Attacking: Three Sides", $COLOR_INFO)
 			$nbSides = 3
 		Case 3 ;All sides ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-			SetLog("Attacking on all sides", $COLOR_INFO)
+			SetLog("Attacking: All Sides", $COLOR_INFO)
 			$nbSides = 4
 		Case 4 ;DE Side - Live Base only ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 			SetLog("Attacking on Dark Elixir Side.", $COLOR_INFO)
@@ -74,307 +74,338 @@ Func algorithm_AllTroops() ;Attack Algorithm for all existing troops
 	EndSwitch
 
 	; $ListInfoDeploy = [Troop, No. of Sides, $WaveNb, $MaxWaveNb, $slotsPerEdge]
+	If $g_aiAttackStdDropOrder[$g_iMatchMode] <> 0 Then $g_aiAttackStdDropOrder[$g_iMatchMode] = 0
+
 	If $g_iMatchMode = $LB And $g_aiAttackStdDropSides[$LB] = 4 Then ; Customise DE side wave deployment here
 		Switch $g_aiAttackStdDropOrder[$g_iMatchMode]
 			Case 0
 				If $g_bCustomDropOrderEnable Then
-					Local $listInfoDeploy[48][5] = [[MatchTroopDropName(0), MatchSidesDrop(0), MatchTroopWaveNb(0), 1, MatchSlotsPerEdge(0)], _
-							[MatchTroopDropName(1), MatchSidesDrop(1), MatchTroopWaveNb(1), 1, MatchSlotsPerEdge(1)], _
-							[MatchTroopDropName(2), MatchSidesDrop(2), MatchTroopWaveNb(2), 1, MatchSlotsPerEdge(2)], _
-							[MatchTroopDropName(3), MatchSidesDrop(3), MatchTroopWaveNb(3), 1, MatchSlotsPerEdge(3)], _
-							[MatchTroopDropName(4), MatchSidesDrop(4), MatchTroopWaveNb(4), 1, MatchSlotsPerEdge(4)], _
-							[MatchTroopDropName(5), MatchSidesDrop(5), MatchTroopWaveNb(5), 1, MatchSlotsPerEdge(5)], _
-							[MatchTroopDropName(6), MatchSidesDrop(6), MatchTroopWaveNb(6), 1, MatchSlotsPerEdge(6)], _
-							[MatchTroopDropName(7), MatchSidesDrop(7), MatchTroopWaveNb(7), 1, MatchSlotsPerEdge(7)], _
-							[MatchTroopDropName(8), MatchSidesDrop(8), MatchTroopWaveNb(8), 1, MatchSlotsPerEdge(8)], _
-							[MatchTroopDropName(9), MatchSidesDrop(9), MatchTroopWaveNb(9), 1, MatchSlotsPerEdge(9)], _
-							[MatchTroopDropName(10), MatchSidesDrop(10), MatchTroopWaveNb(10), 1, MatchSlotsPerEdge(10)], _
-							[MatchTroopDropName(11), MatchSidesDrop(11), MatchTroopWaveNb(11), 1, MatchSlotsPerEdge(11)], _
-							[MatchTroopDropName(12), MatchSidesDrop(12), MatchTroopWaveNb(12), 1, MatchSlotsPerEdge(12)], _
-							[MatchTroopDropName(13), MatchSidesDrop(13), MatchTroopWaveNb(13), 1, MatchSlotsPerEdge(13)], _
-							[MatchTroopDropName(14), MatchSidesDrop(14), MatchTroopWaveNb(14), 1, MatchSlotsPerEdge(14)], _
-							[MatchTroopDropName(15), MatchSidesDrop(15), MatchTroopWaveNb(15), 1, MatchSlotsPerEdge(15)], _
-							[MatchTroopDropName(16), MatchSidesDrop(16), MatchTroopWaveNb(16), 1, MatchSlotsPerEdge(16)], _
-							[MatchTroopDropName(17), MatchSidesDrop(17), MatchTroopWaveNb(17), 1, MatchSlotsPerEdge(17)], _
-							[MatchTroopDropName(18), MatchSidesDrop(18), MatchTroopWaveNb(18), 1, MatchSlotsPerEdge(18)], _
-							[MatchTroopDropName(19), MatchSidesDrop(19), MatchTroopWaveNb(19), 1, MatchSlotsPerEdge(19)], _
-							[MatchTroopDropName(20), MatchSidesDrop(20), MatchTroopWaveNb(20), 1, MatchSlotsPerEdge(20)], _
-							[MatchTroopDropName(21), MatchSidesDrop(21), MatchTroopWaveNb(21), 1, MatchSlotsPerEdge(21)], _
-							[MatchTroopDropName(22), MatchSidesDrop(22), MatchTroopWaveNb(22), 1, MatchSlotsPerEdge(22)], _
-							[MatchTroopDropName(23), MatchSidesDrop(23), MatchTroopWaveNb(23), 1, MatchSlotsPerEdge(23)], _
-							[MatchTroopDropName(24), MatchSidesDrop(24), MatchTroopWaveNb(24), 1, MatchSlotsPerEdge(24)], _
-							[MatchTroopDropName(25), MatchSidesDrop(25), MatchTroopWaveNb(25), 1, MatchSlotsPerEdge(25)], _
-							[MatchTroopDropName(26), MatchSidesDrop(26), MatchTroopWaveNb(26), 1, MatchSlotsPerEdge(26)], _
-							[MatchTroopDropName(27), MatchSidesDrop(27), MatchTroopWaveNb(27), 1, MatchSlotsPerEdge(27)], _
-							[MatchTroopDropName(28), MatchSidesDrop(28), MatchTroopWaveNb(28), 1, MatchSlotsPerEdge(28)], _
-							[MatchTroopDropName(29), MatchSidesDrop(29), MatchTroopWaveNb(29), 1, MatchSlotsPerEdge(29)], _
-							[MatchTroopDropName(30), MatchSidesDrop(30), MatchTroopWaveNb(30), 1, MatchSlotsPerEdge(30)], _
-							[MatchTroopDropName(31), MatchSidesDrop(31), MatchTroopWaveNb(31), 1, MatchSlotsPerEdge(31)], _
-							[MatchTroopDropName(32), MatchSidesDrop(32), MatchTroopWaveNb(32), 1, MatchSlotsPerEdge(32)], _
-							[MatchTroopDropName(33), MatchSidesDrop(33), MatchTroopWaveNb(33), 1, MatchSlotsPerEdge(33)], _
-							[MatchTroopDropName(34), MatchSidesDrop(34), MatchTroopWaveNb(34), 1, MatchSlotsPerEdge(34)], _
-							[MatchTroopDropName(35), MatchSidesDrop(35), MatchTroopWaveNb(35), 1, MatchSlotsPerEdge(35)], _
-							[MatchTroopDropName(36), MatchSidesDrop(36), MatchTroopWaveNb(36), 1, MatchSlotsPerEdge(36)], _
-							[MatchTroopDropName(37), MatchSidesDrop(37), MatchTroopWaveNb(37), 1, MatchSlotsPerEdge(37)], _
-							[MatchTroopDropName(38), MatchSidesDrop(38), MatchTroopWaveNb(38), 1, MatchSlotsPerEdge(38)], _
-							[MatchTroopDropName(39), MatchSidesDrop(39), MatchTroopWaveNb(39), 1, MatchSlotsPerEdge(39)], _
-							[MatchTroopDropName(40), MatchSidesDrop(40), MatchTroopWaveNb(40), 1, MatchSlotsPerEdge(40)], _
-							[MatchTroopDropName(41), MatchSidesDrop(41), MatchTroopWaveNb(41), 1, MatchSlotsPerEdge(41)], _
-							[MatchTroopDropName(42), MatchSidesDrop(42), MatchTroopWaveNb(42), 1, MatchSlotsPerEdge(42)], _
-							[MatchTroopDropName(43), MatchSidesDrop(43), MatchTroopWaveNb(43), 1, MatchSlotsPerEdge(43)], _
-							[MatchTroopDropName(44), MatchSidesDrop(44), MatchTroopWaveNb(44), 1, MatchSlotsPerEdge(44)], _
-							[MatchTroopDropName(45), MatchSidesDrop(45), MatchTroopWaveNb(45), 1, MatchSlotsPerEdge(45)], _
-							[MatchTroopDropName(46), MatchSidesDrop(46), MatchTroopWaveNb(46), 1, MatchSlotsPerEdge(46)], _
-							[MatchTroopDropName(47), MatchSidesDrop(47), MatchTroopWaveNb(47), 1, MatchSlotsPerEdge(47)]]
+					Local $listInfoDeploy[$eDropOrderCount][5] = [[MatchTroopDropName(0), MatchSidesDrop(0), MatchTroopWaveNb(0), 1, MatchSlotsPerEdge(0)], _
+ 						[MatchTroopDropName(1), MatchSidesDrop(1), MatchTroopWaveNb(1), 1, MatchSlotsPerEdge(1)], _
+ 						[MatchTroopDropName(2), MatchSidesDrop(2), MatchTroopWaveNb(2), 1, MatchSlotsPerEdge(2)], _
+						[MatchTroopDropName(3), MatchSidesDrop(3), MatchTroopWaveNb(3), 1, MatchSlotsPerEdge(3)], _
+						[MatchTroopDropName(4), MatchSidesDrop(4), MatchTroopWaveNb(4), 1, MatchSlotsPerEdge(4)], _
+						[MatchTroopDropName(5), MatchSidesDrop(5), MatchTroopWaveNb(5), 1, MatchSlotsPerEdge(5)], _
+						[MatchTroopDropName(6), MatchSidesDrop(6), MatchTroopWaveNb(6), 1, MatchSlotsPerEdge(6)], _
+						[MatchTroopDropName(7), MatchSidesDrop(7), MatchTroopWaveNb(7), 1, MatchSlotsPerEdge(7)], _
+						[MatchTroopDropName(8), MatchSidesDrop(8), MatchTroopWaveNb(8), 1, MatchSlotsPerEdge(8)], _
+						[MatchTroopDropName(9), MatchSidesDrop(9), MatchTroopWaveNb(9), 1, MatchSlotsPerEdge(9)], _
+						[MatchTroopDropName(10), MatchSidesDrop(10), MatchTroopWaveNb(10), 1, MatchSlotsPerEdge(10)], _
+						[MatchTroopDropName(11), MatchSidesDrop(11), MatchTroopWaveNb(11), 1, MatchSlotsPerEdge(11)], _
+						[MatchTroopDropName(12), MatchSidesDrop(12), MatchTroopWaveNb(12), 1, MatchSlotsPerEdge(12)], _
+						[MatchTroopDropName(13), MatchSidesDrop(13), MatchTroopWaveNb(13), 1, MatchSlotsPerEdge(13)], _
+						[MatchTroopDropName(14), MatchSidesDrop(14), MatchTroopWaveNb(14), 1, MatchSlotsPerEdge(14)], _
+						[MatchTroopDropName(15), MatchSidesDrop(15), MatchTroopWaveNb(15), 1, MatchSlotsPerEdge(15)], _
+						[MatchTroopDropName(16), MatchSidesDrop(16), MatchTroopWaveNb(16), 1, MatchSlotsPerEdge(16)], _
+						[MatchTroopDropName(17), MatchSidesDrop(17), MatchTroopWaveNb(17), 1, MatchSlotsPerEdge(17)], _
+						[MatchTroopDropName(18), MatchSidesDrop(18), MatchTroopWaveNb(18), 1, MatchSlotsPerEdge(18)], _
+						[MatchTroopDropName(19), MatchSidesDrop(19), MatchTroopWaveNb(19), 1, MatchSlotsPerEdge(19)], _
+						[MatchTroopDropName(20), MatchSidesDrop(20), MatchTroopWaveNb(20), 1, MatchSlotsPerEdge(20)], _
+						[MatchTroopDropName(21), MatchSidesDrop(21), MatchTroopWaveNb(21), 1, MatchSlotsPerEdge(21)], _
+						[MatchTroopDropName(22), MatchSidesDrop(22), MatchTroopWaveNb(22), 1, MatchSlotsPerEdge(22)], _
+						[MatchTroopDropName(23), MatchSidesDrop(23), MatchTroopWaveNb(23), 1, MatchSlotsPerEdge(23)], _
+						[MatchTroopDropName(24), MatchSidesDrop(24), MatchTroopWaveNb(24), 1, MatchSlotsPerEdge(24)], _
+						[MatchTroopDropName(25), MatchSidesDrop(25), MatchTroopWaveNb(25), 1, MatchSlotsPerEdge(25)], _
+						[MatchTroopDropName(26), MatchSidesDrop(26), MatchTroopWaveNb(26), 1, MatchSlotsPerEdge(26)], _
+						[MatchTroopDropName(27), MatchSidesDrop(27), MatchTroopWaveNb(27), 1, MatchSlotsPerEdge(27)], _
+						[MatchTroopDropName(28), MatchSidesDrop(28), MatchTroopWaveNb(28), 1, MatchSlotsPerEdge(28)], _
+						[MatchTroopDropName(29), MatchSidesDrop(29), MatchTroopWaveNb(29), 1, MatchSlotsPerEdge(29)], _
+						[MatchTroopDropName(30), MatchSidesDrop(30), MatchTroopWaveNb(30), 1, MatchSlotsPerEdge(30)], _
+						[MatchTroopDropName(31), MatchSidesDrop(31), MatchTroopWaveNb(31), 1, MatchSlotsPerEdge(31)], _
+						[MatchTroopDropName(32), MatchSidesDrop(32), MatchTroopWaveNb(32), 1, MatchSlotsPerEdge(32)], _
+						[MatchTroopDropName(33), MatchSidesDrop(33), MatchTroopWaveNb(33), 1, MatchSlotsPerEdge(33)], _
+						[MatchTroopDropName(34), MatchSidesDrop(34), MatchTroopWaveNb(34), 1, MatchSlotsPerEdge(34)], _
+						[MatchTroopDropName(35), MatchSidesDrop(35), MatchTroopWaveNb(35), 1, MatchSlotsPerEdge(35)], _
+						[MatchTroopDropName(36), MatchSidesDrop(36), MatchTroopWaveNb(36), 1, MatchSlotsPerEdge(36)], _
+						[MatchTroopDropName(37), MatchSidesDrop(37), MatchTroopWaveNb(37), 1, MatchSlotsPerEdge(37)], _
+						[MatchTroopDropName(38), MatchSidesDrop(38), MatchTroopWaveNb(38), 1, MatchSlotsPerEdge(38)], _
+						[MatchTroopDropName(39), MatchSidesDrop(39), MatchTroopWaveNb(39), 1, MatchSlotsPerEdge(39)], _
+						[MatchTroopDropName(40), MatchSidesDrop(40), MatchTroopWaveNb(40), 1, MatchSlotsPerEdge(40)], _
+						[MatchTroopDropName(41), MatchSidesDrop(41), MatchTroopWaveNb(41), 1, MatchSlotsPerEdge(41)], _
+						[MatchTroopDropName(42), MatchSidesDrop(42), MatchTroopWaveNb(42), 1, MatchSlotsPerEdge(42)], _
+						[MatchTroopDropName(43), MatchSidesDrop(43), MatchTroopWaveNb(43), 1, MatchSlotsPerEdge(43)], _
+						[MatchTroopDropName(44), MatchSidesDrop(44), MatchTroopWaveNb(44), 1, MatchSlotsPerEdge(44)], _
+						[MatchTroopDropName(45), MatchSidesDrop(45), MatchTroopWaveNb(45), 1, MatchSlotsPerEdge(45)], _
+						[MatchTroopDropName(46), MatchSidesDrop(46), MatchTroopWaveNb(46), 1, MatchSlotsPerEdge(46)], _
+ 						[MatchTroopDropName(47), MatchSidesDrop(47), MatchTroopWaveNb(47), 1, MatchSlotsPerEdge(47)], _
+						[MatchTroopDropName(48), MatchSidesDrop(48), MatchTroopWaveNb(48), 1, MatchSlotsPerEdge(48)], _
+						[MatchTroopDropName(49), MatchSidesDrop(49), MatchTroopWaveNb(49), 1, MatchSlotsPerEdge(49)], _
+						[MatchTroopDropName(50), MatchSidesDrop(50), MatchTroopWaveNb(50), 1, MatchSlotsPerEdge(50)], _
+						[MatchTroopDropName(51), MatchSidesDrop(51), MatchTroopWaveNb(51), 1, MatchSlotsPerEdge(51)], _
+						[MatchTroopDropName(52), MatchSidesDrop(52), MatchTroopWaveNb(52), 1, MatchSlotsPerEdge(52)], _
+						[MatchTroopDropName(53), MatchSidesDrop(53), MatchTroopWaveNb(53), 1, MatchSlotsPerEdge(53)], _
+						[MatchTroopDropName(54), MatchSidesDrop(54), MatchTroopWaveNb(54), 1, MatchSlotsPerEdge(54)], _
+						[MatchTroopDropName(55), MatchSidesDrop(55), MatchTroopWaveNb(55), 1, MatchSlotsPerEdge(55)], _
+						[MatchTroopDropName(56), MatchSidesDrop(56), MatchTroopWaveNb(56), 1, MatchSlotsPerEdge(56)], _
+						[MatchTroopDropName(57), MatchSidesDrop(57), MatchTroopWaveNb(57), 1, MatchSlotsPerEdge(57)], _
+						[MatchTroopDropName(58), MatchSidesDrop(58), MatchTroopWaveNb(58), 1, MatchSlotsPerEdge(58)], _
+						[MatchTroopDropName(59), MatchSidesDrop(59), MatchTroopWaveNb(59), 1, MatchSlotsPerEdge(59)], _
+						[MatchTroopDropName(60), MatchSidesDrop(60), MatchTroopWaveNb(60), 1, MatchSlotsPerEdge(60)], _
+						[MatchTroopDropName(61), MatchSidesDrop(61), MatchTroopWaveNb(61), 1, MatchSlotsPerEdge(61)], _
+						[MatchTroopDropName(62), MatchSidesDrop(62), MatchTroopWaveNb(62), 1, MatchSlotsPerEdge(62)], _
+						[MatchTroopDropName(63), MatchSidesDrop(63), MatchTroopWaveNb(63), 1, MatchSlotsPerEdge(63)], _
+						[MatchTroopDropName(64), MatchSidesDrop(64), MatchTroopWaveNb(64), 1, MatchSlotsPerEdge(64)], _
+						[MatchTroopDropName(65), MatchSidesDrop(65), MatchTroopWaveNb(65), 1, MatchSlotsPerEdge(65)], _
+						[MatchTroopDropName(66), MatchSidesDrop(66), MatchTroopWaveNb(66), 1, MatchSlotsPerEdge(66)], _
+						[MatchTroopDropName(67), MatchSidesDrop(67), MatchTroopWaveNb(67), 1, MatchSlotsPerEdge(67)], _
+						[MatchTroopDropName(68), MatchSidesDrop(68), MatchTroopWaveNb(68), 1, MatchSlotsPerEdge(68)], _
+						[MatchTroopDropName(69), MatchSidesDrop(69), MatchTroopWaveNb(69), 1, MatchSlotsPerEdge(69)], _
+						[MatchTroopDropName(70), MatchSidesDrop(70), MatchTroopWaveNb(70), 1, MatchSlotsPerEdge(70)], _
+						[MatchTroopDropName(71), MatchSidesDrop(71), MatchTroopWaveNb(71), 1, MatchSlotsPerEdge(71)], _
+						[MatchTroopDropName(72), MatchSidesDrop(72), MatchTroopWaveNb(72), 1, MatchSlotsPerEdge(72)], _
+						[MatchTroopDropName(73), MatchSidesDrop(73), MatchTroopWaveNb(73), 1, MatchSlotsPerEdge(73)], _
+						[MatchTroopDropName(74), MatchSidesDrop(74), MatchTroopWaveNb(74), 1, MatchSlotsPerEdge(74)], _
+						[MatchTroopDropName(75), MatchSidesDrop(75), MatchTroopWaveNb(75), 1, MatchSlotsPerEdge(75)], _
+						[MatchTroopDropName(76), MatchSidesDrop(76), MatchTroopWaveNb(76), 1, MatchSlotsPerEdge(76)], _
+						[MatchTroopDropName(77), MatchSidesDrop(77), MatchTroopWaveNb(77), 1, MatchSlotsPerEdge(77)], _
+						[MatchTroopDropName(78), MatchSidesDrop(78), MatchTroopWaveNb(78), 1, MatchSlotsPerEdge(78)]]
 				Else
-					Local $listInfoDeploy[48][5] = [[$eGole, $nbSides, 1, 1, 2] _
-							, [$eIceG, $nbSides, 1, 1, 2] _
-							, [$eLava, $nbSides, 1, 1, 2] _
-							, [$eYeti, $nbSides, 1, 1, 2] _
-							, [$eIceH, $nbSides, 1, 1, 2] _
-							, [$eGiant, $nbSides, 1, 1, $g_iSlotsGiants] _
-							, [$eSGiant, $nbSides, 1, 1, $g_iSlotsGiants] _
-							, [$eDrag, $nbSides, 1, 1, 0] _
-							, [$eSDrag, $nbSides, 1, 1, 0] _
-							, ["CC", 1, 1, 1, 1] _
-							, [$eBall, $nbSides, 1, 1, 0] _
-							, [$eRBall, $nbSides, 1, 1, 0] _
-							, [$eBabyD, $nbSides, 1, 1, 1] _
-							, [$eInfernoD, $nbSides, 1, 1, 1] _
-							, [$eHogs, $nbSides, 1, 1, 1] _
-							, [$eSHogs, $nbSides, 1, 1, 1] _
-							, [$eValk, $nbSides, 1, 1, 0] _
-							, [$eSValk, $nbSides, 1, 1, 0] _
-							, [$eBowl, $nbSides, 1, 1, 0] _
-							, [$eSBowl, $nbSides, 1, 1, 0] _
-							, [$eHunt, $nbSides, 1, 1, 0] _
-							, [$eAppWard, $nbSides, 1, 1, 0] _
-							, [$eDruid, $nbSides, 1, 1, 0] _
-							, [$eFurn, $nbSides, 1, 1, 0] _
-							, [$eMine, $nbSides, 1, 1, 0] _
-							, [$eSMine, $nbSides, 1, 1, 0] _
-							, [$eEDrag, $nbSides, 1, 1, 0] _
-							, [$eRDrag, $nbSides, 1, 1, 0] _
-							, [$eETitan, $nbSides, 1, 1, 0] _
-							, [$eRootR, $nbSides, 1, 1, 0] _
-							, [$eThrower, $nbSides, 1, 1, 0] _
-							, [$eBarb, $nbSides, 1, 1, 0] _
-							, [$eSBarb, $nbSides, 1, 1, 0] _
-							, [$eWall, $nbSides, 1, 1, 1] _
-							, [$eSWall, $nbSides, 1, 1, 1] _
-							, [$eArch, $nbSides, 1, 1, 0] _
-							, [$eSArch, $nbSides, 1, 1, 0] _
-							, [$eWiza, $nbSides, 1, 1, 0] _
-							, [$eSWiza, $nbSides, 1, 1, 0] _
-							, [$eMini, $nbSides, 1, 1, 0] _
-							, [$eSMini, $nbSides, 1, 1, 0] _
-							, [$eWitc, $nbSides, 1, 1, 1] _
-							, [$eSWitc, $nbSides, 1, 1, 1] _
-							, [$eGobl, $nbSides, 1, 1, 0] _
-							, [$eSGobl, $nbSides, 1, 1, 0] _
-							, [$eHeal, $nbSides, 1, 1, 1] _
-							, [$ePekk, $nbSides, 1, 1, 1] _
-							, ["HEROES", 1, 2, 1, 1]]
-				EndIf
-			Case 1
-				Local $listInfoDeploy[10][5] = [[$eBarb, $nbSides, 1, 1, 0] _
+					Local $listInfoDeploy[$eDropOrderCount][5] = [[$eBarb, $nbSides, 1, 1, 0] _
 						, [$eSBarb, $nbSides, 1, 1, 0] _
 						, [$eArch, $nbSides, 1, 1, 0] _
 						, [$eSArch, $nbSides, 1, 1, 0] _
 						, [$eGobl, $nbSides, 1, 1, 0] _
 						, [$eSGobl, $nbSides, 1, 1, 0] _
+						, [$eBarcher, $nbSides, 1, 1, 0] _
 						, [$eMini, $nbSides, 1, 1, 0] _
 						, [$eSMini, $nbSides, 1, 1, 0] _
-						, ["CC", 1, 1, 1, 1] _
-						, ["HEROES", 1, 2, 1, 1]]
-			Case 2
-				Local $listInfoDeploy[23][5] = [[$eGiant, $nbSides, 1, 1, $g_iSlotsGiants] _
+						, [$eIceMini, $nbSides, 1, 1, 0] _
+						, [$eFire, $nbSides, 1, 1, 0] _
+						, [$eDebt, $nbSides, 1, 1, 0] _
+						, [$eKicker, $nbSides, 1, 1, 0] _
+						, [$eGThrow, $nbSides, 1, 1, 0] _
+						, [$eRoyalG, $nbSides, 1, 1, 0] _
+						, [$eWall, $nbSides, 1, 1, 1] _
+						, [$eSWall, $nbSides, 1, 1, 1] _
+						, [$eGiant, $nbSides, 1, 1, $g_iSlotsGiants] _
 						, [$eSGiant, $nbSides, 1, 1, $g_iSlotsGiants] _
-						, ["CC", 1, 1, 1, 1] _
-						, [$eWall, $nbSides, 1, 1, 2] _
-						, [$eSWall, $nbSides, 1, 1, 2] _
-						, [$eBarb, $nbSides, 1, 2, 2] _
-						, [$eSBarb, $nbSides, 1, 2, 2] _
-						, [$eArch, $nbSides, 1, 3, 3] _
-						, [$eSArch, $nbSides, 1, 3, 3] _
-						, [$eBarb, $nbSides, 2, 2, 2] _
-						, [$eSBarb, $nbSides, 2, 2, 2] _
-						, [$eArch, $nbSides, 2, 3, 3] _
-						, [$eSArch, $nbSides, 2, 3, 3] _
-						, ["HEROES", 1, 2, 1, 0] _
+						, [$eGGiant, $nbSides, 1, 1, $g_iSlotsGiants] _
+						, [$eGole, $nbSides, 1, 1, 2] _
+						, [$eIceG, $nbSides, 1, 1, 2] _
+						, [$eMeteorG, $nbSides, 1, 1, 2] _
+						, [$eYeti, $nbSides, 1, 1, 2] _
+						, [$eSYeti, $nbSides, 1, 1, 2] _
+						, [$eETitan, $nbSides, 1, 1, 0] _
+						, [$eRootR, $nbSides, 1, 1, 0] _
+						, [$eGiantS, $nbSides, 1, 1, 0] _
+						, [$eSBarrel, $nbSides, 1, 1, 0] _
+						, [$eERider, $nbSides, 1, 1, 0] _
+						, [$eLava, $nbSides, 1, 1, 2] _
+						, [$eIceH, $nbSides, 1, 1, 2] _
 						, [$eHogs, $nbSides, 1, 1, 1] _
+						, [$eSHogs, $nbSides, 1, 1, 1] _
+						, [$eHogWiz, $nbSides, 1, 1, 0] _
+						, [$eRamR, $nbSides, 1, 1, 0] _
+						, [$ePBarb, $nbSides, 1, 1, 0] _
+						, [$eValk, $nbSides, 1, 1, 0] _
+						, [$eSValk, $nbSides, 1, 1, 0] _
+						, [$eBowl, $nbSides, 1, 1, 0] _
+						, [$eSBowl, $nbSides, 1, 1, 0] _
+						, [$eMine, $nbSides, 1, 1, 0] _
+						, [$eSMine, $nbSides, 1, 1, 0] _
+						, [$eThrower, $nbSides, 1, 1, 0] _
+						, [$eHunt, $nbSides, 1, 1, 0] _
+						, [$ePekk, $nbSides, 1, 1, 1] _
 						, [$eWiza, $nbSides, 1, 1, 0] _
 						, [$eSWiza, $nbSides, 1, 1, 0] _
-						, [$eMini, $nbSides, 1, 1, 0] _
-						, [$eSMini, $nbSides, 1, 1, 0] _
-						, [$eArch, $nbSides, 3, 3, 2] _
-						, [$eSArch, $nbSides, 3, 3, 2] _
-						, [$eGobl, $nbSides, 1, 1, 1] _
-						, [$eSGobl, $nbSides, 1, 1, 1]]
+						, [$ePartyWiz, $nbSides, 1, 1, 0] _
+						, [$eIceWiz, $nbSides, 1, 1, 0] _
+						, [$eWitc, $nbSides, 1, 1, 1] _
+						, [$eSWitc, $nbSides, 1, 1, 1] _
+						, [$eWitchG, $nbSides, 1, 1, 0] _
+						, [$eBabyD, $nbSides, 1, 1, 0] _
+						, [$eInfernoD, $nbSides, 1, 1, 0] _
+						, [$eDrag, $nbSides, 1, 1, 0] _
+						, [$eSDrag, $nbSides, 1, 1, 0] _
+						, [$eEDrag, $nbSides, 1, 1, 0] _
+						, [$eRDrag, $nbSides, 1, 1, 0] _
+						, [$eGDrag, $nbSides, 1, 1, 0] _
+						, [$eADrag, $nbSides, 1, 1, 0] _
+						, [$eBall, $nbSides, 1, 1, 0] _
+						, [$eRBall, $nbSides, 1, 1, 0] _
+						, [$eLavaloon, $nbSides, 1, 1, 0] _
+						, [$eTThrow, $nbSides, 1, 1, 0] _
+						, [$eHeal, $nbSides, 1, 1, 1] _
+						, [$eAppWard, $nbSides, 1, 1, 0] _
+						, [$eDruid, $nbSides, 1, 1, 0] _
+						, [$eFurn, $nbSides, 1, 1, 0] _
+						, [$eRuinW, $nbSides, 1, 1, 0] _
+						, [$eKANE, $nbSides, 1, 1, 0] _
+						, [$eDisarmer, $nbSides, 1, 1, 0] _
+						, [$eYEET, $nbSides, 1, 1, 0] _
+						, [$eYUnder, $nbSides, 1, 1, 0] _
+						, [$eBroom, $nbSides, 1, 1, 0] _
+						, [$eMECHA, $nbSides, 1, 1, 0] _
+						, [$eCOOKIE, $nbSides, 1, 1, 0] _
+						, ["HEROES", 1, 2, 1, 1] _
+						, ["CC", 1, 2, 1, 1]]
+				EndIf
 		EndSwitch
 	Else
 		If $g_bDebugSetLog Then SetDebugLog("listdeploy standard for attack", $COLOR_DEBUG)
 		Switch $g_aiAttackStdDropOrder[$g_iMatchMode]
 			Case 0
 				If $g_bCustomDropOrderEnable Then
-					Local $listInfoDeploy[48][5] = [[MatchTroopDropName(0), MatchSidesDrop(0), MatchTroopWaveNb(0), 1, MatchSlotsPerEdge(0)], _
-							[MatchTroopDropName(1), MatchSidesDrop(1), MatchTroopWaveNb(1), 1, MatchSlotsPerEdge(1)], _
-							[MatchTroopDropName(2), MatchSidesDrop(2), MatchTroopWaveNb(2), 1, MatchSlotsPerEdge(2)], _
-							[MatchTroopDropName(3), MatchSidesDrop(3), MatchTroopWaveNb(3), 1, MatchSlotsPerEdge(3)], _
-							[MatchTroopDropName(4), MatchSidesDrop(4), MatchTroopWaveNb(4), 1, MatchSlotsPerEdge(4)], _
-							[MatchTroopDropName(5), MatchSidesDrop(5), MatchTroopWaveNb(5), 1, MatchSlotsPerEdge(5)], _
-							[MatchTroopDropName(6), MatchSidesDrop(6), MatchTroopWaveNb(6), 1, MatchSlotsPerEdge(6)], _
-							[MatchTroopDropName(7), MatchSidesDrop(7), MatchTroopWaveNb(7), 1, MatchSlotsPerEdge(7)], _
-							[MatchTroopDropName(8), MatchSidesDrop(8), MatchTroopWaveNb(8), 1, MatchSlotsPerEdge(8)], _
-							[MatchTroopDropName(9), MatchSidesDrop(9), MatchTroopWaveNb(9), 1, MatchSlotsPerEdge(9)], _
-							[MatchTroopDropName(10), MatchSidesDrop(10), MatchTroopWaveNb(10), 1, MatchSlotsPerEdge(10)], _
-							[MatchTroopDropName(11), MatchSidesDrop(11), MatchTroopWaveNb(11), 1, MatchSlotsPerEdge(11)], _
-							[MatchTroopDropName(12), MatchSidesDrop(12), MatchTroopWaveNb(12), 1, MatchSlotsPerEdge(12)], _
-							[MatchTroopDropName(13), MatchSidesDrop(13), MatchTroopWaveNb(13), 1, MatchSlotsPerEdge(13)], _
-							[MatchTroopDropName(14), MatchSidesDrop(14), MatchTroopWaveNb(14), 1, MatchSlotsPerEdge(14)], _
-							[MatchTroopDropName(15), MatchSidesDrop(15), MatchTroopWaveNb(15), 1, MatchSlotsPerEdge(15)], _
-							[MatchTroopDropName(16), MatchSidesDrop(16), MatchTroopWaveNb(16), 1, MatchSlotsPerEdge(16)], _
-							[MatchTroopDropName(17), MatchSidesDrop(17), MatchTroopWaveNb(17), 1, MatchSlotsPerEdge(17)], _
-							[MatchTroopDropName(18), MatchSidesDrop(18), MatchTroopWaveNb(18), 1, MatchSlotsPerEdge(18)], _
-							[MatchTroopDropName(19), MatchSidesDrop(19), MatchTroopWaveNb(19), 1, MatchSlotsPerEdge(19)], _
-							[MatchTroopDropName(20), MatchSidesDrop(20), MatchTroopWaveNb(20), 1, MatchSlotsPerEdge(20)], _
-							[MatchTroopDropName(21), MatchSidesDrop(21), MatchTroopWaveNb(21), 1, MatchSlotsPerEdge(21)], _
-							[MatchTroopDropName(22), MatchSidesDrop(22), MatchTroopWaveNb(22), 1, MatchSlotsPerEdge(22)], _
-							[MatchTroopDropName(23), MatchSidesDrop(23), MatchTroopWaveNb(23), 1, MatchSlotsPerEdge(23)], _
-							[MatchTroopDropName(24), MatchSidesDrop(24), MatchTroopWaveNb(24), 1, MatchSlotsPerEdge(24)], _
-							[MatchTroopDropName(25), MatchSidesDrop(25), MatchTroopWaveNb(25), 1, MatchSlotsPerEdge(25)], _
-							[MatchTroopDropName(26), MatchSidesDrop(26), MatchTroopWaveNb(26), 1, MatchSlotsPerEdge(26)], _
-							[MatchTroopDropName(27), MatchSidesDrop(27), MatchTroopWaveNb(27), 1, MatchSlotsPerEdge(27)], _
-							[MatchTroopDropName(28), MatchSidesDrop(28), MatchTroopWaveNb(28), 1, MatchSlotsPerEdge(28)], _
-							[MatchTroopDropName(29), MatchSidesDrop(29), MatchTroopWaveNb(29), 1, MatchSlotsPerEdge(29)], _
-							[MatchTroopDropName(30), MatchSidesDrop(30), MatchTroopWaveNb(30), 1, MatchSlotsPerEdge(30)], _
-							[MatchTroopDropName(31), MatchSidesDrop(31), MatchTroopWaveNb(31), 1, MatchSlotsPerEdge(31)], _
-							[MatchTroopDropName(32), MatchSidesDrop(32), MatchTroopWaveNb(32), 1, MatchSlotsPerEdge(32)], _
-							[MatchTroopDropName(33), MatchSidesDrop(33), MatchTroopWaveNb(33), 1, MatchSlotsPerEdge(33)], _
-							[MatchTroopDropName(34), MatchSidesDrop(34), MatchTroopWaveNb(34), 1, MatchSlotsPerEdge(34)], _
-							[MatchTroopDropName(35), MatchSidesDrop(35), MatchTroopWaveNb(35), 1, MatchSlotsPerEdge(35)], _
-							[MatchTroopDropName(36), MatchSidesDrop(36), MatchTroopWaveNb(36), 1, MatchSlotsPerEdge(36)], _
-							[MatchTroopDropName(37), MatchSidesDrop(37), MatchTroopWaveNb(37), 1, MatchSlotsPerEdge(37)], _
-							[MatchTroopDropName(38), MatchSidesDrop(38), MatchTroopWaveNb(38), 1, MatchSlotsPerEdge(38)], _
-							[MatchTroopDropName(39), MatchSidesDrop(39), MatchTroopWaveNb(39), 1, MatchSlotsPerEdge(39)], _
-							[MatchTroopDropName(40), MatchSidesDrop(40), MatchTroopWaveNb(40), 1, MatchSlotsPerEdge(40)], _
-							[MatchTroopDropName(41), MatchSidesDrop(41), MatchTroopWaveNb(41), 1, MatchSlotsPerEdge(41)], _
-							[MatchTroopDropName(42), MatchSidesDrop(42), MatchTroopWaveNb(42), 1, MatchSlotsPerEdge(42)], _
-							[MatchTroopDropName(43), MatchSidesDrop(43), MatchTroopWaveNb(43), 1, MatchSlotsPerEdge(43)], _
-							[MatchTroopDropName(44), MatchSidesDrop(44), MatchTroopWaveNb(44), 1, MatchSlotsPerEdge(44)], _
-							[MatchTroopDropName(45), MatchSidesDrop(45), MatchTroopWaveNb(45), 1, MatchSlotsPerEdge(45)], _
-							[MatchTroopDropName(46), MatchSidesDrop(46), MatchTroopWaveNb(46), 1, MatchSlotsPerEdge(46)], _
-							[MatchTroopDropName(47), MatchSidesDrop(47), MatchTroopWaveNb(47), 1, MatchSlotsPerEdge(47)]]
+					Local $listInfoDeploy[$eDropOrderCount][5] = [[MatchTroopDropName(0), MatchSidesDrop(0), MatchTroopWaveNb(0), 1, MatchSlotsPerEdge(0)], _
+ 						[MatchTroopDropName(1), MatchSidesDrop(1), MatchTroopWaveNb(1), 1, MatchSlotsPerEdge(1)], _
+ 						[MatchTroopDropName(2), MatchSidesDrop(2), MatchTroopWaveNb(2), 1, MatchSlotsPerEdge(2)], _
+						[MatchTroopDropName(3), MatchSidesDrop(3), MatchTroopWaveNb(3), 1, MatchSlotsPerEdge(3)], _
+						[MatchTroopDropName(4), MatchSidesDrop(4), MatchTroopWaveNb(4), 1, MatchSlotsPerEdge(4)], _
+						[MatchTroopDropName(5), MatchSidesDrop(5), MatchTroopWaveNb(5), 1, MatchSlotsPerEdge(5)], _
+						[MatchTroopDropName(6), MatchSidesDrop(6), MatchTroopWaveNb(6), 1, MatchSlotsPerEdge(6)], _
+						[MatchTroopDropName(7), MatchSidesDrop(7), MatchTroopWaveNb(7), 1, MatchSlotsPerEdge(7)], _
+						[MatchTroopDropName(8), MatchSidesDrop(8), MatchTroopWaveNb(8), 1, MatchSlotsPerEdge(8)], _
+						[MatchTroopDropName(9), MatchSidesDrop(9), MatchTroopWaveNb(9), 1, MatchSlotsPerEdge(9)], _
+						[MatchTroopDropName(10), MatchSidesDrop(10), MatchTroopWaveNb(10), 1, MatchSlotsPerEdge(10)], _
+						[MatchTroopDropName(11), MatchSidesDrop(11), MatchTroopWaveNb(11), 1, MatchSlotsPerEdge(11)], _
+						[MatchTroopDropName(12), MatchSidesDrop(12), MatchTroopWaveNb(12), 1, MatchSlotsPerEdge(12)], _
+						[MatchTroopDropName(13), MatchSidesDrop(13), MatchTroopWaveNb(13), 1, MatchSlotsPerEdge(13)], _
+						[MatchTroopDropName(14), MatchSidesDrop(14), MatchTroopWaveNb(14), 1, MatchSlotsPerEdge(14)], _
+						[MatchTroopDropName(15), MatchSidesDrop(15), MatchTroopWaveNb(15), 1, MatchSlotsPerEdge(15)], _
+						[MatchTroopDropName(16), MatchSidesDrop(16), MatchTroopWaveNb(16), 1, MatchSlotsPerEdge(16)], _
+						[MatchTroopDropName(17), MatchSidesDrop(17), MatchTroopWaveNb(17), 1, MatchSlotsPerEdge(17)], _
+						[MatchTroopDropName(18), MatchSidesDrop(18), MatchTroopWaveNb(18), 1, MatchSlotsPerEdge(18)], _
+						[MatchTroopDropName(19), MatchSidesDrop(19), MatchTroopWaveNb(19), 1, MatchSlotsPerEdge(19)], _
+						[MatchTroopDropName(20), MatchSidesDrop(20), MatchTroopWaveNb(20), 1, MatchSlotsPerEdge(20)], _
+						[MatchTroopDropName(21), MatchSidesDrop(21), MatchTroopWaveNb(21), 1, MatchSlotsPerEdge(21)], _
+						[MatchTroopDropName(22), MatchSidesDrop(22), MatchTroopWaveNb(22), 1, MatchSlotsPerEdge(22)], _
+						[MatchTroopDropName(23), MatchSidesDrop(23), MatchTroopWaveNb(23), 1, MatchSlotsPerEdge(23)], _
+						[MatchTroopDropName(24), MatchSidesDrop(24), MatchTroopWaveNb(24), 1, MatchSlotsPerEdge(24)], _
+						[MatchTroopDropName(25), MatchSidesDrop(25), MatchTroopWaveNb(25), 1, MatchSlotsPerEdge(25)], _
+						[MatchTroopDropName(26), MatchSidesDrop(26), MatchTroopWaveNb(26), 1, MatchSlotsPerEdge(26)], _
+						[MatchTroopDropName(27), MatchSidesDrop(27), MatchTroopWaveNb(27), 1, MatchSlotsPerEdge(27)], _
+						[MatchTroopDropName(28), MatchSidesDrop(28), MatchTroopWaveNb(28), 1, MatchSlotsPerEdge(28)], _
+						[MatchTroopDropName(29), MatchSidesDrop(29), MatchTroopWaveNb(29), 1, MatchSlotsPerEdge(29)], _
+						[MatchTroopDropName(30), MatchSidesDrop(30), MatchTroopWaveNb(30), 1, MatchSlotsPerEdge(30)], _
+						[MatchTroopDropName(31), MatchSidesDrop(31), MatchTroopWaveNb(31), 1, MatchSlotsPerEdge(31)], _
+						[MatchTroopDropName(32), MatchSidesDrop(32), MatchTroopWaveNb(32), 1, MatchSlotsPerEdge(32)], _
+						[MatchTroopDropName(33), MatchSidesDrop(33), MatchTroopWaveNb(33), 1, MatchSlotsPerEdge(33)], _
+						[MatchTroopDropName(34), MatchSidesDrop(34), MatchTroopWaveNb(34), 1, MatchSlotsPerEdge(34)], _
+						[MatchTroopDropName(35), MatchSidesDrop(35), MatchTroopWaveNb(35), 1, MatchSlotsPerEdge(35)], _
+						[MatchTroopDropName(36), MatchSidesDrop(36), MatchTroopWaveNb(36), 1, MatchSlotsPerEdge(36)], _
+						[MatchTroopDropName(37), MatchSidesDrop(37), MatchTroopWaveNb(37), 1, MatchSlotsPerEdge(37)], _
+						[MatchTroopDropName(38), MatchSidesDrop(38), MatchTroopWaveNb(38), 1, MatchSlotsPerEdge(38)], _
+						[MatchTroopDropName(39), MatchSidesDrop(39), MatchTroopWaveNb(39), 1, MatchSlotsPerEdge(39)], _
+						[MatchTroopDropName(40), MatchSidesDrop(40), MatchTroopWaveNb(40), 1, MatchSlotsPerEdge(40)], _
+						[MatchTroopDropName(41), MatchSidesDrop(41), MatchTroopWaveNb(41), 1, MatchSlotsPerEdge(41)], _
+						[MatchTroopDropName(42), MatchSidesDrop(42), MatchTroopWaveNb(42), 1, MatchSlotsPerEdge(42)], _
+						[MatchTroopDropName(43), MatchSidesDrop(43), MatchTroopWaveNb(43), 1, MatchSlotsPerEdge(43)], _
+						[MatchTroopDropName(44), MatchSidesDrop(44), MatchTroopWaveNb(44), 1, MatchSlotsPerEdge(44)], _
+						[MatchTroopDropName(45), MatchSidesDrop(45), MatchTroopWaveNb(45), 1, MatchSlotsPerEdge(45)], _
+						[MatchTroopDropName(46), MatchSidesDrop(46), MatchTroopWaveNb(46), 1, MatchSlotsPerEdge(46)], _
+ 						[MatchTroopDropName(47), MatchSidesDrop(47), MatchTroopWaveNb(47), 1, MatchSlotsPerEdge(47)], _
+						[MatchTroopDropName(48), MatchSidesDrop(48), MatchTroopWaveNb(48), 1, MatchSlotsPerEdge(48)], _
+						[MatchTroopDropName(49), MatchSidesDrop(49), MatchTroopWaveNb(49), 1, MatchSlotsPerEdge(49)], _
+						[MatchTroopDropName(50), MatchSidesDrop(50), MatchTroopWaveNb(50), 1, MatchSlotsPerEdge(50)], _
+						[MatchTroopDropName(51), MatchSidesDrop(51), MatchTroopWaveNb(51), 1, MatchSlotsPerEdge(51)], _
+						[MatchTroopDropName(52), MatchSidesDrop(52), MatchTroopWaveNb(52), 1, MatchSlotsPerEdge(52)], _
+						[MatchTroopDropName(53), MatchSidesDrop(53), MatchTroopWaveNb(53), 1, MatchSlotsPerEdge(53)], _
+						[MatchTroopDropName(54), MatchSidesDrop(54), MatchTroopWaveNb(54), 1, MatchSlotsPerEdge(54)], _
+						[MatchTroopDropName(55), MatchSidesDrop(55), MatchTroopWaveNb(55), 1, MatchSlotsPerEdge(55)], _
+						[MatchTroopDropName(56), MatchSidesDrop(56), MatchTroopWaveNb(56), 1, MatchSlotsPerEdge(56)], _
+						[MatchTroopDropName(57), MatchSidesDrop(57), MatchTroopWaveNb(57), 1, MatchSlotsPerEdge(57)], _
+						[MatchTroopDropName(58), MatchSidesDrop(58), MatchTroopWaveNb(58), 1, MatchSlotsPerEdge(58)], _
+						[MatchTroopDropName(59), MatchSidesDrop(59), MatchTroopWaveNb(59), 1, MatchSlotsPerEdge(59)], _
+						[MatchTroopDropName(60), MatchSidesDrop(60), MatchTroopWaveNb(60), 1, MatchSlotsPerEdge(60)], _
+						[MatchTroopDropName(61), MatchSidesDrop(61), MatchTroopWaveNb(61), 1, MatchSlotsPerEdge(61)], _
+						[MatchTroopDropName(62), MatchSidesDrop(62), MatchTroopWaveNb(62), 1, MatchSlotsPerEdge(62)], _
+						[MatchTroopDropName(63), MatchSidesDrop(63), MatchTroopWaveNb(63), 1, MatchSlotsPerEdge(63)], _
+						[MatchTroopDropName(64), MatchSidesDrop(64), MatchTroopWaveNb(64), 1, MatchSlotsPerEdge(64)], _
+						[MatchTroopDropName(65), MatchSidesDrop(65), MatchTroopWaveNb(65), 1, MatchSlotsPerEdge(65)], _
+						[MatchTroopDropName(66), MatchSidesDrop(66), MatchTroopWaveNb(66), 1, MatchSlotsPerEdge(66)], _
+						[MatchTroopDropName(67), MatchSidesDrop(67), MatchTroopWaveNb(67), 1, MatchSlotsPerEdge(67)], _
+						[MatchTroopDropName(68), MatchSidesDrop(68), MatchTroopWaveNb(68), 1, MatchSlotsPerEdge(68)], _
+						[MatchTroopDropName(69), MatchSidesDrop(69), MatchTroopWaveNb(69), 1, MatchSlotsPerEdge(69)], _
+						[MatchTroopDropName(70), MatchSidesDrop(70), MatchTroopWaveNb(70), 1, MatchSlotsPerEdge(70)], _
+						[MatchTroopDropName(71), MatchSidesDrop(71), MatchTroopWaveNb(71), 1, MatchSlotsPerEdge(71)], _
+						[MatchTroopDropName(72), MatchSidesDrop(72), MatchTroopWaveNb(72), 1, MatchSlotsPerEdge(72)], _
+						[MatchTroopDropName(73), MatchSidesDrop(73), MatchTroopWaveNb(73), 1, MatchSlotsPerEdge(73)], _
+						[MatchTroopDropName(74), MatchSidesDrop(74), MatchTroopWaveNb(74), 1, MatchSlotsPerEdge(74)], _
+						[MatchTroopDropName(75), MatchSidesDrop(75), MatchTroopWaveNb(75), 1, MatchSlotsPerEdge(75)], _
+						[MatchTroopDropName(76), MatchSidesDrop(76), MatchTroopWaveNb(76), 1, MatchSlotsPerEdge(76)], _
+						[MatchTroopDropName(77), MatchSidesDrop(77), MatchTroopWaveNb(77), 1, MatchSlotsPerEdge(77)], _
+						[MatchTroopDropName(78), MatchSidesDrop(78), MatchTroopWaveNb(78), 1, MatchSlotsPerEdge(78)]]
 				Else
-					Local $listInfoDeploy[48][5] = [[$eGole, $nbSides, 1, 1, 2] _
-							, [$eIceG, $nbSides, 1, 1, 2] _
-							, [$eLava, $nbSides, 1, 1, 2] _
-							, [$eYeti, $nbSides, 1, 1, 2] _
-							, [$eIceH, $nbSides, 1, 1, 2] _
-							, [$eGiant, $nbSides, 1, 1, $g_iSlotsGiants] _
-							, [$eSGiant, $nbSides, 1, 1, $g_iSlotsGiants] _
-							, [$eDrag, $nbSides, 1, 1, 0] _
-							, [$eSDrag, $nbSides, 1, 1, 0] _
-							, ["CC", 1, 1, 1, 1] _
-							, [$eBall, $nbSides, 1, 1, 0] _
-							, [$eRBall, $nbSides, 1, 1, 0] _
-							, [$eBabyD, $nbSides, 1, 1, 1] _
-							, [$eInfernoD, $nbSides, 1, 1, 1] _
-							, [$eHogs, $nbSides, 1, 1, 1] _
-							, [$eSHogs, $nbSides, 1, 1, 1] _
-							, [$eValk, $nbSides, 1, 1, 0] _
-							, [$eSValk, $nbSides, 1, 1, 0] _
-							, [$eBowl, $nbSides, 1, 1, 0] _
-							, [$eSBowl, $nbSides, 1, 1, 0] _
-							, [$eHunt, $nbSides, 1, 1, 0] _
-							, [$eAppWard, $nbSides, 1, 1, 0] _
-							, [$eDruid, $nbSides, 1, 1, 0] _
-							, [$eFurn, $nbSides, 1, 1, 0] _
-							, [$eMine, $nbSides, 1, 1, 0] _
-							, [$eSMine, $nbSides, 1, 1, 0] _
-							, [$eEDrag, $nbSides, 1, 1, 0] _
-							, [$eRDrag, $nbSides, 1, 1, 0] _
-							, [$eETitan, $nbSides, 1, 1, 0] _
-							, [$eRootR, $nbSides, 1, 1, 0] _
-							, [$eThrower, $nbSides, 1, 1, 0] _
-							, [$eBarb, $nbSides, 1, 1, 0] _
-							, [$eSBarb, $nbSides, 1, 1, 0] _
-							, [$eWall, $nbSides, 1, 1, 1] _
-							, [$eSWall, $nbSides, 1, 1, 1] _
-							, [$eArch, $nbSides, 1, 1, 0] _
-							, [$eSArch, $nbSides, 1, 1, 0] _
-							, [$eWiza, $nbSides, 1, 1, 0] _
-							, [$eSWiza, $nbSides, 1, 1, 0] _
-							, [$eMini, $nbSides, 1, 1, 0] _
-							, [$eSMini, $nbSides, 1, 1, 0] _
-							, [$eWitc, $nbSides, 1, 1, 1] _
-							, [$eSWitc, $nbSides, 1, 1, 1] _
-							, [$eGobl, $nbSides, 1, 1, 0] _
-							, [$eSGobl, $nbSides, 1, 1, 0] _
-							, [$eHeal, $nbSides, 1, 1, 1] _
-							, [$ePekk, $nbSides, 1, 1, 1] _
-							, ["HEROES", 1, 2, 1, 1]]
-				EndIf
-			Case 1
-				Local $listInfoDeploy[10][5] = [[$eBarb, $nbSides, 1, 1, 0] _
+					Local $listInfoDeploy[$eDropOrderCount][5] = [[$eBarb, $nbSides, 1, 1, 0] _
 						, [$eSBarb, $nbSides, 1, 1, 0] _
 						, [$eArch, $nbSides, 1, 1, 0] _
 						, [$eSArch, $nbSides, 1, 1, 0] _
 						, [$eGobl, $nbSides, 1, 1, 0] _
 						, [$eSGobl, $nbSides, 1, 1, 0] _
+						, [$eBarcher, $nbSides, 1, 1, 0] _
 						, [$eMini, $nbSides, 1, 1, 0] _
 						, [$eSMini, $nbSides, 1, 1, 0] _
-						, ["CC", 1, 1, 1, 1] _
-						, ["HEROES", 1, 2, 1, 1]]
-			Case 2
-				Local $listInfoDeploy[23][5] = [[$eGiant, $nbSides, 1, 1, $g_iSlotsGiants] _
-						, [$eSGiant, $nbSides, 1, 1, $g_iSlotsGiants] _
-						, ["CC", 1, 1, 1, 1] _
-						, [$eBarb, $nbSides, 1, 2, 0] _
-						, [$eSBarb, $nbSides, 1, 2, 0] _
+						, [$eIceMini, $nbSides, 1, 1, 0] _
+						, [$eFire, $nbSides, 1, 1, 0] _
+						, [$eDebt, $nbSides, 1, 1, 0] _
+						, [$eKicker, $nbSides, 1, 1, 0] _
+						, [$eGThrow, $nbSides, 1, 1, 0] _
+						, [$eRoyalG, $nbSides, 1, 1, 0] _
 						, [$eWall, $nbSides, 1, 1, 1] _
 						, [$eSWall, $nbSides, 1, 1, 1] _
-						, [$eArch, $nbSides, 1, 2, 0] _
-						, [$eSArch, $nbSides, 1, 2, 0] _
-						, [$eBarb, $nbSides, 2, 2, 0] _
-						, [$eSBarb, $nbSides, 2, 2, 0] _
-						, [$eGobl, $nbSides, 1, 2, 0] _
-						, [$eSGobl, $nbSides, 1, 2, 0] _
-						, [$eHogs, $nbSides, 1, 1, 1] _
-						, [$eWiza, $nbSides, 1, 1, 0] _
-						, [$eSWiza, $nbSides, 1, 1, 0] _
-						, [$eMini, $nbSides, 1, 1, 0] _
-						, [$eSMini, $nbSides, 1, 1, 0] _
-						, [$eArch, $nbSides, 2, 2, 0] _
-						, [$eSArch, $nbSides, 2, 2, 0] _
-						, [$eGobl, $nbSides, 2, 2, 0] _
-						, [$eSGobl, $nbSides, 2, 2, 0] _
-						, ["HEROES", 1, 2, 1, 1]]
-			Case Else
-				SetLog("Algorithm type unavailable, defaulting to regular", $COLOR_ERROR)
-				Local $listInfoDeploy[23][5] = [[$eGiant, $nbSides, 1, 1, $g_iSlotsGiants] _
+						, [$eGiant, $nbSides, 1, 1, $g_iSlotsGiants] _
 						, [$eSGiant, $nbSides, 1, 1, $g_iSlotsGiants] _
-						, ["CC", 1, 1, 1, 1] _
-						, [$eBarb, $nbSides, 1, 2, 0] _
-						, [$eSBarb, $nbSides, 1, 2, 0] _
-						, [$eWall, $nbSides, 1, 1, 1] _
-						, [$eSWall, $nbSides, 1, 1, 1] _
-						, [$eArch, $nbSides, 1, 2, 0] _
-						, [$eSArch, $nbSides, 1, 2, 0] _
-						, [$eBarb, $nbSides, 2, 2, 0] _
-						, [$eSBarb, $nbSides, 2, 2, 0] _
-						, [$eGobl, $nbSides, 1, 2, 0] _
-						, [$eSGobl, $nbSides, 1, 2, 0] _
+						, [$eGGiant, $nbSides, 1, 1, $g_iSlotsGiants] _
+						, [$eGole, $nbSides, 1, 1, 2] _
+						, [$eIceG, $nbSides, 1, 1, 2] _
+						, [$eMeteorG, $nbSides, 1, 1, 2] _
+						, [$eYeti, $nbSides, 1, 1, 2] _
+						, [$eSYeti, $nbSides, 1, 1, 2] _
+						, [$eETitan, $nbSides, 1, 1, 0] _
+						, [$eRootR, $nbSides, 1, 1, 0] _
+						, [$eGiantS, $nbSides, 1, 1, 0] _
+						, [$eSBarrel, $nbSides, 1, 1, 0] _
+						, [$eERider, $nbSides, 1, 1, 0] _
+						, [$eLava, $nbSides, 1, 1, 2] _
+						, [$eIceH, $nbSides, 1, 1, 2] _
 						, [$eHogs, $nbSides, 1, 1, 1] _
+						, [$eSHogs, $nbSides, 1, 1, 1] _
+						, [$eHogWiz, $nbSides, 1, 1, 0] _
+						, [$eRamR, $nbSides, 1, 1, 0] _
+						, [$ePBarb, $nbSides, 1, 1, 0] _
+						, [$eValk, $nbSides, 1, 1, 0] _
+						, [$eSValk, $nbSides, 1, 1, 0] _
+						, [$eBowl, $nbSides, 1, 1, 0] _
+						, [$eSBowl, $nbSides, 1, 1, 0] _
+						, [$eMine, $nbSides, 1, 1, 0] _
+						, [$eSMine, $nbSides, 1, 1, 0] _
+						, [$eThrower, $nbSides, 1, 1, 0] _
+						, [$eHunt, $nbSides, 1, 1, 0] _
+						, [$ePekk, $nbSides, 1, 1, 1] _
 						, [$eWiza, $nbSides, 1, 1, 0] _
 						, [$eSWiza, $nbSides, 1, 1, 0] _
-						, [$eMini, $nbSides, 1, 1, 0] _
-						, [$eSMini, $nbSides, 1, 1, 0] _
-						, [$eArch, $nbSides, 2, 2, 0] _
-						, [$eSArch, $nbSides, 2, 2, 0] _
-						, [$eGobl, $nbSides, 2, 2, 0] _
-						, [$eSGobl, $nbSides, 2, 2, 0] _
-						, ["HEROES", 1, 2, 1, 1]]
+						, [$ePartyWiz, $nbSides, 1, 1, 0] _
+						, [$eIceWiz, $nbSides, 1, 1, 0] _
+						, [$eWitc, $nbSides, 1, 1, 1] _
+						, [$eSWitc, $nbSides, 1, 1, 1] _
+						, [$eWitchG, $nbSides, 1, 1, 0] _
+						, [$eBabyD, $nbSides, 1, 1, 0] _
+						, [$eInfernoD, $nbSides, 1, 1, 0] _
+						, [$eDrag, $nbSides, 1, 1, 0] _
+						, [$eSDrag, $nbSides, 1, 1, 0] _
+						, [$eEDrag, $nbSides, 1, 1, 0] _
+						, [$eRDrag, $nbSides, 1, 1, 0] _
+						, [$eGDrag, $nbSides, 1, 1, 0] _
+						, [$eADrag, $nbSides, 1, 1, 0] _
+						, [$eBall, $nbSides, 1, 1, 0] _
+						, [$eRBall, $nbSides, 1, 1, 0] _
+						, [$eLavaloon, $nbSides, 1, 1, 0] _
+						, [$eTThrow, $nbSides, 1, 1, 0] _
+						, [$eHeal, $nbSides, 1, 1, 1] _
+						, [$eAppWard, $nbSides, 1, 1, 0] _
+						, [$eDruid, $nbSides, 1, 1, 0] _
+						, [$eFurn, $nbSides, 1, 1, 0] _
+						, [$eRuinW, $nbSides, 1, 1, 0] _
+						, [$eKANE, $nbSides, 1, 1, 0] _
+						, [$eDisarmer, $nbSides, 1, 1, 0] _
+						, [$eYEET, $nbSides, 1, 1, 0] _
+						, [$eYUnder, $nbSides, 1, 1, 0] _
+						, [$eBroom, $nbSides, 1, 1, 0] _
+						, [$eMECHA, $nbSides, 1, 1, 0] _
+						, [$eCOOKIE, $nbSides, 1, 1, 0] _
+						, ["HEROES", 1, 2, 1, 1] _
+						, ["CC", 1, 1, 1, 1]]
+				EndIf
 		EndSwitch
 	EndIf
 
@@ -385,28 +416,35 @@ Func algorithm_AllTroops() ;Attack Algorithm for all existing troops
 	$g_aiDeployHeroesPosition[0] = -1
 	$g_aiDeployHeroesPosition[1] = -1
 
-	LaunchTroop2($listInfoDeploy, $g_iClanCastleSlot, $g_iKingSlot, $g_iQueenSlot, $g_iPrinceSlot, $g_iWardenSlot, $g_iChampionSlot)
+	LaunchTroop2($listInfoDeploy, $g_iClanCastleSlot, $g_iKingSlot, $g_iQueenSlot, $g_iPrinceSlot, $g_iWardenSlot, $g_iChampionSlot, $g_iDukeSlot)
 
+	If Not $g_bIsCCDropped And $g_iClanCastleSlot <> -1 Then
+		If $g_aiDeployHeroesPosition[0] <> -1 Then
+			dropCC($g_aiDeployHeroesPosition[0], $g_aiDeployHeroesPosition[1], $g_iClanCastleSlot)
+		Else
+			dropCC($g_aaiBottomRightDropPoints[2][0], $g_aaiBottomRightDropPoints[2][1], $g_iClanCastleSlot)
+		EndIf
+	EndIf
 	CheckHeroesHealth()
 
 	If _Sleep($DELAYALGORITHM_ALLTROOPS4) Then Return
-	SetLog("Dropping left over troops", $COLOR_INFO)
-	For $x = 0 To 1
-		If PrepareAttack($g_iMatchMode, True) = 0 Then
-			If $g_bDebugSetLog Then SetDebugLog("No Wast time... exit, no troops usable left", $COLOR_DEBUG)
-			ExitLoop ;Check remaining quantities
-		EndIf
-		For $i = $eBarb To $eFurn ; launch all remaining troops
+	Local $iRemainingCheck = PrepareAttack($g_iMatchMode, True)
+	If $iRemainingCheck <> -1 And HasRemainingRegularTroops() Then
+		SetLog("Dropping leftover troops")
+		For $i = $eBarb To $eGDrag ; launch all remaining troops
 			If LaunchTroop($i, $nbSides, 1, 1, 1) Then
 				CheckHeroesHealth()
 				If _Sleep($DELAYALGORITHM_ALLTROOPS5) Then Return
 			EndIf
 		Next
-	Next
+	EndIf
 
 	CheckHeroesHealth()
-
-	SetLog("Finished Attacking, waiting for the battle to end")
+	If $iRemainingCheck = -1 Then
+		SetLog("Attack deploy status not verified: attack bar detection failed", $COLOR_WARNING)
+	Else
+		SetLog("Finished Attacking, waiting for the battle to end")
+	EndIf
 EndFunc   ;==>algorithm_AllTroops
 
 Func SetSlotSpecialTroops()
@@ -415,11 +453,12 @@ Func SetSlotSpecialTroops()
 	$g_iPrinceSlot = -1
 	$g_iWardenSlot = -1
 	$g_iChampionSlot = -1
+	$g_iDukeSlot = -1
 	$g_iClanCastleSlot = -1
 
 	For $i = 0 To UBound($g_avAttackTroops) - 1
 		If $g_avAttackTroops[$i][0] = $eCastle Or $g_avAttackTroops[$i][0] = $eWallW Or $g_avAttackTroops[$i][0] = $eBattleB Or $g_avAttackTroops[$i][0] = $eStoneS Or _
-				$g_avAttackTroops[$i][0] = $eSiegeB Or $g_avAttackTroops[$i][0] = $eLogL Or $g_avAttackTroops[$i][0] = $eFlameF Or $g_avAttackTroops[$i][0] = $eBattleD Or $g_avAttackTroops[$i][0] = $eTroopL Then
+				$g_avAttackTroops[$i][0] = $eSiegeB Or $g_avAttackTroops[$i][0] = $eLogL Or $g_avAttackTroops[$i][0] = $eFlameF Or $g_avAttackTroops[$i][0] = $eBattleD Or $g_avAttackTroops[$i][0] = $eTroopL Or $g_avAttackTroops[$i][0] = $eSkyW Then
 			$g_iClanCastleSlot = $i
 		ElseIf $g_avAttackTroops[$i][0] = $eKing Then
 			$g_iKingSlot = $i
@@ -431,6 +470,8 @@ Func SetSlotSpecialTroops()
 			$g_iWardenSlot = $i
 		ElseIf $g_avAttackTroops[$i][0] = $eChampion Then
 			$g_iChampionSlot = $i
+		ElseIf $g_avAttackTroops[$i][0] = $eDuke Then
+			$g_iDukeSlot = $i
 		EndIf
 	Next
 
@@ -440,6 +481,7 @@ Func SetSlotSpecialTroops()
 		SetDebugLog("SetSlotSpecialTroops() Prince Slot: " & $g_iPrinceSlot, $COLOR_DEBUG)
 		SetDebugLog("SetSlotSpecialTroops() Warden Slot: " & $g_iWardenSlot, $COLOR_DEBUG)
 		SetDebugLog("SetSlotSpecialTroops() Champion Slot: " & $g_iChampionSlot, $COLOR_DEBUG)
+		SetDebugLog("SetSlotSpecialTroops() Dragon Duke Slot: " & $g_iDukeSlot, $COLOR_DEBUG)
 		SetDebugLog("SetSlotSpecialTroops() Clan Castle Slot: " & $g_iClanCastleSlot, $COLOR_DEBUG)
 	EndIf
 
@@ -471,7 +513,11 @@ Func SmartAttackStrategy($imode)
 		_CaptureRegion2()
 		_GetRedArea()
 
-		SetLog("Calculated  (in " & Round(__TimerDiff($hTimer) / 1000, 2) & " seconds) :")
+		SetLog("Calculated in " & Round(__TimerDiff($hTimer) / 1000, 2) & " seconds:")
+		If $g_iSmartZapTiming = $eSmartZapTimingStart Then
+			SmartZap()
+			If Not $g_bRunState Then Return
+		EndIf
 
 		If ($g_abAttackStdSmartNearCollectors[$imode][0] Or $g_abAttackStdSmartNearCollectors[$imode][1] Or $g_abAttackStdSmartNearCollectors[$imode][2]) Then
 			SetLog("Locating Mines, Collectors & Drills", $COLOR_INFO)
@@ -501,10 +547,10 @@ Func SmartAttackStrategy($imode)
 					_ArrayAdd($g_aiPixelNearCollector, $g_aiPixelDarkElixir, 0, "|", @CRLF, $ARRAYFILL_FORCE_STRING)
 				EndIf
 			EndIf
-			SetLog("Located  (in " & Round(__TimerDiff($hTimer) / 1000, 2) & " seconds) :")
+			SetLog("Located in " & Round(__TimerDiff($hTimer) / 1000, 2) & " seconds:")
 			SetLog("[" & UBound($g_aiPixelMine) & "] Gold Mines")
 			SetLog("[" & UBound($g_aiPixelElixir) & "] Elixir Collectors")
-			SetLog("[" & UBound($g_aiPixelDarkElixir) & "] Dark Elixir Drill/s")
+			SetLog("[" & UBound($g_aiPixelDarkElixir) & "] Dark Elixir Drills")
 			$g_aiNbrOfDetectedMines[$imode] += UBound($g_aiPixelMine)
 			$g_aiNbrOfDetectedCollectors[$imode] += UBound($g_aiPixelElixir)
 			$g_aiNbrOfDetectedDrills[$imode] += UBound($g_aiPixelDarkElixir)
@@ -513,3 +559,4 @@ Func SmartAttackStrategy($imode)
 
 	EndIf
 EndFunc   ;==>SmartAttackStrategy
+

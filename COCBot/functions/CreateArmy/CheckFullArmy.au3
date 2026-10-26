@@ -22,19 +22,7 @@ Func CheckOverviewFullArmy($bOpenArmyWindow = False, $bCloseArmyWindow = False)
 
 	If $bOpenArmyWindow Then
 		If _Sleep($DELAYCHECKFULLARMY1) Then Return
-		Click($aArmyTrainButton[0], $aArmyTrainButton[1], 1, 120, "#0347") ; Click Button Army Overview
-		If _Sleep($DELAYCHECKFULLARMY2) Then Return
-		Local $j = 0
-		While Not _ColorCheck(_GetPixelColor(795, 146 + $g_iMidOffsetY, True), Hex(0xFF8D95, 6), 20) ; "ARMY tab"
-			If $g_bDebugSetLogTrain Then SetLog("OverView TabColor=" & _GetPixelColor(795, 146 + $g_iMidOffsetY, True), $COLOR_DEBUG)
-			If _Sleep($DELAYCHECKFULLARMY1) Then Return ; wait for Train Window to be ready.
-			$j += 1
-			If $j > 15 Then ExitLoop
-		WEnd
-		If $j > 15 Then
-			SetLog("Army Window didn't open", $COLOR_ERROR)
-			Return
-		EndIf
+		If Not OpenArmyOverview(True, "CheckOverviewFullArmy()") Then Return
 	EndIf
 
 	If _sleep($DELAYCHECKFULLARMY2) Then Return
@@ -45,7 +33,7 @@ Func CheckOverviewFullArmy($bOpenArmyWindow = False, $bCloseArmyWindow = False)
 		If _sleep($DELAYCHECKFULLARMY2) Then Return
 		If IsArray($aArmyInfoCap) Then
 			If $aArmyInfoCap[0] > 1 Then ; check if the OCR was valid and returned both values
-				If Number($aArmyInfoCap[0]) = Number($aArmyInfoCap[1]) Then $IsAfull = True
+			If Number($aArmyInfoCap[1]) = Number($aArmyInfoCap[2]) Then $IsAfull = True
 			EndIf
 		EndIf
 	Else

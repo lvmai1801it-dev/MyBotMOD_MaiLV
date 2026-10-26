@@ -1,4 +1,4 @@
-; #FUNCTION# ====================================================================================================================
+﻿; #FUNCTION# ====================================================================================================================
 ; Name ..........: Collect Free Magic Items from trader
 ; Description ...:
 ; Syntax ........: CollectFreeMagicItems()
@@ -16,7 +16,7 @@
 Func CollectFreeMagicItems($bTest = False)
 	If Not $g_bChkCollectFreeMagicItems Or Not $g_bRunState Then Return
 
-	Local Static $iLastTimeChecked[8] = [0, 0, 0, 0, 0, 0, 0, 0]
+	Local Static $iLastTimeChecked[$g_iSwitchAccMaxAccounts]
 	If $iLastTimeChecked[$g_iCurAccount] = @MDAY And Not $bTest Then Return
 
 	ClearScreen()
@@ -49,24 +49,24 @@ Func CollectFreeMagicItems($bTest = False)
 				Click($aResults[$i][1], $aResults[$i][2])
 				If _Sleep(Random(3000, 4000, 1)) Then Return
 				If isGemOpen(True) Then
-					SetLog("Free Magic Item Collect Fail! Gem Window popped up!", $COLOR_ERROR)
+					SetLog("Free magic item collection failed, Gems Window popped up", $COLOR_ERROR)
 				EndIf
-				SetLog("Free Magic Item Detected On Slot #" & $ItemPosition & "", $COLOR_INFO)
+				SetLog("Free Magic Item Detected - Slot: #" & $ItemPosition, $COLOR_SUCCESS)
 				If WaitforPixel($aOcrPositions[$i][0] + 25, $aOcrPositions[$i][1] - 30, $aOcrPositions[$i][0] + 35, $aOcrPositions[$i][1] - 25, "AD590D", 15, 1) Then
-					SetLog("Free Magic Item Collected On Slot #" & $ItemPosition & "", $COLOR_SUCCESS)
+					SetLog("Free Magic Item Collected - Slot: #" & $ItemPosition, $COLOR_SUCCESS)
 					$aGem[$i] = "Collected"
 					If _Sleep(1500) Then Return
 					$Collected += 1
 				EndIf
 			ElseIf $aResults[$i][0] = "FreeFull" Then
-				SetLog("Free Magic Item Detected On Slot #" & $ItemPosition & "", $COLOR_INFO)
-				SetLog("But Item Can't be Collected, Stock is Full", $COLOR_INFO)
+				SetLog("Free Magic Item Detected - Slot: #" & $ItemPosition, $COLOR_SUCCESS)
+				SetLog("But item can't be collected, stock is full")
 				$aGem[$i] = "Full"
 			ElseIf $aResults[$i][0] = "Full" Then
 				$aGem[$i] = "Full"
 			ElseIf $aResults[$i][0] = "SoldOut" Then
-				SetLog("Free Magic Item Detected On Slot #" & $ItemPosition & "", $COLOR_INFO)
-				SetLog("But Item Out Of Stock", $COLOR_INFO)
+				SetLog("Free Magic Item Detected - Slot: #" & $ItemPosition, $COLOR_SUCCESS)
+				SetLog("The item is out of stock")
 				$aGem[$i] = "Sold Out"
 				If _Sleep(Random(2000, 4000, 1)) Then Return
 			EndIf
@@ -75,9 +75,8 @@ Func CollectFreeMagicItems($bTest = False)
 	Next
 
 	If Not $Collected Then
-		SetLog("Nothing free to collect!", $COLOR_INFO)
+		SetLog("No free rewards to collect")
 	EndIf
-	SetLog("Daily Discounts: " & $aGem[0] & " | " & $aGem[1] & " | " & $aGem[2])
 
 	CloseWindow2()
 	If _Sleep(1000) Then Return
@@ -89,18 +88,17 @@ Func GetFreeMagic()
 	Local $aResults[0][3]
 
 	For $i = 0 To UBound($aOcrPositions) - 1
+		Local $bSoldOut = WaitforPixel($aOcrPositions[$i][0] + 25, $aOcrPositions[$i][1] - 30, $aOcrPositions[$i][0] + 35, $aOcrPositions[$i][1] - 25, "AD590D", 15, 1)
+		Local $Read = $bSoldOut ? "SoldOut" : ReadFreeMagicValue($aOcrPositions[$i][0], $aOcrPositions[$i][1], $i + 1)
 
-		Local $Read = getOcrAndCapture("coc-freemagicitems", $aOcrPositions[$i][0], $aOcrPositions[$i][1], 60, 25, True)
 		If $Read = "FREE" Then
-			If WaitforPixel($aOcrPositions[$i][0] + 25, $aOcrPositions[$i][1] - 30, $aOcrPositions[$i][0] + 35, $aOcrPositions[$i][1] - 25, "AD590D", 15, 1) Then
-				$Read = "SoldOut"
-			EndIf
 			If WaitforPixel($aOcrPositions[$i][0] + 33, $aOcrPositions[$i][1] + 30, $aOcrPositions[$i][0] + 35, $aOcrPositions[$i][1] + 31, "969696", 10, 1) Then
 				$Read = "FreeFull"
 			EndIf
 		EndIf
+
 		If $Read = "" Then $Read = "N/A"
-		If Number($Read) > 10 Then
+		If StringRegExp($Read, "^\d+$") Then
 			$Read = $Read & " Gems"
 			If WaitforPixel($aOcrPositions[$i][0] + 33, $aOcrPositions[$i][1] + 30, $aOcrPositions[$i][0] + 35, $aOcrPositions[$i][1] + 31, "b4b4b4", 10, 1) Then
 				$Read = "Full"
@@ -110,6 +108,94 @@ Func GetFreeMagic()
 	Next
 	Return $aResults
 EndFunc   ;==>GetFreeMagic
+
+Func ReadFreeMagicValue($iX, $iY, $iSlot)
+	Local $aModels[3] = ["coc-freemagicitems", "coc-CostsUpgrades", "coc-ms"]
+	Local $aReadAreas[5][5] = [[0, 0, 60, 25, 12], [0, 8, 60, 18, 3], [5, 8, 48, 18, 3], [-4, 5, 68, 20, 2], [-10, -4, 80, 33, 1]]
+	Local $aValues[0][2]
+
+	For $iModel = 0 To UBound($aModels) - 1
+		For $iArea = 0 To UBound($aReadAreas) - 1
+			Local $sRawRead = StringStripWS(getOcrAndCapture($aModels[$iModel], $iX + $aReadAreas[$iArea][0], $iY + $aReadAreas[$iArea][1], $aReadAreas[$iArea][2], $aReadAreas[$iArea][3], True), 8)
+			Local $sUpperRead = StringUpper($sRawRead)
+			SetDebugLog("Free Magic OCR slot #" & $iSlot & " [" & $aModels[$iModel] & "] try #" & ($iArea + 1) & ": '" & $sRawRead & "'")
+
+			If StringInStr($sUpperRead, "FREE") Then Return "FREE"
+
+			Local $sDigits = StringRegExpReplace($sRawRead, "\D", "")
+			If $sDigits = "" Then ContinueLoop
+
+			Local $iValue = Number($sDigits)
+			If $iModel > 0 And IsLikelyTraderGemIconNoise($iValue) Then ContinueLoop
+			Local $iWeight = $aReadAreas[$iArea][4]
+
+			; Recover common two-digit gem prices when OCR drops the last digit.
+			If $iValue < 10 Then
+				Switch $iValue
+					Case 3
+						$iValue = 30
+					Case 5
+						$iValue = 50
+					Case 6
+						$iValue = 60
+					Case 7
+						$iValue = 75
+					Case 9
+						$iValue = 90
+					Case Else
+						ContinueLoop
+				EndSwitch
+				$iWeight = _Max(1, Int($iWeight / 2))
+			Else
+				$iWeight += 3
+			EndIf
+
+			If $iValue < 10 Or $iValue > 9999 Then ContinueLoop
+			If $iModel = 0 Then $iWeight += 2
+			If IsCommonTraderGemPrice($iValue) Then $iWeight += 2
+			If Not IsCommonTraderGemPrice($iValue) And $iArea > 0 Then $iWeight -= 4
+
+			Local $bAdded = False
+			For $i = 0 To UBound($aValues) - 1
+				If $aValues[$i][0] = $iValue Then
+					$aValues[$i][1] += $iWeight
+					$bAdded = True
+					ExitLoop
+				EndIf
+			Next
+			If Not $bAdded Then _ArrayAdd($aValues, $iValue & "|" & $iWeight)
+		Next
+	Next
+
+	If UBound($aValues) = 0 Then Return ""
+
+	Local $iBestValue = 0, $iBestWeight = -1
+	For $i = 0 To UBound($aValues) - 1
+		If $aValues[$i][1] > $iBestWeight Then
+			$iBestValue = $aValues[$i][0]
+			$iBestWeight = $aValues[$i][1]
+		EndIf
+	Next
+
+	SetDebugLog("Free Magic OCR slot #" & $iSlot & " selected: " & $iBestValue & " (score " & $iBestWeight & ")")
+	Return String($iBestValue)
+EndFunc   ;==>ReadFreeMagicValue
+
+Func IsLikelyTraderGemIconNoise($iValue)
+	Local $aNoiseValues[7] = [111, 313, 413, 1111, 1113, 11111, 11113]
+	For $i = 0 To UBound($aNoiseValues) - 1
+		If $aNoiseValues[$i] = $iValue Then Return True
+	Next
+	Return False
+EndFunc   ;==>IsLikelyTraderGemIconNoise
+
+Func IsCommonTraderGemPrice($iValue)
+	Local $aCommonPrices[28] = [10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 65, 70, 75, 80, 90, 100, 115, 120, 150, 200, 250, 300, 400, 500, 600, 750, 900, 925]
+	For $i = 0 To UBound($aCommonPrices) - 1
+		If $aCommonPrices[$i] = $iValue Then Return True
+	Next
+	Return False
+EndFunc   ;==>IsCommonTraderGemPrice
 
 Func OpenTraderWindow()
 	Local $Found = False
@@ -130,35 +216,24 @@ Func OpenTraderWindow()
 		If _Sleep(1000) Then Return
 	Next
 	If Not $Found Then
-		SetLog("Trader unavailable", $COLOR_INFO)
-		SetLog("Bot will recheck next loop", $COLOR_OLIVE)
+		SetLog("Trader Unavailable", $COLOR_DEBUG)
+		SetLog("Rechecking in the next loop", $COLOR_DEBUG)
 		Return False
 	Else
-		Local $aIsWeekyDealsOpen[4] = [40, 0, 0x8DC11D, 20]
 		WaitForClanMessage("WeeklyDeals")
-		Local $aTabButton = findButton("WeeklyDeals", Default, 1, True)
-		If IsArray($aTabButton) And UBound($aTabButton, 1) = 2 Then
-			$aIsWeekyDealsOpen[1] = $aTabButton[1]
-			If Not _CheckPixel($aIsWeekyDealsOpen, True) Then
-				ClickP($aTabButton)
-				If Not _WaitForCheckPixel($aIsWeekyDealsOpen, True) Then
-					SetLog("Error : Cannot open Gems Menu. Pixel to check did not appear", $COLOR_ERROR)
-					CloseWindow()
-					Return FuncReturn(SetError(1, 0, False), $g_bDebugSetLog)
-				EndIf
+		; Locate the Gems tab itself. Event Deals changes its slot, not its image.
+		For $i = 1 To 5
+			If QuickMIS("BC1", $g_sImgTraderGems, 35, 165 + $g_iMidOffsetY, 150, 340 + $g_iMidOffsetY) Then
+				Click($g_iQuickMISX, $g_iQuickMISY)
+				If _Sleep(500) Then Return False
+			Local $aiDailyDiscount = decodeSingleCoord(findImage("DailyDiscount", $g_sImgDailyDiscountWindow, GetDiamondFromRect("420,105,510,155"), 1, True, Default))
+			If IsArray($aiDailyDiscount) And UBound($aiDailyDiscount, 1) > 1 Then Return True
 			EndIf
-		Else
-			SetDebugLog("Error when opening Gems Menu: $aTabButton is no valid Array", $COLOR_ERROR)
-			CloseWindow()
-			Return FuncReturn(SetError(1, 0, False), $g_bDebugSetLog)
-		EndIf
-	EndIf
+			If _Sleep(250) Then Return False
+		Next
 
-	Local $aiDailyDiscount = decodeSingleCoord(findImage("DailyDiscount", $g_sImgDailyDiscountWindow, GetDiamondFromRect("420,105,510,155"), 1, True, Default))
-	If Not IsArray($aiDailyDiscount) Or UBound($aiDailyDiscount, 1) < 1 Then
+		SetLog("Cannot open Gems Menu", $COLOR_ERROR)
 		CloseWindow()
 		Return False
 	EndIf
-
-	Return True
 EndFunc   ;==>OpenTraderWindow

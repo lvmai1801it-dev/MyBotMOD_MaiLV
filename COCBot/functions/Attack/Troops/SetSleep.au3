@@ -14,13 +14,14 @@
 ; ===============================================================================================================================
 Func SetSleep($iType)
 	If IsKeepClicksActive() Then Return 0 ; fast bulk deploy
-	Local $iFactorZero = 10
-	Local $iFactorOne = 100
+	Local $iTiming = GetAttackDropTiming()
+	Local $iFactorZero = 10 * $iTiming
+	Local $iFactorOne = 100 * $iTiming
 
 	If $g_bAndroidAdbClick Then
 		; adjust for slow ADB clicks the delay factor
-		$iFactorZero = 10
-		$iFactorOne = 100
+		$iFactorZero = 10 * $iTiming
+		$iFactorOne = 100 * $iTiming
 	EndIf
 
 	Switch $iType
@@ -30,6 +31,16 @@ Func SetSleep($iType)
 			Return Round(Random(1, 10)) * $iFactorOne
 	EndSwitch
 EndFunc   ;==>SetSleep
+
+Func GetAttackDropTiming()
+	Local $iTiming = $g_iAttackDropTiming
+	If $iTiming < 1 Or $iTiming > 9 Then $iTiming = 1
+	Return $iTiming
+EndFunc   ;==>GetAttackDropTiming
+
+Func IsFastAttackDropTiming()
+	Return GetAttackDropTiming() = 1
+EndFunc   ;==>IsFastAttackDropTiming
 
 ; #FUNCTION# ====================================================================================================================
 ; Name ..........: _SleepAttack
@@ -49,6 +60,10 @@ Func _SleepAttack($iDelay, $iSleep = True)
 	If Not $g_bRunState Then
 		ResumeAndroid()
 		Return True
+	EndIf
+	If $g_bBotPaused Then
+		TogglePauseSleep()
+		If Not $g_bRunState Then Return True
 	EndIf
 	If IsKeepClicksActive() Then Return False
 	Return _Sleep($iDelay, $iSleep)

@@ -34,16 +34,23 @@ Func TrainSiege()
 
 	If Not $g_bRunState Then Return
 
-	If $Isremoved Or Not $g_bFullArmy Then
+	If $Isremoved Or _NeedSiegeTraining() Then
 		Local $rWhatToTrain = WhichSiegeToTrain()
 		If DoWhatToTrainContainSiege($rWhatToTrain) Then TrainSiegeUsingWhatToTrain($rWhatToTrain)
-		CheckIfArmyIsReady()
 	EndIf
 
 	If _Sleep(250) Then Return
 	If Not $g_bRunState Then Return
 
 EndFunc   ;==>TrainSiege
+
+Func _NeedSiegeTraining()
+	For $i = 0 To $eSiegeMachineCount - 1
+		If $g_aiArmyCompSiegeMachines[$i] > $g_aiCurrentSiegeMachines[$i] Then Return True
+	Next
+
+	Return False
+EndFunc   ;==>_NeedSiegeTraining
 
 Func DoWhatToTrainContainSiege($rWTT)
 	If UBound($rWTT) = 1 And $rWTT[0][0] = "WallW" And $rWTT[0][1] = 0 Then Return False ; If was default Result of WhichSiegeToTrain
@@ -55,7 +62,7 @@ EndFunc   ;==>DoWhatToTrainContainSiege
 
 Func IsSiegeToTrain($sName)
 	Local $iIndex = TroopIndexLookup($sName, "IsSiegeToTrain")
-	If $iIndex >= $eWallW And $iIndex <= $eTroopL Then Return True
+	If $iIndex >= $eWallW And $iIndex <= $eSkyW Then Return True
 	Return False
 EndFunc   ;==>IsSiegeToTrain
 
@@ -90,30 +97,62 @@ Func TrainSiegeUsingWhatToTrain($rWTT)
 					SetLog("Training " & $rWTT[$i][1] & "x " & $sSiegeName & ($rWTT[$i][1] > 1 ? "s" : ""), $COLOR_SUCCESS)
 				EndIf
 
-				DragSiegeIfNeeded($iSiegeIndex - $eWallW, $iPage)
-
-				TrainIt($iSiegeIndex, $rWTT[$i][1], $g_iTrainClickDelay)
+				If Not TrainSiegeMachineIt($iSiegeIndex, $rWTT[$i][1], $iPage) Then
+					CloseSiegeTrainingPanel()
+					Return False
+				EndIf
 				$LeftSpace -= $rWTT[$i][1] * $g_aiSiegeMachineSpace[$iSiegeIndex - $eWallW]
 			EndIf
 		EndIf
 		If _Sleep($DELAYRESPOND) Then Return ; add 5ms delay to catch TrainIt errors, and force return to back to main loop
 	Next
 
+	CloseSiegeTrainingPanel()
+	Return True
+EndFunc   ;==>TrainSiegeUsingWhatToTrain
+
+Func CloseSiegeTrainingPanel()
 	If IsTrainPageGrayed(False, 3) Then
 		Click(Random(240, 360, 1), Random(190 + $g_iMidOffsetY, 210 + $g_iMidOffsetY, 1), 1, 120)
 		If _Sleep(250) Then Return
 	EndIf
+EndFunc   ;==>CloseSiegeTrainingPanel
 
-	Return True
-EndFunc   ;==>TrainSiegeUsingWhatToTrain
+Func TrainSiegeMachineIt($iSiegeIndex, $iQuantity, ByRef $iPage)
+	Local $iSiegeMachineIndex = $iSiegeIndex - $eWallW
+
+	If _Sleep(900) Then Return False
+	If _TrainVisibleSiegeMachine($iSiegeIndex, $iQuantity) Then Return True
+	If _DragAndTrainSiegeIfNeeded($iSiegeMachineIndex, $iSiegeIndex, $iQuantity, $iPage) Then Return True
+
+	If $iPage < 2 And DragSiegePageRight($iPage) Then
+		If _TrainVisibleSiegeMachine($iSiegeIndex, $iQuantity) Then Return True
+	EndIf
+
+	SetLog("TrainIt troop position " & GetTroopName($iSiegeIndex) & " did not find icon", $COLOR_ERROR)
+	SetLog("Siege machine icon not found in workshop!", $COLOR_ERROR)
+	Return False
+EndFunc   ;==>TrainSiegeMachineIt
+
+Func _TrainVisibleSiegeMachine($iSiegeIndex, $iQuantity)
+	Local $aTrainPos = GetTrainPos($iSiegeIndex)
+	If Not IsArray($aTrainPos) Or $aTrainPos[0] = -1 Then Return False
+
+	If _ColorCheck(_GetPixelColor($aTrainPos[0], $aTrainPos[1], $g_bCapturePixel), Hex($aTrainPos[2], 6), $aTrainPos[3]) Then
+		Return TrainClickP($aTrainPos, $iQuantity, $g_iTrainClickDelay, "#0266")
+	EndIf
+
+	Return False
+EndFunc   ;==>_TrainVisibleSiegeMachine
 
 Func WhichSiegeToTrain($bRemoveExtra = False)
 	Local $ToReturn[1][2] = [["WallW", 0]] ; 2 element dynamic list [Siege, quantity]
 	If Not $bRemoveExtra Then
 		For $i = 0 To $eSiegeMachineCount - 1
-			If $g_aiArmyCompSiegeMachines[$i] > 0 Then
+			Local $iMissingSieges = $g_aiArmyCompSiegeMachines[$i] - $g_aiCurrentSiegeMachines[$i]
+			If $iMissingSieges > 0 Then
 				$ToReturn[UBound($ToReturn) - 1][0] = $g_asSiegeMachineShortNames[$i]
-				$ToReturn[UBound($ToReturn) - 1][1] = $g_aiArmyCompSiegeMachines[$i]
+				$ToReturn[UBound($ToReturn) - 1][1] = $iMissingSieges
 				ReDim $ToReturn[UBound($ToReturn) + 1][2]
 			EndIf
 		Next
@@ -147,7 +186,7 @@ Func RemoveExtraSieges($toRemove)
 
 		; Loop through Sieges needed to get removed Just to write some Logs
 		For $i = 0 To (UBound($toRemove) - 1)
-			SetLog("Sieges Remove.", $COLOR_INFO)
+			SetLog("Removing Sieges", $COLOR_INFO)
 			Click(793, 326 + $g_iMidOffsetY)
 			If _Sleep(250) Then Return
 			Local $aiOkayButton = findButton("Okay", Default, 1, True)
@@ -162,48 +201,60 @@ Func RemoveExtraSieges($toRemove)
 
 		If Not $g_bRunState Then Return
 
-		SetLog("All Extra Sieges removed", $COLOR_SUCCESS)
+		SetLog("All Extra Sieges Removed", $COLOR_SUCCESS)
+		Local $aEmptySieges[$eSiegeMachineCount]
+		$g_aiCurrentSiegeMachines = $aEmptySieges
 		If _Sleep(200) Then Return
 		If $iResult = 0 Then $iResult = 1
 	Else ; If No extra troop found
-		SetLog("No siege to remove, great", $COLOR_SUCCESS)
+		SetLog("No sieges to remove, great", $COLOR_SUCCESS)
 		$iResult = 3
 	EndIf
 
 	Return $iResult
 EndFunc   ;==>RemoveExtraSieges
 
-Func DragSiegeIfNeeded($iSiegeIndex, ByRef $iPage)
+Func _DragAndTrainSiegeIfNeeded($iSiegeIndex, $iTrainIndex, $iQuantity, ByRef $iPage)
+	Local $iTargetPage = 0
 
-	SetLog("Siege Needed: " & $g_asSiegeMachineNames[$iSiegeIndex])
+	Switch $iSiegeIndex
+		Case $eSiegeWallWrecker To $eSiegeLogLauncher
+			$iTargetPage = 0
+		Case $eSiegeFlameFlinger To $eSiegeBattleDrill
+			$iTargetPage = 1
+		Case $eSiegeTroopLauncher To $eSiegeSkyWagon
+			$iTargetPage = 2
+	EndSwitch
 
+	While $iPage < $iTargetPage
+		If Not DragSiegePageRight($iPage) Then Return False
+		If _TrainVisibleSiegeMachine($iTrainIndex, $iQuantity) Then Return True
+	WEnd
+
+	While $iPage > $iTargetPage
+		If Not DragSiegePageLeft($iPage) Then Return False
+		If _TrainVisibleSiegeMachine($iTrainIndex, $iQuantity) Then Return True
+	WEnd
+
+	Return False
+EndFunc   ;==>_DragAndTrainSiegeIfNeeded
+
+Func DragSiegePageRight(ByRef $iPage)
 	Local $iY1 = Random(540 + $g_iBottomOffsetY, 580 + $g_iBottomOffsetY, 1)
 	Local $iY2 = Random(540 + $g_iBottomOffsetY, 580 + $g_iBottomOffsetY, 1)
 
-	If $iPage = 0 Then
-		If $iSiegeIndex >= $eSiegeWallWrecker And $iSiegeIndex <= $eSiegeLogLauncher Then
-			Return True
-		Else
-			; Drag right to left
-			ClickDrag(660, $iY1, 260, $iY2, 250) ; to expose Flame Flinger
-			If _Sleep(Random(1500, 2000, 1)) Then Return
-			$iPage = 1
-			Return True
-		EndIf
-	EndIf
+	ClickDrag(760, $iY1, 220, $iY2, 350)
+	If _Sleep(Random(1500, 2000, 1)) Then Return False
+	$iPage += 1
+	Return True
+EndFunc   ;==>DragSiegePageRight
 
-	If $iPage = 1 Then
-		If $iSiegeIndex >= $eSiegeBattleBlimp And $iSiegeIndex <= $eSiegeTroopLauncher Then
-			Return True
-		Else
-			; Drag left to right
-			ClickDrag(220, $iY1, 650, $iY2, 250) ; to expose Wall Wrecker
-			If _Sleep(Random(1500, 2000, 1)) Then Return
-			$iPage = 0
-			Return True
-		EndIf
-	EndIf
+Func DragSiegePageLeft(ByRef $iPage)
+	Local $iY1 = Random(540 + $g_iBottomOffsetY, 580 + $g_iBottomOffsetY, 1)
+	Local $iY2 = Random(540 + $g_iBottomOffsetY, 580 + $g_iBottomOffsetY, 1)
 
-	Return False
-EndFunc   ;==>DragSiegeIfNeeded
-
+	ClickDrag(220, $iY1, 760, $iY2, 350)
+	If _Sleep(Random(1500, 2000, 1)) Then Return False
+	$iPage -= 1
+	Return True
+EndFunc   ;==>DragSiegePageLeft

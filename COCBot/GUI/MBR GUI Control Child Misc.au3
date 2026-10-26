@@ -1,4 +1,4 @@
-; #FUNCTION# ====================================================================================================================
+﻿; #FUNCTION# ====================================================================================================================
 ; Name ..........: MBR GUI Control Misc
 ; Description ...: This file Includes all functions to current GUI
 ; Syntax ........:
@@ -28,9 +28,11 @@ Func LoadProfile($bSaveCurrentProfile = True)
 
 	; Setup the profile in case it doesn't exist.
 	If setupProfile() Then
+		Local $bProfileConfigExists = FileExists($g_sProfileConfigPath)
 		readConfig()
+		$g_sWindowLayoutProfile = $g_sProfileCurrentName
 		applyConfig()
-		saveConfig()
+		If Not $bProfileConfigExists Then saveConfig()
 		SetLog("Profile " & $g_sProfileCurrentName & " loaded from " & $g_sProfileConfigPath, $COLOR_SUCCESS)
 		Return True
 	EndIf
@@ -81,7 +83,7 @@ Func btnAddConfirm()
 			If GUICtrlGetState($g_hBtnDeleteProfile) <> $GUI_ENABLE Then GUICtrlSetState($g_hBtnDeleteProfile, $GUI_ENABLE)
 			If GUICtrlGetState($g_hBtnRenameProfile) <> $GUI_ENABLE Then GUICtrlSetState($g_hBtnRenameProfile, $GUI_ENABLE)
 		Case Else
-			SetLog("If you are seeing this log message there is something wrong.", $COLOR_ERROR)
+			SetLog("If you are seeing this log message there is something wrong", $COLOR_ERROR)
 	EndSwitch
 EndFunc   ;==>btnAddConfirm
 
@@ -117,7 +119,7 @@ Func btnDeleteCancel()
 			GUICtrlSetState($g_hBtnPushSharedPrefs, $GUI_SHOW)
 			GUICtrlSetState($g_hBtnSaveprofile, $GUI_SHOW)
 		Case Else
-			SetLog("If you are seeing this log message there is something wrong.", $COLOR_ERROR)
+			SetLog("If you are seeing this log message there is something wrong", $COLOR_ERROR)
 	EndSwitch
 
 	If GUICtrlRead($g_hCmbProfile) = "<No Profiles>" Then
@@ -170,7 +172,7 @@ Func btnRenameConfirm()
 			GUICtrlSetState($g_hBtnPushSharedPrefs, $GUI_SHOW)
 			GUICtrlSetState($g_hBtnSaveprofile, $GUI_SHOW)
 		Case Else
-			SetLog("If you are seeing this log message there is something wrong.", $COLOR_ERROR)
+			SetLog("If you are seeing this log message there is something wrong", $COLOR_ERROR)
 	EndSwitch
 EndFunc   ;==>btnRenameConfirm
 
@@ -183,7 +185,7 @@ Func btnPushSharedPrefs()
 EndFunc   ;==>btnPushSharedPrefs
 
 Func BtnSaveprofile()
-	SetLog("Saving your setting...", $COLOR_INFO)
+	SetLog("Saving Your Settings", $COLOR_INFO)
 	SaveConfig()
 	readConfig()
 	applyConfig()
@@ -207,18 +209,32 @@ Func WhatSCIDAccount2Use()
 	$g_iWhatSCIDAccount2Use = _GUICtrlComboBox_GetCurSel($g_hCmbWhatSCIDAccount2Use)
 EndFunc   ;==>WhatSCIDAccount2Use
 
+Func cmbBotCommand()
+	$g_iCmbBotCommand = _GUICtrlComboBox_GetCurSel($g_hCmbBotCommand)
+	If $g_iCmbBotCommand < 0 Then
+		$g_iCmbBotCommand = 0
+		_GUICtrlComboBox_SetCurSel($g_hCmbBotCommand, $g_iCmbBotCommand)
+	EndIf
+	cmbBotCond()
+EndFunc   ;==>cmbBotCommand
+
 Func cmbBotCond()
 	Local $iCond = _GUICtrlComboBox_GetCurSel($g_hCmbBotCond)
-	If $iCond = 15 Then
+	If $iCond < 0 Then
+		$iCond = 6
+		_GUICtrlComboBox_SetCurSel($g_hCmbBotCond, $iCond)
+	EndIf
+	$g_iCmbBotCond = $iCond
+	If $iCond = 5 Then
 		If _GUICtrlComboBox_GetCurSel($g_hCmbHoursStop) = 0 Then _GUICtrlComboBox_SetCurSel($g_hCmbHoursStop, 1)
 		GUICtrlSetState($g_hCmbHoursStop, $GUI_ENABLE)
 	Else
 		_GUICtrlComboBox_SetCurSel($g_hCmbHoursStop, 0)
 		GUICtrlSetState($g_hCmbHoursStop, $GUI_DISABLE)
 	EndIf
-	If $iCond = 22 Then
+	If $iCond = 4 Then
 		GUICtrlSetState($g_hCmbHoursStop, $GUI_HIDE)
-		For $i = $g_ahTxtResumeAttackLoot[$eLootTrophy] To $g_ahTxtResumeAttackLoot[$eLootDarkElixir]
+		For $i = $g_ahTxtResumeAttackLoot[$eLootGold] To $g_ahTxtResumeAttackLoot[$eLootDarkElixir]
 			GUICtrlSetState($i, $GUI_HIDE)
 		Next
 		_GUI_Value_STATE("SHOW", $g_hCmbTimeStop & "#" & $g_hCmbResumeTime)
@@ -226,7 +242,7 @@ Func cmbBotCond()
 	Else
 		_GUI_Value_STATE("HIDE", $g_hCmbTimeStop & "#" & $g_hCmbResumeTime)
 		GUICtrlSetState($g_hCmbHoursStop, $GUI_SHOW)
-		For $i = $g_ahTxtResumeAttackLoot[$eLootTrophy] To $g_ahTxtResumeAttackLoot[$eLootDarkElixir]
+		For $i = $g_ahTxtResumeAttackLoot[$eLootGold] To $g_ahTxtResumeAttackLoot[$eLootDarkElixir]
 			GUICtrlSetState($i, $GUI_SHOW)
 		Next
 	EndIf
@@ -234,29 +250,33 @@ Func cmbBotCond()
 	For $i = $g_LblResumeAttack To $g_ahTxtResumeAttackLoot[$eLootDarkElixir]
 		GUICtrlSetState($i, $GUI_DISABLE)
 	Next
-	If _GUICtrlComboBox_GetCurSel($g_hCmbBotCommand) <> 0 Then Return
-	If $iCond <= 14 Or $iCond = 22 Then GUICtrlSetState($g_LblResumeAttack, $GUI_ENABLE)
-	If $iCond <= 14 Then GUICtrlSetState($g_hChkCollectStarBonus, $GUI_ENABLE)
-	If $iCond <= 6 Or $iCond = 8 Or $iCond = 10 Or $iCond = 14 Then GUICtrlSetState($g_ahTxtResumeAttackLoot[$eLootGold], $GUI_ENABLE)
-	If $iCond <= 5 Or $iCond = 7 Or $iCond = 9 Or $iCond = 11 Or $iCond = 14 Then GUICtrlSetState($g_ahTxtResumeAttackLoot[$eLootElixir], $GUI_ENABLE)
-	If $iCond = 13 Or $iCond = 14 Then GUICtrlSetState($g_ahTxtResumeAttackLoot[$eLootDarkElixir], $GUI_ENABLE)
-	If $iCond <= 3 Or ($iCond >= 6 And $iCond <= 9) Or $iCond = 12 Then GUICtrlSetState($g_ahTxtResumeAttackLoot[$eLootTrophy], $GUI_ENABLE)
-	If $iCond = 22 Then GUICtrlSetState($g_hCmbResumeTime, $GUI_ENABLE)
+	GUICtrlSetState($g_hChkCollectStarBonus, $GUI_DISABLE)
+	; Enable storage-based condition controls for all halt commands
+	If $iCond <= 3 Or $iCond = 4 Then GUICtrlSetState($g_LblResumeAttack, $GUI_ENABLE)
+	If $iCond <= 3 Then GUICtrlSetState($g_hChkCollectStarBonus, $GUI_ENABLE)
+	If $iCond = 0 Or $iCond = 1 Then GUICtrlSetState($g_ahTxtResumeAttackLoot[$eLootGold], $GUI_ENABLE)
+	If $iCond = 0 Or $iCond = 2 Then GUICtrlSetState($g_ahTxtResumeAttackLoot[$eLootElixir], $GUI_ENABLE)
+	If $iCond = 0 Or $iCond = 3 Then GUICtrlSetState($g_ahTxtResumeAttackLoot[$eLootDarkElixir], $GUI_ENABLE)
+	If $iCond = 4 Then GUICtrlSetState($g_hCmbResumeTime, $GUI_ENABLE)
 EndFunc   ;==>cmbBotCond
 
 Func chkBotStop()
 	If GUICtrlRead($g_hChkBotStop) = $GUI_CHECKED Then
+		cmbBotCommand()
 		For $i = $g_hCmbBotCommand To $g_hCmbBotCond
 			GUICtrlSetState($i, $GUI_ENABLE)
 		Next
 		cmbBotCond()
-		GUICtrlSetState($g_hChkForceAttackOnClanGamesWhenHalt, $GUI_ENABLE)
 	Else
-		For $i = $g_hCmbBotCommand To $g_ahTxtResumeAttackLoot[$eLootDarkElixir]
+		For $i = $g_hCmbBotCommand To $g_hChkCollectStarBonus
 			GUICtrlSetState($i, $GUI_DISABLE)
 		Next
-		GUICtrlSetState($g_hChkForceAttackOnClanGamesWhenHalt, $GUI_DISABLE)
+		For $i = $g_ahTxtResumeAttackLoot[$eLootGold] To $g_ahTxtResumeAttackLoot[$eLootDarkElixir]
+			GUICtrlSetState($i, $GUI_DISABLE)
+		Next
 	EndIf
+	; This option must remain configurable even when Halt Mode is currently disabled.
+	GUICtrlSetState($g_hChkForceAttackOnClanGamesWhenHalt, $GUI_ENABLE)
 EndFunc   ;==>chkBotStop
 
 ;~ Func btnLocateBarracks()
@@ -281,10 +301,31 @@ Func btnLocateClanCastle()
 	Local $wasRunState = $g_bRunState
 	$g_bRunState = True
 	ZoomOut()
-	LocateClanCastle()
+	If LocateClanCastle(False) Then SaveConfig()
 	$g_bRunState = $wasRunState
 	AndroidShield("btnLocateClanCastle") ; Update shield status due to manual $g_bRunState
 EndFunc   ;==>btnLocateClanCastle
+
+Func RestartAfterTownHallRelocate($iOldTownHallLevel, $wasRunState)
+	If Not $iOldTownHallLevel = $g_iTownHallLevel Then
+		_ExtMsgBoxSet(1 + 64, $SS_CENTER, 0x004080, 0xFFFF00, 12, "Comic Sans MS", 600)
+		Local $stext = @CRLF & GetTranslatedFileIni("MBR Popups", "Locating_your_TH", "If you locating your TH because you upgraded,") & @CRLF & _
+				GetTranslatedFileIni("MBR Popups", "Must_restart_bot", "then you must restart bot!!!") & @CRLF & @CRLF & _
+				GetTranslatedFileIni("MBR Popups", "OK_to_restart_bot", "Click OK to restart bot,") & @CRLF & @CRLF & GetTranslatedFileIni("MBR Popups", "Cancel_to_exit", "Or Click Cancel to exit") & @CRLF
+		Local $MsgBox = _ExtMsgBox(0, GetTranslatedFileIni("MBR Popups", "Ok_Cancel", "Ok|Cancel"), GetTranslatedFileIni("MBR Popups", "Close_Bot", "Close Bot Please!"), $stext, 120)
+		If $g_bDebugSetLog Then SetDebugLog("$MsgBox= " & $MsgBox, $COLOR_DEBUG)
+		If $MsgBox = 1 Then
+			#cs
+				Local $stext = @CRLF & GetTranslatedFileIni("MBR Popups", "Sure_Close Bot", "Are you 100% sure you want to restart bot ?") & @CRLF & @CRLF & _
+				GetTranslatedFileIni("MBR Popups", "Restart_bot", "Click OK to close bot and then restart the bot (manually)") & @CRLF & @CRLF & GetTranslatedFileIni("MBR Popups", "Cancel_to_exit", -1) & @CRLF
+				Local $MsgBox = _ExtMsgBox(0, GetTranslatedFileIni("MBR Popups", "Ok_Cancel", -1), GetTranslatedFileIni("MBR Popups", "Close_Bot", -1), $stext, 120)
+				If $g_bDebugSetLog Then SetDebugLog("$MsgBox= " & $MsgBox, $COLOR_DEBUG)
+				If $MsgBox = 1 Then BotClose(False)
+			#ce
+			RestartBot(False, $wasRunState)
+		EndIf
+	EndIf
+EndFunc   ;==>RestartAfterTownHallRelocate
 
 ;~ Func btnLocateSpellfactory()
 ;~ 	Local $wasRunState = $g_bRunState
@@ -309,36 +350,61 @@ Func btnLocateTownHall()
 	Local $g_iOldTownHallLevel = $g_iTownHallLevel
 	$g_bRunState = True
 	ZoomOut()
-	LocateTownHall()
-	If Not $g_iOldTownHallLevel = $g_iTownHallLevel Then
-		_ExtMsgBoxSet(1 + 64, $SS_CENTER, 0x004080, 0xFFFF00, 12, "Comic Sans MS", 600)
-		Local $stext = @CRLF & GetTranslatedFileIni("MBR Popups", "Locating_your_TH", "If you locating your TH because you upgraded,") & @CRLF & _
-				GetTranslatedFileIni("MBR Popups", "Must_restart_bot", "then you must restart bot!!!") & @CRLF & @CRLF & _
-				GetTranslatedFileIni("MBR Popups", "OK_to_restart_bot", "Click OK to restart bot,") & @CRLF & @CRLF & GetTranslatedFileIni("MBR Popups", "Cancel_to_exit", "Or Click Cancel to exit") & @CRLF
-		Local $MsgBox = _ExtMsgBox(0, GetTranslatedFileIni("MBR Popups", "Ok_Cancel", "Ok|Cancel"), GetTranslatedFileIni("MBR Popups", "Close_Bot", "Close Bot Please!"), $stext, 120)
-		If $g_bDebugSetLog Then SetDebugLog("$MsgBox= " & $MsgBox, $COLOR_DEBUG)
-		If $MsgBox = 1 Then
-			#cs
-				Local $stext = @CRLF & GetTranslatedFileIni("MBR Popups", "Sure_Close Bot", "Are you 100% sure you want to restart bot ?") & @CRLF & @CRLF & _
-				GetTranslatedFileIni("MBR Popups", "Restart_bot", "Click OK to close bot and then restart the bot (manually)") & @CRLF & @CRLF & GetTranslatedFileIni("MBR Popups", "Cancel_to_exit", -1) & @CRLF
-				Local $MsgBox = _ExtMsgBox(0, GetTranslatedFileIni("MBR Popups", "Ok_Cancel", -1), GetTranslatedFileIni("MBR Popups", "Close_Bot", -1), $stext, 120)
-				If $g_bDebugSetLog Then SetDebugLog("$MsgBox= " & $MsgBox, $COLOR_DEBUG)
-				If $MsgBox = 1 Then BotClose(False)
-			#ce
-			RestartBot(False, $wasRunState)
-		EndIf
-	EndIf
+	If LocateTownHall(False, False) Then SaveConfig()
+	RestartAfterTownHallRelocate($g_iOldTownHallLevel, $wasRunState)
 	$g_bRunState = $wasRunState
 	AndroidShield("btnLocateTownHall") ; Update shield status due to manual $g_bRunState
 EndFunc   ;==>btnLocateTownHall
 
+Func btnLocateAllNormalBuildings()
+	Local $wasRunState = $g_bRunState
+	Local $g_iOldTownHallLevel = $g_iTownHallLevel
+	Local $bConfigChanged = False
+	$g_bRunState = True
+	SetLog("Locating All Village Buildings", $COLOR_INFO)
+	ZoomOut()
+	While 1
+		If Not LocateTownHall(False, False) Then ExitLoop
+		$bConfigChanged = True
+		If Not LocateClanCastle(False) Then ExitLoop
+		$bConfigChanged = True
+		If Number($g_iTownHallLevel) >= 7 Then
+			If Not LocateHeroHall(False) Then ExitLoop
+			$bConfigChanged = True
+		EndIf
+		If Number($g_iTownHallLevel) >= 3 Then
+			If Not LocateLab(False) Then ExitLoop
+			$bConfigChanged = True
+		EndIf
+		If Number($g_iTownHallLevel) >= 14 Then
+			If Not LocatePetHouse(False) Then ExitLoop
+			$bConfigChanged = True
+		EndIf
+		If Number($g_iTownHallLevel) >= 8 Then
+			If Not LocateBlacksmith(False) Then ExitLoop
+			$bConfigChanged = True
+		EndIf
+		If Number($g_iTownHallLevel) >= 9 Then
+			If Not LocateHelperHut(False) Then ExitLoop
+			$bConfigChanged = True
+		EndIf
+		ExitLoop
+	WEnd
+	If $bConfigChanged Then
+		SaveConfig()
+		applyConfig()
+	EndIf
+	RestartAfterTownHallRelocate($g_iOldTownHallLevel, $wasRunState)
+	$g_bRunState = $wasRunState
+	AndroidShield("btnLocateAllNormalBuildings") ; Update shield status due to manual $g_bRunState
+EndFunc   ;==>btnLocateAllNormalBuildings
 
 
 Func btnResetBuilding()
 	Local $wasRunState = $g_bRunState
 	$g_bRunState = True
 	While 1
-		If _Sleep(500) Then Return ; add small delay before display message window
+		If _Sleep(500) Then ExitLoop ; add small delay before display message window
 		If FileExists($g_sProfileBuildingPath) Then ; Check for building.ini file first
 			_ExtMsgBoxSet(1 + 64, $SS_CENTER, 0x004080, 0xFFFF00, 12, "Comic Sans MS", 600)
 			Local $stext = @CRLF & GetTranslatedFileIni("MBR Popups", "Delete_and_Reset_Building_info", "Click OK to Delete and Reset all Building info,") & @CRLF & @CRLF & _
@@ -416,7 +482,7 @@ Func btnLab()
 	Local $wasRunState = $g_bRunState
 	$g_bRunState = True
 	ZoomOut()
-	LocateLab()
+	If LocateLab(False) Then SaveConfig()
 	$g_bRunState = $wasRunState
 	AndroidShield("btnLab") ; Update shield status due to manual $g_bRunState
 EndFunc   ;==>btnLab
@@ -425,7 +491,7 @@ Func btnLocateHeroHall()
 	Local $wasRunState = $g_bRunState
 	$g_bRunState = True
 	ZoomOut()
-	LocateHeroHall()
+	If LocateHeroHall(False) Then SaveConfig()
 	$g_bRunState = $wasRunState
 	AndroidShield("btnLocateHeroHall") ; Update shield status due to manual $g_bRunState
 EndFunc   ;==>btnLocateHeroHall
@@ -434,7 +500,7 @@ Func btnPet()
 	Local $wasRunState = $g_bRunState
 	$g_bRunState = True
 	ZoomOut()
-	LocatePetHouse()
+	If LocatePetHouse(False) Then SaveConfig()
 	$g_bRunState = $wasRunState
 	AndroidShield("btnPet") ; Update shield status due to manual $g_bRunState
 EndFunc   ;==>btnPet
@@ -443,7 +509,7 @@ Func btnBsmith()
 	Local $wasRunState = $g_bRunState
 	$g_bRunState = True
 	ZoomOut()
-	LocateBlacksmith()
+	If LocateBlacksmith(False) Then SaveConfig()
 	$g_bRunState = $wasRunState
 	AndroidShield("btnBsmith") ; Update shield status due to manual $g_bRunState
 EndFunc   ;==>btnBsmith
@@ -452,210 +518,10 @@ Func btnHelperHut()
 	Local $wasRunState = $g_bRunState
 	$g_bRunState = True
 	ZoomOut()
-	LocateHelperHut()
+	If LocateHelperHut(False) Then SaveConfig()
 	$g_bRunState = $wasRunState
 	AndroidShield("btnHelperHut") ; Update shield status due to manual $g_bRunState
 EndFunc   ;==>btnHelperHut
-
-Func chkTrophyAtkDead()
-	If GUICtrlRead($g_hChkTrophyAtkDead) = $GUI_CHECKED Then
-		$g_bDropTrophyAtkDead = True
-		GUICtrlSetState($g_hTxtDropTrophyArmyMin, $GUI_ENABLE)
-		GUICtrlSetState($g_hLblDropTrophyArmyMin, $GUI_ENABLE)
-		GUICtrlSetState($g_hLblDropTrophyArmyPercent, $GUI_ENABLE)
-	Else
-		$g_bDropTrophyAtkDead = False
-		GUICtrlSetState($g_hTxtDropTrophyArmyMin, $GUI_DISABLE)
-		GUICtrlSetState($g_hLblDropTrophyArmyMin, $GUI_DISABLE)
-		GUICtrlSetState($g_hLblDropTrophyArmyPercent, $GUI_DISABLE)
-	EndIf
-EndFunc   ;==>chkTrophyAtkDead
-
-Func chkTrophyRange()
-	If GUICtrlRead($g_hChkTrophyRange) = $GUI_CHECKED Then
-		GUICtrlSetState($g_hTxtDropTrophy, $GUI_ENABLE)
-		GUICtrlSetState($g_hTxtMaxTrophy, $GUI_ENABLE)
-		GUICtrlSetState($g_hChkTrophyHeroes, $GUI_ENABLE)
-		GUICtrlSetState($g_hChkTrophyAtkDead, $GUI_ENABLE)
-		chkTrophyAtkDead()
-		chkTrophyHeroes()
-	Else
-		GUICtrlSetState($g_hTxtDropTrophy, $GUI_DISABLE)
-		GUICtrlSetState($g_hTxtMaxTrophy, $GUI_DISABLE)
-		GUICtrlSetState($g_hChkTrophyHeroes, $GUI_DISABLE)
-		GUICtrlSetState($g_hChkTrophyAtkDead, $GUI_DISABLE)
-		GUICtrlSetState($g_hTxtDropTrophyArmyMin, $GUI_DISABLE)
-		GUICtrlSetState($g_hLblDropTrophyArmyMin, $GUI_DISABLE)
-		GUICtrlSetState($g_hLblDropTrophyArmyPercent, $GUI_DISABLE)
-		GUICtrlSetState($g_hLblTrophyHeroesPriority, $GUI_DISABLE)
-		GUICtrlSetState($g_hCmbTrophyHeroesPriority, $GUI_DISABLE)
-	EndIf
-EndFunc   ;==>chkTrophyRange
-
-Func TxtDropTrophy()
-	If Number(GUICtrlRead($g_hTxtDropTrophy)) > Number(GUICtrlRead($g_hTxtMaxTrophy)) Then
-		GUICtrlSetData($g_hTxtMaxTrophy, GUICtrlRead($g_hTxtDropTrophy))
-		TxtMaxTrophy()
-	EndIf
-	_GUI_Value_STATE("HIDE", $g_aGroupListPicMinTrophy)
-	If Number(GUICtrlRead($g_hTxtDropTrophy)) >= Number($g_asLeagueDetails[21][4]) Then
-		GUICtrlSetState($g_hPicMinTrophies[$eLeagueLegend], $GUI_SHOW)
-		GUICtrlSetData($g_hLblMinTrophies, "")
-	ElseIf Number(GUICtrlRead($g_hTxtDropTrophy)) >= Number($g_asLeagueDetails[18][4]) Then
-		GUICtrlSetState($g_hPicMinTrophies[$eLeagueTitan], $GUI_SHOW)
-		If Number(GUICtrlRead($g_hTxtDropTrophy)) >= Number($g_asLeagueDetails[20][4]) Then
-			GUICtrlSetData($g_hLblMinTrophies, "1")
-		ElseIf Number(GUICtrlRead($g_hTxtDropTrophy)) >= Number($g_asLeagueDetails[19][4]) Then
-			GUICtrlSetData($g_hLblMinTrophies, "2")
-		ElseIf Number(GUICtrlRead($g_hTxtDropTrophy)) >= Number($g_asLeagueDetails[18][4]) Then
-			GUICtrlSetData($g_hLblMinTrophies, "3")
-		EndIf
-	ElseIf Number(GUICtrlRead($g_hTxtDropTrophy)) >= Number($g_asLeagueDetails[15][4]) Then
-		GUICtrlSetState($g_hPicMinTrophies[$eLeagueChampion], $GUI_SHOW)
-		If Number(GUICtrlRead($g_hTxtDropTrophy)) >= Number($g_asLeagueDetails[17][4]) Then
-			GUICtrlSetData($g_hLblMinTrophies, "1")
-		ElseIf Number(GUICtrlRead($g_hTxtDropTrophy)) >= Number($g_asLeagueDetails[16][4]) Then
-			GUICtrlSetData($g_hLblMinTrophies, "2")
-		ElseIf Number(GUICtrlRead($g_hTxtDropTrophy)) >= Number($g_asLeagueDetails[15][4]) Then
-			GUICtrlSetData($g_hLblMinTrophies, "3")
-		EndIf
-	ElseIf Number(GUICtrlRead($g_hTxtDropTrophy)) >= Number($g_asLeagueDetails[12][4]) Then
-		GUICtrlSetState($g_hPicMinTrophies[$eLeagueMaster], $GUI_SHOW)
-		If Number(GUICtrlRead($g_hTxtDropTrophy)) >= Number($g_asLeagueDetails[14][4]) Then
-			GUICtrlSetData($g_hLblMinTrophies, "1")
-		ElseIf Number(GUICtrlRead($g_hTxtDropTrophy)) >= Number($g_asLeagueDetails[13][4]) Then
-			GUICtrlSetData($g_hLblMinTrophies, "2")
-		ElseIf Number(GUICtrlRead($g_hTxtDropTrophy)) >= Number($g_asLeagueDetails[12][4]) Then
-			GUICtrlSetData($g_hLblMinTrophies, "3")
-		EndIf
-	ElseIf Number(GUICtrlRead($g_hTxtDropTrophy)) >= Number($g_asLeagueDetails[9][4]) Then
-		GUICtrlSetState($g_hPicMinTrophies[$eLeagueCrystal], $GUI_SHOW)
-		If Number(GUICtrlRead($g_hTxtDropTrophy)) >= Number($g_asLeagueDetails[11][4]) Then
-			GUICtrlSetData($g_hLblMinTrophies, "1")
-		ElseIf Number(GUICtrlRead($g_hTxtDropTrophy)) >= Number($g_asLeagueDetails[10][4]) Then
-			GUICtrlSetData($g_hLblMinTrophies, "2")
-		ElseIf Number(GUICtrlRead($g_hTxtDropTrophy)) >= Number($g_asLeagueDetails[9][4]) Then
-			GUICtrlSetData($g_hLblMinTrophies, "3")
-		EndIf
-	ElseIf Number(GUICtrlRead($g_hTxtDropTrophy)) >= Number($g_asLeagueDetails[6][4]) Then
-		GUICtrlSetState($g_hPicMinTrophies[$eLeagueGold], $GUI_SHOW)
-		If Number(GUICtrlRead($g_hTxtDropTrophy)) >= Number($g_asLeagueDetails[8][4]) Then
-			GUICtrlSetData($g_hLblMinTrophies, "1")
-		ElseIf Number(GUICtrlRead($g_hTxtDropTrophy)) >= Number($g_asLeagueDetails[7][4]) Then
-			GUICtrlSetData($g_hLblMinTrophies, "2")
-		ElseIf Number(GUICtrlRead($g_hTxtDropTrophy)) >= Number($g_asLeagueDetails[6][4]) Then
-			GUICtrlSetData($g_hLblMinTrophies, "3")
-		EndIf
-	ElseIf Number(GUICtrlRead($g_hTxtDropTrophy)) >= Number($g_asLeagueDetails[3][4]) Then
-		GUICtrlSetState($g_hPicMinTrophies[$eLeagueSilver], $GUI_SHOW)
-		If Number(GUICtrlRead($g_hTxtDropTrophy)) >= Number($g_asLeagueDetails[5][4]) Then
-			GUICtrlSetData($g_hLblMinTrophies, "1")
-		ElseIf Number(GUICtrlRead($g_hTxtDropTrophy)) >= Number($g_asLeagueDetails[4][4]) Then
-			GUICtrlSetData($g_hLblMinTrophies, "2")
-		ElseIf Number(GUICtrlRead($g_hTxtDropTrophy)) >= Number($g_asLeagueDetails[3][4]) Then
-			GUICtrlSetData($g_hLblMinTrophies, "3")
-		EndIf
-	ElseIf Number(GUICtrlRead($g_hTxtDropTrophy)) >= Number($g_asLeagueDetails[0][4]) Then
-		GUICtrlSetState($g_hPicMinTrophies[$eLeagueBronze], $GUI_SHOW)
-		If Number(GUICtrlRead($g_hTxtDropTrophy)) >= Number($g_asLeagueDetails[2][4]) Then
-			GUICtrlSetData($g_hLblMinTrophies, "1")
-		ElseIf Number(GUICtrlRead($g_hTxtDropTrophy)) >= Number($g_asLeagueDetails[1][4]) Then
-			GUICtrlSetData($g_hLblMinTrophies, "2")
-		ElseIf Number(GUICtrlRead($g_hTxtDropTrophy)) >= Number($g_asLeagueDetails[0][4]) Then
-			GUICtrlSetData($g_hLblMinTrophies, "3")
-		EndIf
-	Else
-		GUICtrlSetState($g_hPicMinTrophies[$eLeagueUnranked], $GUI_SHOW)
-		GUICtrlSetData($g_hLblMinTrophies, "")
-	EndIf
-EndFunc   ;==>TxtDropTrophy
-
-Func TxtMaxTrophy()
-	If Number(GUICtrlRead($g_hTxtDropTrophy)) > Number(GUICtrlRead($g_hTxtMaxTrophy)) Then
-		GUICtrlSetData($g_hTxtMaxTrophy, GUICtrlRead($g_hTxtDropTrophy))
-	EndIf
-	_GUI_Value_STATE("HIDE", $g_aGroupListPicMaxTrophy)
-	If Number(GUICtrlRead($g_hTxtMaxTrophy)) >= Number($g_asLeagueDetails[21][4]) Then
-		GUICtrlSetState($g_hPicMaxTrophies[$eLeagueLegend], $GUI_SHOW)
-		GUICtrlSetData($g_hLblMaxTrophies, "")
-	ElseIf Number(GUICtrlRead($g_hTxtMaxTrophy)) >= Number($g_asLeagueDetails[18][4]) Then
-		GUICtrlSetState($g_hPicMaxTrophies[$eLeagueTitan], $GUI_SHOW)
-		If Number(GUICtrlRead($g_hTxtMaxTrophy)) >= Number($g_asLeagueDetails[20][4]) Then
-			GUICtrlSetData($g_hLblMaxTrophies, "1")
-		ElseIf Number(GUICtrlRead($g_hTxtMaxTrophy)) >= Number($g_asLeagueDetails[19][4]) Then
-			GUICtrlSetData($g_hLblMaxTrophies, "2")
-		ElseIf Number(GUICtrlRead($g_hTxtMaxTrophy)) >= Number($g_asLeagueDetails[18][4]) Then
-			GUICtrlSetData($g_hLblMaxTrophies, "3")
-		EndIf
-	ElseIf Number(GUICtrlRead($g_hTxtMaxTrophy)) >= Number($g_asLeagueDetails[15][4]) Then
-		GUICtrlSetState($g_hPicMaxTrophies[$eLeagueChampion], $GUI_SHOW)
-		If Number(GUICtrlRead($g_hTxtMaxTrophy)) >= Number($g_asLeagueDetails[17][4]) Then
-			GUICtrlSetData($g_hLblMaxTrophies, "1")
-		ElseIf Number(GUICtrlRead($g_hTxtMaxTrophy)) >= Number($g_asLeagueDetails[16][4]) Then
-			GUICtrlSetData($g_hLblMaxTrophies, "2")
-		ElseIf Number(GUICtrlRead($g_hTxtMaxTrophy)) >= Number($g_asLeagueDetails[15][4]) Then
-			GUICtrlSetData($g_hLblMaxTrophies, "3")
-		EndIf
-	ElseIf Number(GUICtrlRead($g_hTxtMaxTrophy)) >= Number($g_asLeagueDetails[12][4]) Then
-		GUICtrlSetState($g_hPicMaxTrophies[$eLeagueMaster], $GUI_SHOW)
-		If Number(GUICtrlRead($g_hTxtMaxTrophy)) >= Number($g_asLeagueDetails[14][4]) Then
-			GUICtrlSetData($g_hLblMaxTrophies, "1")
-		ElseIf Number(GUICtrlRead($g_hTxtMaxTrophy)) >= Number($g_asLeagueDetails[13][4]) Then
-			GUICtrlSetData($g_hLblMaxTrophies, "2")
-		ElseIf Number(GUICtrlRead($g_hTxtMaxTrophy)) >= Number($g_asLeagueDetails[12][4]) Then
-			GUICtrlSetData($g_hLblMaxTrophies, "3")
-		EndIf
-	ElseIf Number(GUICtrlRead($g_hTxtMaxTrophy)) >= Number($g_asLeagueDetails[9][4]) Then
-		GUICtrlSetState($g_hPicMaxTrophies[$eLeagueCrystal], $GUI_SHOW)
-		If Number(GUICtrlRead($g_hTxtMaxTrophy)) >= Number($g_asLeagueDetails[11][4]) Then
-			GUICtrlSetData($g_hLblMaxTrophies, "1")
-		ElseIf Number(GUICtrlRead($g_hTxtMaxTrophy)) >= Number($g_asLeagueDetails[10][4]) Then
-			GUICtrlSetData($g_hLblMaxTrophies, "2")
-		ElseIf Number(GUICtrlRead($g_hTxtMaxTrophy)) >= Number($g_asLeagueDetails[9][4]) Then
-			GUICtrlSetData($g_hLblMaxTrophies, "3")
-		EndIf
-	ElseIf Number(GUICtrlRead($g_hTxtMaxTrophy)) >= Number($g_asLeagueDetails[6][4]) Then
-		GUICtrlSetState($g_hPicMaxTrophies[$eLeagueGold], $GUI_SHOW)
-		If Number(GUICtrlRead($g_hTxtMaxTrophy)) >= Number($g_asLeagueDetails[8][4]) Then
-			GUICtrlSetData($g_hLblMaxTrophies, "1")
-		ElseIf Number(GUICtrlRead($g_hTxtMaxTrophy)) >= Number($g_asLeagueDetails[7][4]) Then
-			GUICtrlSetData($g_hLblMaxTrophies, "2")
-		ElseIf Number(GUICtrlRead($g_hTxtMaxTrophy)) >= Number($g_asLeagueDetails[6][4]) Then
-			GUICtrlSetData($g_hLblMaxTrophies, "3")
-		EndIf
-	ElseIf Number(GUICtrlRead($g_hTxtMaxTrophy)) >= Number($g_asLeagueDetails[3][4]) Then
-		GUICtrlSetState($g_hPicMaxTrophies[$eLeagueSilver], $GUI_SHOW)
-		If Number(GUICtrlRead($g_hTxtMaxTrophy)) >= Number($g_asLeagueDetails[5][4]) Then
-			GUICtrlSetData($g_hLblMaxTrophies, "1")
-		ElseIf Number(GUICtrlRead($g_hTxtMaxTrophy)) >= Number($g_asLeagueDetails[4][4]) Then
-			GUICtrlSetData($g_hLblMaxTrophies, "2")
-		ElseIf Number(GUICtrlRead($g_hTxtMaxTrophy)) >= Number($g_asLeagueDetails[3][4]) Then
-			GUICtrlSetData($g_hLblMaxTrophies, "3")
-		EndIf
-	ElseIf Number(GUICtrlRead($g_hTxtMaxTrophy)) >= Number($g_asLeagueDetails[0][4]) Then
-		GUICtrlSetState($g_hPicMaxTrophies[$eLeagueBronze], $GUI_SHOW)
-		If Number(GUICtrlRead($g_hTxtMaxTrophy)) >= Number($g_asLeagueDetails[2][4]) Then
-			GUICtrlSetData($g_hLblMaxTrophies, "1")
-		ElseIf Number(GUICtrlRead($g_hTxtMaxTrophy)) >= Number($g_asLeagueDetails[1][4]) Then
-			GUICtrlSetData($g_hLblMaxTrophies, "2")
-		ElseIf Number(GUICtrlRead($g_hTxtMaxTrophy)) >= Number($g_asLeagueDetails[0][4]) Then
-			GUICtrlSetData($g_hLblMaxTrophies, "3")
-		EndIf
-	Else
-		GUICtrlSetState($g_hPicMaxTrophies[$eLeagueUnranked], $GUI_SHOW)
-		GUICtrlSetData($g_hLblMaxTrophies, "")
-	EndIf
-EndFunc   ;==>TxtMaxTrophy
-
-Func chkTrophyHeroes()
-	If GUICtrlRead($g_hChkTrophyHeroes) = $GUI_CHECKED Then
-		GUICtrlSetState($g_hLblTrophyHeroesPriority, $GUI_ENABLE)
-		GUICtrlSetState($g_hCmbTrophyHeroesPriority, $GUI_ENABLE)
-	Else
-		GUICtrlSetState($g_hLblTrophyHeroesPriority, $GUI_DISABLE)
-		GUICtrlSetState($g_hCmbTrophyHeroesPriority, $GUI_DISABLE)
-	EndIf
-EndFunc   ;==>chkTrophyHeroes
 
 Func ChkCollect()
 	If GUICtrlRead($g_hChkCollect) = $GUI_CHECKED Then
@@ -708,32 +574,54 @@ EndFunc   ;==>chkStartClockTowerBoost
 Func chkEnableBBAttack()
 	If GUICtrlRead($g_hChkEnableBBAttack) = $GUI_CHECKED Then
 		GUICtrlSetState($g_hChkBBTrophyRange, $GUI_ENABLE)
-		GUICtrlSetState($g_hChkBBAttIfLootAvail, $GUI_ENABLE)
 		GUICtrlSetState($g_hCmbBBAttackCount, $GUI_ENABLE)
-		GUICtrlSetState($g_hChkBBHaltOnGoldFull, $GUI_ENABLE)
-		GUICtrlSetState($g_hChkBBHaltOnElixirFull, $GUI_ENABLE)
-		GUICtrlSetState($g_hChkBBWaitForMachine, $GUI_ENABLE)
+		GUICtrlSetState($g_hChkBBHaltOnStoragesFull, $GUI_ENABLE)
+		GUICtrlSetState($g_hChkBBIgnoreFullStorages, $GUI_ENABLE)
+		GUICtrlSetState($g_hChkBBUseTroopsSkills, $GUI_ENABLE)
 		GUICtrlSetState($g_hBtnBBDropOrder, $GUI_ENABLE)
 		GUICtrlSetState($g_hCmbBBSameTroopDelay, $GUI_ENABLE)
 		GUICtrlSetState($g_hCmbBBNextTroopDelay, $GUI_ENABLE)
-		GUICtrlSetState($g_hChkForceBBAttackOnClanGames, $GUI_ENABLE)
+		GUICtrlSetState($g_hChkBBAttack1Side, $GUI_ENABLE)
+		GUICtrlSetState($g_hChkBBAttack2Sides, $GUI_ENABLE)
+		GUICtrlSetState($g_hChkBBAttackAllSides, $GUI_ENABLE)
+		GUICtrlSetState($g_hCmbBBPrioritizeDefenses, $GUI_ENABLE)
+		GUICtrlSetState($g_hChkDropTrophyBB, $GUI_ENABLE)
+		GUICtrlSetState($g_hChkBBStarsAvailable, $GUI_ENABLE)
 		cmbBBAttackCount()
 		chkBBTrophyRange()
 	Else
 		GUICtrlSetState($g_hChkBBTrophyRange, $GUI_DISABLE)
-		GUICtrlSetState($g_hChkBBAttIfLootAvail, $GUI_DISABLE)
 		GUICtrlSetState($g_hCmbBBAttackCount, $GUI_DISABLE)
-		GUICtrlSetState($g_hChkBBHaltOnGoldFull, $GUI_DISABLE)
-		GUICtrlSetState($g_hChkBBHaltOnElixirFull, $GUI_DISABLE)
+		GUICtrlSetState($g_hChkBBHaltOnStoragesFull, $GUI_DISABLE)
+		GUICtrlSetState($g_hChkBBIgnoreFullStorages, $GUI_DISABLE)
 		GUICtrlSetState($g_hTxtBBTrophyLowerLimit, $GUI_DISABLE)
 		GUICtrlSetState($g_hTxtBBTrophyUpperLimit, $GUI_DISABLE)
-		GUICtrlSetState($g_hChkBBWaitForMachine, $GUI_DISABLE)
+		GUICtrlSetState($g_hChkBBUseTroopsSkills, $GUI_DISABLE)
 		GUICtrlSetState($g_hBtnBBDropOrder, $GUI_DISABLE)
 		GUICtrlSetState($g_hCmbBBSameTroopDelay, $GUI_DISABLE)
 		GUICtrlSetState($g_hCmbBBNextTroopDelay, $GUI_DISABLE)
-		GUICtrlSetState($g_hChkForceBBAttackOnClanGames, $GUI_DISABLE)
+		GUICtrlSetState($g_hChkBBAttack1Side, $GUI_DISABLE)
+		GUICtrlSetState($g_hChkBBAttack2Sides, $GUI_DISABLE)
+		GUICtrlSetState($g_hChkBBAttackAllSides, $GUI_DISABLE)
+		GUICtrlSetState($g_hCmbBBPrioritizeDefenses, $GUI_DISABLE)
+		GUICtrlSetState($g_hChkDropTrophyBB, $GUI_DISABLE)
+		GUICtrlSetState($g_hChkBBStarsAvailable, $GUI_DISABLE)
 	EndIf
 EndFunc   ;==>chkEnableBBAttack
+
+Func chkBBHaltOnStoragesFull()
+	$g_bChkBBHaltOnStoragesFull = (GUICtrlRead($g_hChkBBHaltOnStoragesFull) = $GUI_CHECKED)
+	If GUICtrlRead($g_hChkBBHaltOnStoragesFull) = $GUI_CHECKED Then
+		GUICtrlSetState($g_hChkBBIgnoreFullStorages, $GUI_UNCHECKED)
+	EndIf
+EndFunc   ;==>chkBBHaltOnStoragesFull
+
+Func chkBBIgnoreFullStorages()
+	$g_bChkBBIgnoreFullStorages = (GUICtrlRead($g_hChkBBIgnoreFullStorages) = $GUI_CHECKED)
+	If GUICtrlRead($g_hChkBBIgnoreFullStorages) = $GUI_CHECKED Then
+		GUICtrlSetState($g_hChkBBHaltOnStoragesFull, $GUI_UNCHECKED)
+	EndIf
+EndFunc   ;==>chkBBIgnoreFullStorages
 
 Func cmbBBNextTroopDelay()
 	$g_iBBNextTroopDelay = $g_iBBNextTroopDelayDefault + ((_GUICtrlComboBox_GetCurSel($g_hCmbBBNextTroopDelay) + 1) - 5) * $g_iBBNextTroopDelayIncrement ; +- n*increment
@@ -755,6 +643,7 @@ Func chkBBTrophyRange()
 		GUICtrlSetState($g_hTxtBBTrophyLowerLimit, $GUI_DISABLE)
 		GUICtrlSetState($g_hTxtBBTrophyUpperLimit, $GUI_DISABLE)
 	EndIf
+	GUICtrlSetState($g_hChkDropTrophyBB, $GUI_ENABLE)
 EndFunc   ;==>chkBBTrophyRange
 
 Func btnBBDropOrder()
@@ -844,25 +733,73 @@ Func CloseCustomBBDropOrder()
 	GUICtrlSetState($g_hChkEnableBBAttack, $GUI_ENABLE)
 EndFunc   ;==>CloseCustomBBDropOrder
 
+Func chkBBAttack1Side()
+	$g_bBBAttack1Side = (GUICtrlRead($g_hChkBBAttack1Side) = $GUI_CHECKED)
+	If $g_bBBAttack1Side Then
+		GUICtrlSetState($g_hChkBBAttack2Sides, $GUI_UNCHECKED)
+		GUICtrlSetState($g_hChkBBAttackAllSides, $GUI_UNCHECKED)
+		$g_bBBAttack2Sides = False
+		$g_bBBAttackAllSides = False
+		$g_iBBSideAttack = 1
+	Else
+		$g_iBBSideAttack = 0
+	EndIf
+	SetDebugLog("BB Attack 1 Side: " & $g_bBBAttack1Side, $COLOR_DEBUG)
+EndFunc   ;==>chkBBAttack1Side
+
+Func chkBBAttack2Sides()
+	$g_bBBAttack2Sides = (GUICtrlRead($g_hChkBBAttack2Sides) = $GUI_CHECKED)
+	If $g_bBBAttack2Sides Then
+		GUICtrlSetState($g_hChkBBAttack1Side, $GUI_UNCHECKED)
+		GUICtrlSetState($g_hChkBBAttackAllSides, $GUI_UNCHECKED)
+		$g_bBBAttack1Side = False
+		$g_bBBAttackAllSides = False
+		$g_iBBSideAttack = 2
+	Else
+		$g_iBBSideAttack = 0
+	EndIf
+	SetDebugLog("BB Attack 2 Sides: " & $g_bBBAttack2Sides, $COLOR_DEBUG)
+EndFunc   ;==>chkBBAttack2Sides
+
+Func chkBBAttackAllSides()
+	$g_bBBAttackAllSides = (GUICtrlRead($g_hChkBBAttackAllSides) = $GUI_CHECKED)
+	If $g_bBBAttackAllSides Then
+		GUICtrlSetState($g_hChkBBAttack1Side, $GUI_UNCHECKED)
+		GUICtrlSetState($g_hChkBBAttack2Sides, $GUI_UNCHECKED)
+		$g_bBBAttack1Side = False
+		$g_bBBAttack2Sides = False
+		$g_iBBSideAttack = 3
+	Else
+		$g_iBBSideAttack = 0
+	EndIf
+	SetDebugLog("BB Attack All Sides: " & $g_bBBAttackAllSides, $COLOR_DEBUG)
+EndFunc   ;==>chkBBAttackAllSides
+
+Func chkBBUseTroopSkills()
+	$g_bChkBBUseTroopsSkills = (GUICtrlRead($g_hChkBBUseTroopsSkills) = $GUI_CHECKED)
+	SetDebugLog("BB Use Troops Skills: " & $g_bChkBBUseTroopsSkills, $COLOR_DEBUG)
+EndFunc   ;==>chkBBUseTroopSkills
+
 Func chkUpgradeDoubleCannon()
 
 	If GUICtrlRead($g_hChkDoubleCannonUpgrade) = $GUI_CHECKED Then
 		_GUICtrlTab_ClickTab($g_hTabMain, 0)
 
-		SetLog("Please wait ......", $COLOR_OLIVE)
-		SetLog("Checking for valid Coordinates of Double Cannon ......", $COLOR_OLIVE)
+		SetLog("Please wait...", $COLOR_OLIVE)
+		SetLog("Checking for valid coordinates of Double Cannon", $COLOR_OLIVE)
 
 		$g_bDoubleCannonUpgrade = True
 		LocateDoubleCannon()
 	Else
-		$g_bDoubleCannonUpgrade = False
+		SetLog("Double Cannon upgrade disabled, coordinates reseted", $COLOR_INFO)
+		DeleteDoubleCannonCoord()
 	EndIf
 
 	Return
 EndFunc   ;==>chkUpgradeDoubleCannon
 
 Func DeleteDoubleCannonCoord()
-	SetLog("Deleting Coordinates of Double Cannon.", $COLOR_OLIVE)
+	SetLog("Deleting coordinates of Double Cannon", $COLOR_OLIVE)
 	$g_aiDoubleCannonPos[0] = -1
 	$g_aiDoubleCannonPos[1] = -1
 	$g_aiDoubleCannonPos[2] = -1
@@ -878,20 +815,21 @@ Func chkUpgradeArcherTower()
 	If GUICtrlRead($g_hChkArcherTowerUpgrade) = $GUI_CHECKED Then
 		_GUICtrlTab_ClickTab($g_hTabMain, 0)
 
-		SetLog("Please wait ......", $COLOR_OLIVE)
-		SetLog("Checking for valid Coordinates of Archer Tower ......", $COLOR_OLIVE)
+		SetLog("Please wait...", $COLOR_OLIVE)
+		SetLog("Checking for valid coordinates of Archer Tower", $COLOR_OLIVE)
 
 		$g_bArcherTowerUpgrade = True
 		LocateArcherTower()
 	Else
-		$g_bArcherTowerUpgrade = False
+		SetLog("Archer Tower upgrade disabled, coordinates reseted", $COLOR_INFO)
+		DeleteArcherTowerCoord()
 	EndIf
 
 	Return
 EndFunc   ;==>chkUpgradeArcherTower
 
 Func DeleteArcherTowerCoord()
-	SetLog("Deleting Coordinates of Archer Tower.", $COLOR_OLIVE)
+	SetLog("Deleting coordinates of Archer Tower", $COLOR_OLIVE)
 	$g_aiArcherTowerPos[0] = -1
 	$g_aiArcherTowerPos[1] = -1
 	$g_aiArcherTowerPos[2] = -1
@@ -907,20 +845,21 @@ Func chkUpgradeMultiMortar()
 	If GUICtrlRead($g_hChkMultiMortarUpgrade) = $GUI_CHECKED Then
 		_GUICtrlTab_ClickTab($g_hTabMain, 0)
 
-		SetLog("Please wait ......", $COLOR_OLIVE)
-		SetLog("Checking for valid Coordinates of Multi Mortar ......", $COLOR_OLIVE)
+		SetLog("Please wait...", $COLOR_OLIVE)
+		SetLog("Checking for valid coordinates of Multi Mortar", $COLOR_OLIVE)
 
 		$g_bMultiMortarUpgrade = True
 		LocateMultiMortar()
 	Else
-		$g_bMultiMortarUpgrade = False
+		SetLog("Multi Mortar upgrade disabled, coordinates reseted", $COLOR_INFO)
+		DeleteMultiMortarCoord()
 	EndIf
 
 	Return
 EndFunc   ;==>chkUpgradeMultiMortar
 
 Func DeleteMultiMortarCoord()
-	SetLog("Deleting Coordinates of Multi Mortar.", $COLOR_OLIVE)
+	SetLog("Deleting coordinates of Multi Mortar", $COLOR_OLIVE)
 	$g_aiMultiMortarPos[0] = -1
 	$g_aiMultiMortarPos[1] = -1
 	$g_aiMultiMortarPos[2] = -1
@@ -936,20 +875,57 @@ Func chkUpgradeAnyDef()
 	If GUICtrlRead($g_hChkAnyDefUpgrade) = $GUI_CHECKED Then
 		_GUICtrlTab_ClickTab($g_hTabMain, 0)
 
-		SetLog("Please wait ......", $COLOR_OLIVE)
-		SetLog("Checking for valid Coordinates of Defensive Building ......", $COLOR_OLIVE)
+		SetLog("Please wait...", $COLOR_OLIVE)
+		SetLog("Checking for valid coordinates of Cannon", $COLOR_OLIVE)
 
 		$g_bAnyDefUpgrade = True
 		LocateAnyDef()
 	Else
-		$g_bAnyDefUpgrade = False
+		SetLog("Cannon upgrade disabled, coordinates reseted", $COLOR_INFO)
+		DeleteCannonCoord()
 	EndIf
 
 	Return
 EndFunc   ;==>chkUpgradeAnyDef
 
+Func chkUpgradeBattleMachine()
+
+	If GUICtrlRead($g_hChkBattleMachineUpgrade) = $GUI_CHECKED Then
+		_GUICtrlTab_ClickTab($g_hTabMain, 0)
+
+		SetLog("Please wait...", $COLOR_OLIVE)
+		SetLog("Checking for valid coordinates of Battle Machine", $COLOR_OLIVE)
+
+		$g_bBattleMachineUpgrade = True
+		LocateBattleMachine()
+	Else
+		SetLog("Battle Machine upgrade disabled, coordinates reseted", $COLOR_INFO)
+		DeleteBattleMachineCoord()
+	EndIf
+
+	Return
+EndFunc   ;==>chkUpgradeBattleMachine
+
+Func chkUpgradeBattlecopter()
+
+	If GUICtrlRead($g_hChkBattlecopterUpgrade) = $GUI_CHECKED Then
+		_GUICtrlTab_ClickTab($g_hTabMain, 0)
+
+		SetLog("Please wait...", $COLOR_OLIVE)
+		SetLog("Checking for valid coordinates of Battle Copter", $COLOR_OLIVE)
+
+		$g_bBattlecopterUpgrade = True
+		LocateBattleCopter()
+	Else
+		SetLog("Battle Copter upgrade disabled, coordinates reseted", $COLOR_INFO)
+		DeleteBattleCopterCoord()
+	EndIf
+
+	Return
+EndFunc   ;==>chkUpgradeBattlecopter
+
 Func DeleteCannonCoord()
-	SetLog("Deleting Coordinates of Cannon.", $COLOR_OLIVE)
+	SetLog("Deleting coordinates of Cannon", $COLOR_OLIVE)
 	$g_aiAnyDefPos[0] = -1
 	$g_aiAnyDefPos[1] = -1
 	$g_aiAnyDefPos[2] = -1
@@ -961,16 +937,32 @@ Func DeleteCannonCoord()
 EndFunc   ;==>DeleteCannonCoord
 
 Func cmbBBAttackCount()
-	$g_iBBAttackCount = _GUICtrlComboBox_GetCurSel($g_hCmbBBAttackCount)
+	Local $sBBAttackCount = StringStripWS(GUICtrlRead($g_hCmbBBAttackCount), $STR_STRIPALL)
+	Switch StringLower($sBBAttackCount)
+		Case "stars"
+			$g_iBBAttackCount = 0
+		Case "random", ""
+			$g_iBBAttackCount = 1
+			GUICtrlSetData($g_hCmbBBAttackCount, "Random")
+		Case Else
+			Local $iBBAttackCount = Int($sBBAttackCount)
+			If $iBBAttackCount < 1 Then $iBBAttackCount = 1
+			If $iBBAttackCount > 15 Then $iBBAttackCount = 15
+			$g_iBBAttackCount = $iBBAttackCount + 1
+			GUICtrlSetData($g_hCmbBBAttackCount, $iBBAttackCount)
+	EndSwitch
 	SetDebugLog("BB Attack Count: " & $g_iBBAttackCount, $COLOR_DEBUG)
-	If _GUICtrlComboBox_GetCurSel($g_hCmbBBAttackCount) = 0 Then
-		SetDebugLog("Enabling Check Loot Available", $COLOR_DEBUG)
-		GUICtrlSetState($g_hChkBBAttIfLootAvail, $GUI_CHECKED)
-		GUICtrlSetState($g_hChkBBAttIfLootAvail, $GUI_DISABLE)
-	Else
-		GUICtrlSetState($g_hChkBBAttIfLootAvail, $GUI_ENABLE)
-	EndIf
 EndFunc   ;==>cmbBBAttackCount
+
+Func cmbBBSideAttack()
+	$g_iBBSideAttack = _GUICtrlComboBox_GetCurSel($g_hCmbBBSideAttack)
+	SetDebugLog("BB Side Attack: " & $g_iBBSideAttack, $COLOR_DEBUG)
+EndFunc   ;==>cmbBBSideAttack
+
+Func cmbBBPrioritizeDefenses()
+	$g_iBBPrioritizeDefenses = _GUICtrlComboBox_GetCurSel($g_hCmbBBPrioritizeDefenses)
+	SetDebugLog("BB Prioritize Defenses: " & $g_iBBPrioritizeDefenses, $COLOR_DEBUG)
+EndFunc   ;==>cmbBBPrioritizeDefenses
 
 Func chkActivateClangames()
 	If GUICtrlRead($g_hChkClanGamesEnabled) = $GUI_CHECKED Then
@@ -1367,6 +1359,33 @@ Func CGBBTroopsTVItem()
 	Next
 EndFunc   ;==>CGBBTroopsTVItem
 
+Func CGMainHeroTVRoot()
+	If BitAND(GUICtrlRead($g_hChkCGMainHero), $GUI_CHECKED) And GUICtrlRead($g_hChkCGRootEnabledAll) = $GUI_CHECKED Then ;root Clangames Hero Challenges
+		For $i = 0 To UBound($g_ahCGMainHeroItem) - 1
+			If BitAND(GUICtrlGetState($g_ahCGMainHeroItem[$i]), $GUI_DISABLE) = 0 Then GUICtrlSetState($g_ahCGMainHeroItem[$i], $GUI_CHECKED)
+		Next
+	EndIf
+	If Not BitAND(GUICtrlRead($g_hChkCGMainHero), $GUI_CHECKED) And GUICtrlRead($g_hChkCGRootEnabledAll) = $GUI_CHECKED Then ;root Clangames Hero Challenges
+		For $i = 0 To UBound($g_ahCGMainHeroItem) - 1
+			GUICtrlSetState($g_ahCGMainHeroItem[$i], $GUI_UNCHECKED)
+		Next
+	EndIf
+	GUICtrlSetData($g_hLabelClangamesDesc, "Enable/Disable Hero Challenges")
+EndFunc   ;==>CGMainHeroTVRoot
+
+Func CGMainHeroTVItem()
+	Local $tmpChallenges = ClanGamesChallenges("$HeroChallenges")
+	For $i = 0 To UBound($g_ahCGMainHeroItem) - 1
+		If GUICtrlRead($g_hClanGamesTV) = $g_ahCGMainHeroItem[$i] Then
+			GUICtrlSetData($g_hLabelClangamesDesc, $tmpChallenges[$i][4] & @CRLF & "Required TH Level : " & $tmpChallenges[$i][2] _
+					 & @CRLF & "Difficulty : " & $tmpChallenges[$i][3])
+			ExitLoop
+		Else
+			GUICtrlSetData($g_hLabelClangamesDesc, "")
+		EndIf
+	Next
+EndFunc   ;==>CGMainHeroTVItem
+
 Func chkSortClanGames()
 	If GUICtrlRead($g_hChkClanGamesSort) = $GUI_CHECKED Then
 		$g_bSortClanGames = True
@@ -1419,6 +1438,14 @@ Func ChkEnableForgeDE()
 	EndIf
 EndFunc   ;==>ChkEnableForgeDE
 
+Func ChkUseGoldPassForgeOnly()
+    If GUICtrlRead($g_hChkUseGoldPassForgeOnly) = $GUI_CHECKED Then
+        $g_bUseGoldPassForgeOnly = True
+    Else
+        $g_bUseGoldPassForgeOnly = False
+    EndIf
+EndFunc   ;==>ChkUseGoldPassForgeOnly
+
 Func ChkEnableForgeBBGold()
 	If GUICtrlRead($g_hChkEnableForgeBBGold) = $GUI_CHECKED Then
 		$g_bChkEnableForgeBBGold = True
@@ -1450,13 +1477,13 @@ EndFunc   ;==>ChkEnableForgeBBElix
 Func EnableAutoUpgradeCC()
 	If GUICtrlRead($g_hChkEnableAutoUpgradeCC) = $GUI_CHECKED Then
 		$g_bChkEnableAutoUpgradeCC = True
-		For $i = $g_hChkAutoUpgradeCCPriorArmy To $g_hChkAutoUpgradeCCWallIgnore
+		For $i = $g_hChkAutoUpgradeCCTreasury To $g_hChkAutoUpgradeCCWallIgnore
 			GUICtrlSetState($i, $GUI_ENABLE)
 		Next
 		GUICtrlSetState($g_hTxtAutoUpgradeCCLog, $GUI_ENABLE)
 	Else
 		$g_bChkEnableAutoUpgradeCC = False
-		For $i = $g_hChkAutoUpgradeCCPriorArmy To $g_hChkAutoUpgradeCCWallIgnore
+		For $i = $g_hChkAutoUpgradeCCTreasury To $g_hChkAutoUpgradeCCWallIgnore
 			GUICtrlSetState($i, $GUI_DISABLE)
 		Next
 		GUICtrlSetState($g_hTxtAutoUpgradeCCLog, $GUI_DISABLE)

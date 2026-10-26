@@ -56,7 +56,6 @@ Func GoldElixirChangeThSnipes($x)
 			If ($Gold2 = "" And $Elixir2 = "") Then
 				If _Sleep($DELAYGOLDELIXIRCHANGE1) Then Return
 				If getGoldVillageSearch(48, 69 + 7) = "" And getElixirVillageSearch(48, 69 + 29 + 7) = "" Then
-					SetLog("Battle has finished", $COLOR_SUCCESS)
 					Return True
 					ExitLoop
 				EndIf

@@ -51,6 +51,11 @@ Func _GetVectorOutZone($eVectorType)
 		If $pixel[1] > 555 + $g_iBottomOffsetY Then
 			$pixel[1] = 555 + $g_iBottomOffsetY
 		EndIf
+		; Clamp to valid screen coordinates
+		If $pixel[0] < 0 Then $pixel[0] = 0
+		If $pixel[0] > $g_iGAME_WIDTH Then $pixel[0] = $g_iGAME_WIDTH
+		If $pixel[1] < 0 Then $pixel[1] = 0
+		If $pixel[1] > $g_iGAME_HEIGHT Then $pixel[1] = $g_iGAME_HEIGHT
 		$vectorOutZone[UBound($vectorOutZone) - 1] = $pixel
 
 		; CS69 - $x and $y are never referenced in this function

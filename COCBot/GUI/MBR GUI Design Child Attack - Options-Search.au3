@@ -15,25 +15,39 @@
 #include-once
 
 Global $g_hChkSearchReduction = 0, $g_hTxtSearchReduceCount = 0, $g_hTxtSearchReduceGold = 0, $g_hTxtSearchReduceElixir = 0, $g_hTxtSearchReduceGoldPlusElixir = 0, _
-	   $g_hTxtSearchReduceDark = 0, $g_hTxtSearchReduceTrophy = 0
-Global $g_hSldVSDelay = 0, $g_hSldMaxVSDelay = 0
-Global $g_hChkAttackNow = 0, $g_hCmbAttackNowDelay = 0, $g_hChkRestartSearchLimit = 0, $g_hTxtRestartSearchlimit = 0, $g_hChkAlertSearch = 0
-
-Global $g_hLblVSDelay = 0, $g_hLblTextVSDelay = 0, $g_hLblMaxVSDelay = 0, $g_hLblTextMaxVSDelay = 0, $g_hLblAttackNow = 0, $g_hLblAttackNowSec = 0
-Global $g_hChkRestartSearchPickupHero = 0
+	   $g_hTxtSearchReduceDark = 0
+Global $g_hChkEnableTournament = 0
+Global $g_hChkAttackNow = 0, $g_hCmbAttackNowDelay = 0, $g_hLblAttackNow = 0, $g_hLblAttackNowSec = 0, $g_hChkRestartSearchLimit = 0, $g_hTxtRestartSearchlimit = 0, $g_hChkAlertSearch = 0
+Global $g_hChkSmartLightSpell = 0, $g_hChkSmartEQSpell = 0, $g_hTxtSmartZapEarthquakesPerTarget = 0, $g_hCmbSmartZapTarget = 0, $g_hCmbSmartZapSecondaryTarget = 0, _
+	   $g_hTxtSmartZapSpellsPerTarget = 0, $g_hCmbSmartZapTiming = 0
 
 Func CreateAttackSearchOptionsSearch()
 
 	Local $sTxtTip = ""
 	Local $x = 25, $y = 45
-	GUICtrlCreateGroup(GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "Group_01", "Search Reduction"), $x - 20, $y - 20, 223, 165)
+	GUICtrlCreateGroup(GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "Group_03", "Search Options"), $x - 20, $y - 20, 223, 347)
 	$x -= 13
+	$y -= 5
+		$g_hChkRestartSearchLimit = GUICtrlCreateCheckbox(GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "ChkRestartSearchLimit", "Restart every") & ":", $x, $y - 4, -1, -1)
+			$sTxtTip = GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "ChkRestartSearchLimit_Info_01", "Return To Base after x searches and restart to search enemy villages.")
+			_GUICtrlSetTip(-1, $sTxtTip)
+			GUICtrlSetState(-1, $GUI_CHECKED)
+			GUICtrlSetOnEvent(-1, "chkRestartSearchLimit")
+		$g_hTxtRestartSearchlimit = GUICtrlCreateInput("50", $x + 15, $y + 15, 25, 18, BitOR($GUI_SS_DEFAULT_INPUT, $ES_CENTER, $ES_NUMBER))
+			_GUICtrlSetTip(-1, $sTxtTip)
+			GUICtrlSetLimit(-1, 3)
+		GUICtrlCreateLabel(GetTranslatedFileIni("MBR Global GUI Design", "search(es).", -1), $x + 47, $y + 17, -1, -1)
+
+	$y += 48
+		GUICtrlCreateLabel(GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "LblTargetReduction", "Target Reduction"), $x, $y, 190, 16)
+
+	$y += 17
 		$g_hChkSearchReduction = GUICtrlCreateCheckbox(GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "ChkSearchReduction", "Enable Search Reduction"), $x, $y - 4, -1, -1)
 			_GUICtrlSetTip(-1, GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "ChkSearchReduction_Info_01", "Check this if you want the search values to automatically be lowered after a certain amount of searches."))
 			GUICtrlSetState(-1, $GUI_UNCHECKED)
 			GUICtrlSetOnEvent(-1, "chkSearchReduction")
 
-	$y += 15
+	$y += 20
 		GUICtrlCreateLabel(GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "LblSearchReduceCount", "Reduce targets every"), $x, $y + 3, -1, -1)
 			$sTxtTip = GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "LblSearchReduceCount_Info_01", "Enter the No. of searches to wait before each reduction occurs.")
 			_GUICtrlSetTip(-1, $sTxtTip)
@@ -86,94 +100,119 @@ Func CreateAttackSearchOptionsSearch()
 		_GUICtrlCreateIcon($g_sLibIconPath, $eIcnDark, $x + 160, $y, 16, 16)
 			_GUICtrlSetTip(-1, $sTxtTip)
 
-	$y += 21
-		GUICtrlCreateLabel(GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "LblSearchReduceTrophy", "- Reduce Trophies"), $x, $y + 3, -1, 17)
-			$sTxtTip = GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "LblSearchReduceTrophy_Info_01", "Lower value for Trophies by this amount on each step.")
-			_GUICtrlSetTip(-1, $sTxtTip)
-		$g_hTxtSearchReduceTrophy = GUICtrlCreateInput("2", $x + 115, $y, 40, 18, BitOR($GUI_SS_DEFAULT_INPUT, $ES_CENTER, $ES_NUMBER))
-			_GUICtrlSetTip(-1, $sTxtTip)
-			GUICtrlSetLimit(-1, 1)
-		_GUICtrlCreateIcon($g_sLibIconPath, $eIcnTrophy, $x + 160, $y, 16, 16)
-			_GUICtrlSetTip(-1, $sTxtTip)
-	GUICtrlCreateGroup("", -99, -99, 1, 1)
+	$y += 38
+		GUICtrlCreateLabel(GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "LblManualControl", "Manual Control"), $x, $y, 190, 16)
 
-	$x = 25
-	$y = 212
-	GUICtrlCreateGroup(GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "Group_02", "Village Search Delay"), $x - 20, $y - 20, 223, 72)
-	$x += 20
-		$sTxtTip = GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "LblMinVSDelay_Info_01", "Use this slider to change the time to wait between Next clicks when searching for a Village to Attack.") & @CRLF & _
-				   GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "LblMinVSDelay_Info_02", "This might compensate for Out of Sync errors on some PC's.") & @CRLF & _
-				   GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "LblMinVSDelay_Info_03", "NO GUARANTEES! This will not always have the same results!")
-		GUICtrlCreateLabel(GetTranslatedFileIni("MBR Global GUI Design", "Mini", "Min"), $x - 20, $y - 2, 25, 15, $SS_RIGHT)
-			_GUICtrlSetTip(-1, $sTxtTip)
-		$g_hLblVSDelay = GUICtrlCreateLabel("0", $x + 7, $y - 2, 12, 15, $SS_RIGHT)
-			_GUICtrlSetTip(-1, $sTxtTip)
-		$g_hLblTextVSDelay = GUICtrlCreateLabel(GetTranslatedFileIni("MBR Global GUI Design", "seconds", "seconds"), $x + 23, $y - 2, -1, -1)
-		$g_hSldVSDelay = GUICtrlCreateSlider($x + 70, $y - 4, 105, 25, BITOR($TBS_TOOLTIPS, $TBS_AUTOTICKS)) ;,
-			_GUICtrlSetTip(-1, $sTxtTip)
-			_GUICtrlSlider_SetTipSide(-1, $TBTS_BOTTOM)
-			_GUICtrlSlider_SetTicFreq(-1, 1)
-			GUICtrlSetLimit(-1, 12, 0) ; change max/min value
-			GUICtrlSetData(-1, 1) ; default value
-			GUICtrlSetBkColor(-1, $COLOR_WHITE)
-			GUICtrlSetOnEvent(-1, "sldVSDelay")
-
-	$y += 25
-		GUICtrlCreateLabel(GetTranslatedFileIni("MBR Global GUI Design", "Maxi", "Max"), $x - 20, $y - 2, 25, 15, $SS_RIGHT)
-			$sTxtTip = GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "LblMaxVSDelay_Info_01", "Enable random village search delay value by setting") & @CRLF & _
-					   GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "LblMaxVSDelay_Info_02", "bottom Max slide value higher than the top minimum slide")
-			_GUICtrlSetTip(-1, $sTxtTip)
-		$g_hLblMaxVSDelay = GUICtrlCreateLabel("0", $x + 7, $y - 2, 12, 15, $SS_RIGHT)
-			_GUICtrlSetTip(-1, $sTxtTip)
-		$g_hLblTextMaxVSDelay = GUICtrlCreateLabel(GetTranslatedFileIni("MBR Global GUI Design", "seconds", -1), $x + 23, $y - 2, 45, -1)
-		$g_hSldMaxVSDelay = GUICtrlCreateSlider($x + 70, $y - 4, 105, 25, BITOR($TBS_TOOLTIPS, $TBS_AUTOTICKS))
-			_GUICtrlSetTip(-1, $sTxtTip)
-			_GUICtrlSlider_SetTipSide(-1, $TBTS_BOTTOM)
-			_GUICtrlSlider_SetTicFreq(-1, 1)
-			GUICtrlSetLimit(-1, 15, 0) ; change max/min value
-			GUICtrlSetData(-1, 4) ; default value
-			GUICtrlSetBkColor(-1, $COLOR_WHITE)
-			GUICtrlSetOnEvent(-1, "sldMaxVSDelay")
-	GUICtrlCreateGroup("", -99, -99, 1, 1)
-
-	$x = 253
-	$y = 45
-	GUICtrlCreateGroup(GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "Group_03", "Search Options"), $x - 20, $y - 20, 189, 165)
-	$x -= 5
-		$g_hChkAttackNow = GUICtrlCreateCheckbox(GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "ChkAttackNow", "Attack Now! option."), $x - 5, $y - 4, -1, -1)
+	$y += 17
+		$g_hChkAttackNow = GUICtrlCreateCheckbox(GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "ChkAttackNow", "Enable Attack Now! Option"), $x, $y - 4, -1, -1)
 			$sTxtTip = GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "ChkAttackNow_Info_01", "Check this if you want the option to have an 'Attack Now!' button next to") & @CRLF & _
 					   GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "ChkAttackNow_Info_02", "the Start and Pause buttons to bypass the dead base or all base search values.") & @CRLF & _
 					   GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "ChkAttackNow_Info_03", "The Attack Now! button will only appear when searching for villages to Attack.")
 			_GUICtrlSetTip(-1, $sTxtTip)
 			GUICtrlSetOnEvent(-1, "chkAttackNow")
-		$g_hLblAttackNow = GUICtrlCreateLabel(GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "LblAttackNow", "Add") & ":", $x + 10, $y + 20, 27, -1, $SS_RIGHT)
+	$y += 22
+		$g_hLblAttackNow = GUICtrlCreateLabel(GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "LblAttackNow", "Reaction Time") & ":", $x, $y + 3, 92, -1, $SS_RIGHT)
 			$sTxtTip = GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "LblAttackNow_Info_01", "Add this amount of reaction time to slow down the search.")
 			_GUICtrlSetTip(-1, $sTxtTip)
 			GUICtrlSetState(-1, $GUI_DISABLE)
-		$g_hCmbAttackNowDelay = GUICtrlCreateCombo("", $x + 45, $y + 17, 35, 25, BitOR($CBS_DROPDOWNLIST, $CBS_AUTOHSCROLL))
+		$g_hCmbAttackNowDelay = GUICtrlCreateCombo("", $x + 97, $y, 35, 25, BitOR($CBS_DROPDOWNLIST, $CBS_AUTOHSCROLL))
 			_GUICtrlSetTip(-1, $sTxtTip)
 			GUICtrlSetData(-1, "0|1|2|3|4|5", "3") ; default value 3
 			GUICtrlSetState(-1, $GUI_DISABLE)
-		$g_hLblAttackNowSec = GUICtrlCreateLabel(GetTranslatedFileIni("MBR Global GUI Design", "sec.", -1), $x + 85, $y + 20, -1, -1)
+		$g_hLblAttackNowSec = GUICtrlCreateLabel(GetTranslatedFileIni("MBR Global GUI Design", "sec.", -1), $x + 137, $y + 3, -1, -1)
 			_GUICtrlSetTip(-1, $sTxtTip)
 			GUICtrlSetState(-1, $GUI_DISABLE)
+	GUICtrlCreateGroup("", -99, -99, 1, 1)
 
-	$y += 49
-		$g_hChkRestartSearchLimit = GUICtrlCreateCheckbox( GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "ChkRestartSearchLimit", "Restart every") & ":", $x - 5, $y - 8, -1, -1)
-			$sTxtTip = GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "ChkRestartSearchLimit_Info_01", "Return To Base after x searches and restart to search enemy villages.")
+	$x = 253
+	$y = 45
+	GUICtrlCreateGroup(GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "Group_04", "SmartZap"), $x - 20, $y - 20, 189, 197)
+		_GUICtrlCreateIcon($g_sLibIconPath, $eIcnLightSpell, $x - 15, $y - 4, 24, 24)
+		$g_hChkSmartLightSpell = GUICtrlCreateCheckbox(GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "ChkSmartLightSpell", "Use Lightning"), $x + 15, $y - 3, 130, 24)
+			$sTxtTip = GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "ChkSmartLightSpell_Info_01", "Drop Lightning spells on Dark Elixir Drills.")
 			_GUICtrlSetTip(-1, $sTxtTip)
-			GUICtrlSetState(-1, $GUI_CHECKED)
-			GUICtrlSetOnEvent(-1, "chkRestartSearchLimit")
-		$g_hTxtRestartSearchlimit = GUICtrlCreateInput("50", $x + 15, $y + 15, 25, 18, BitOR($GUI_SS_DEFAULT_INPUT, $ES_CENTER, $ES_NUMBER))
-			_GUICtrlSetTip(-1, $sTxtTip)
-			GUICtrlSetLimit(-1, 3)
-			;GUICtrlSetState(-1, $GUI_DISABLE)  ; Only needed when unchecked at bot start
-		GUICtrlCreateLabel(GetTranslatedFileIni("MBR Global GUI Design", "search(es).", -1), $x + 47, $y + 17, -1, -1)
+			GUICtrlSetOnEvent(-1, "chkSmartLightSpell")
 
-	$y += 45
-		$g_hChkAlertSearch = GUICtrlCreateCheckbox(GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "ChkAlertSearch", "Alert me when Village found"), $x - 5, $y, -1, -1)
-			_GUICtrlSetTip(-1, GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "ChkAlertSearch_Info_01", "Check this if you want an Audio alarm & a Balloon Tip when a Base to attack is found."))
-			GUICtrlSetState(-1, $GUI_CHECKED)
+	$y += 25
+		_GUICtrlCreateIcon($g_sLibIconPath, $eIcnEarthQuakeSpell, $x - 15, $y - 4, 24, 24)
+		$g_hChkSmartEQSpell = GUICtrlCreateCheckbox(GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "ChkSmartEQSpell", "Use Earthquake"), $x + 15, $y - 3, 130, 24)
+			$sTxtTip = GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "ChkSmartEQSpell_Info_01", "Drop Earthquake spells on selected SmartZap targets.")
+			_GUICtrlSetTip(-1, $sTxtTip)
+			GUICtrlSetOnEvent(-1, "chkEarthQuakeZap")
+
+	$y += 25
+		GUICtrlCreateLabel(GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "LblSmartZapSpellsPerTarget", "Lightning") & ":", $x - 15, $y + 4, 75, 17, $SS_RIGHT)
+		$g_hTxtSmartZapSpellsPerTarget = GUICtrlCreateInput("2", $x + 65, $y, 35, 21, BitOR($GUI_SS_DEFAULT_INPUT, $ES_CENTER, $ES_NUMBER))
+			$sTxtTip = GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "TxtSmartZapSpellsPerTarget_Info_01", "Lightning spells to drop on each target before moving to the next one.")
+			_GUICtrlSetTip(-1, $sTxtTip)
+			GUICtrlSetLimit(-1, 2)
+			GUICtrlSetOnEvent(-1, "txtSmartZapSpellsPerTarget")
+			GUICtrlSetState(-1, $GUI_DISABLE)
+		GUICtrlCreateLabel(GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "LblSmartZapPerTarget", "per target"), $x + 105, $y + 4, 65, 17)
+
+	$y += 25
+		GUICtrlCreateLabel(GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "LblSmartZapEarthquakesPerTarget", "Earthquake") & ":", $x - 15, $y + 4, 75, 17, $SS_RIGHT)
+		$g_hTxtSmartZapEarthquakesPerTarget = GUICtrlCreateInput("1", $x + 65, $y, 35, 21, BitOR($GUI_SS_DEFAULT_INPUT, $ES_CENTER, $ES_NUMBER))
+			$sTxtTip = GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "TxtSmartZapEarthquakesPerTarget_Info_01", "Earthquake spells to drop on each target before moving to the next one.")
+			_GUICtrlSetTip(-1, $sTxtTip)
+			GUICtrlSetLimit(-1, 2)
+			GUICtrlSetOnEvent(-1, "txtSmartZapEarthquakesPerTarget")
+			GUICtrlSetState(-1, $GUI_DISABLE)
+		GUICtrlCreateLabel(GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "LblSmartZapPerTarget", "per target"), $x + 105, $y + 4, 65, 17)
+
+	$y += 25
+		GUICtrlCreateLabel(GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "LblSmartZapTarget", "Target") & ":", $x - 15, $y + 4, 45, 17, $SS_RIGHT)
+		$g_hCmbSmartZapTarget = GUICtrlCreateCombo("", $x + 35, $y, 100, 25, BitOR($CBS_DROPDOWNLIST, $CBS_AUTOHSCROLL))
+			$sTxtTip = GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "CmbSmartZapTarget_Info_01", "Choose which building SmartZap attacks.")
+			_GUICtrlSetTip(-1, $sTxtTip)
+			GUICtrlSetData(-1, GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "CmbSmartZapTargetDrills", "Drills") & "|" & _
+							   GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "CmbSmartZapTargetAirDefense", "Air Defense") & "|" & _
+							   GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "CmbSmartZapTargetAirSweeper", "Air Sweeper") & "|" & _
+							   GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "CmbSmartZapTargetEagle", "Eagle") & "|" & _
+							   GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "CmbSmartZapTargetFirespitter", "Firespitter") & "|" & _
+							   GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "CmbSmartZapTargetInfernos", "Infernos") & "|" & _
+							   GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "CmbSmartZapTargetMonolith", "Monolith") & "|" & _
+							   GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "CmbSmartZapTargetMortars", "Mortars") & "|" & _
+							   GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "CmbSmartZapTargetRevengeTower", "Revenge Tower") & "|" & _
+							   GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "CmbSmartZapTargetScattershot", "Scattershot") & "|" & _
+							   GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "CmbSmartZapTargetWizardTowers", "Wizard Towers") & "|" & _
+							   GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "CmbSmartZapTargetXBow", "XBow"), _
+							   GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "CmbSmartZapTargetDrills", "Drills"))
+			GUICtrlSetOnEvent(-1, "cmbSmartZapTarget")
+			GUICtrlSetState(-1, $GUI_DISABLE)
+
+	$y += 25
+		$g_hCmbSmartZapSecondaryTarget = GUICtrlCreateCombo("", $x + 35, $y, 100, 25, BitOR($CBS_DROPDOWNLIST, $CBS_AUTOHSCROLL))
+			$sTxtTip = GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "CmbSmartZapSecondaryTarget_Info_01", "Choose an optional secondary target if the first target is not detected.")
+			_GUICtrlSetTip(-1, $sTxtTip)
+			GUICtrlSetData(-1, GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "CmbSmartZapSecondaryTargetNone", "None") & "|" & _
+							   GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "CmbSmartZapTargetDrills", "Drills") & "|" & _
+							   GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "CmbSmartZapTargetAirDefense", "Air Defense") & "|" & _
+							   GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "CmbSmartZapTargetAirSweeper", "Air Sweeper") & "|" & _
+							   GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "CmbSmartZapTargetEagle", "Eagle") & "|" & _
+							   GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "CmbSmartZapTargetFirespitter", "Firespitter") & "|" & _
+							   GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "CmbSmartZapTargetInfernos", "Infernos") & "|" & _
+							   GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "CmbSmartZapTargetMonolith", "Monolith") & "|" & _
+							   GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "CmbSmartZapTargetMortars", "Mortars") & "|" & _
+							   GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "CmbSmartZapTargetRevengeTower", "Revenge Tower") & "|" & _
+							   GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "CmbSmartZapTargetScattershot", "Scattershot") & "|" & _
+							   GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "CmbSmartZapTargetWizardTowers", "Wizard Towers") & "|" & _
+							   GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "CmbSmartZapTargetXBow", "XBow"), _
+							   GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "CmbSmartZapSecondaryTargetNone", "None"))
+			GUICtrlSetOnEvent(-1, "cmbSmartZapSecondaryTarget")
+			GUICtrlSetState(-1, $GUI_DISABLE)
+
+	$y += 25
+		GUICtrlCreateLabel(GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "LblSmartZapTiming", "Timing") & ":", $x - 15, $y + 4, 45, 17, $SS_RIGHT)
+		$g_hCmbSmartZapTiming = GUICtrlCreateCombo("", $x + 35, $y, 100, 25, BitOR($CBS_DROPDOWNLIST, $CBS_AUTOHSCROLL))
+			$sTxtTip = GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "CmbSmartZapTiming_Info_01", "Choose when SmartZap runs during attack.")
+			_GUICtrlSetTip(-1, $sTxtTip)
+			GUICtrlSetData(-1, GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "CmbSmartZapTimingStart", "Start") & "|" & _
+							   GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "CmbSmartZapTimingMid", "Mid") & "|" & _
+							   GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "CmbSmartZapTimingEnd", "End"), _
+							   GetTranslatedFileIni("MBR GUI Design Child Attack - Options-Search", "CmbSmartZapTimingStart", "Start"))
+			GUICtrlSetOnEvent(-1, "cmbSmartZapTiming")
+			GUICtrlSetState(-1, $GUI_DISABLE)
 	GUICtrlCreateGroup("", -99, -99, 1, 1)
 
 EndFunc   ;==>CreateAttackSearchOptionsSearch

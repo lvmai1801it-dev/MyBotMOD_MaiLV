@@ -20,12 +20,12 @@ Func GetTownHallLevel($bFirstTime = False)
 	If isInsideDiamond($g_aiTownHallPos) = False Then ; If TH pos is not known or is outside village then get new position
 		LocateTownHall(True) ; Set flag = true for location only, or repeated loop happens
 		If isInsideDiamond($g_aiTownHallPos) Then SaveConfig() ; save new location
-		If _Sleep($DELAYGETTHLEVEL1) Then Return
+		If _Sleep($DELAYIMGLOCATE1) Then Return
 	EndIf
 
 	If $bFirstTime = True Then
 		BuildingClickP($g_aiTownHallPos, "#0349")
-		If _Sleep($DELAYGETTHLEVEL2) Then Return
+		If _Sleep($DELAYIMGLOCATE1) Then Return
 	EndIf
 
 	If $g_bDebugImageSave Then SaveDebugImage("GetTHLevelView")
@@ -40,17 +40,17 @@ Func GetTownHallLevel($bFirstTime = False)
 		EndIf
 		If $aTHInfo[2] <> "" Then
 			$g_iTownHallLevel = $aTHInfo[2] ; grab building level from building info array
-			SetLog("Your Town Hall Level read as: " & $g_iTownHallLevel, $COLOR_SUCCESS)
+			SetLog("Town Hall Detected: (" & $g_aiTownHallPos[0] & "," & $g_aiTownHallPos[1] & "), Level: " & $g_iTownHallLevel, $COLOR_SUCCESS)
 			saveConfig()
 		Else
-			SetLog("Your Town Hall Level was not found! Please Manually Locate", $COLOR_INFO)
-			ClearScreen()
-			Return False
+			SetLog("Town Hall Level not detected via text - Using Fallback: Setting to Level " & $g_iMaxTHLevel, $COLOR_WARNING)
+			$g_iTownHallLevel = $g_iMaxTHLevel
+			saveConfig()
 		EndIf
 	Else
-		SetLog("Your Town Hall Level was not found! Please Manually Locate", $COLOR_INFO)
-		ClearScreen()
-		Return False
+		SetLog("Your Town Hall Level was not found (no building info)! Using fallback: setting to level " & $g_iMaxTHLevel & ".", $COLOR_WARNING)
+		$g_iTownHallLevel = $g_iMaxTHLevel
+		saveConfig()
 	EndIf
 
 	ClearScreen()

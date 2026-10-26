@@ -41,11 +41,16 @@ Func getArmySpellCapacity($bOpenArmyWindow = False, $bCloseArmyWindow = False, $
 		$sSpellsInfo = getSpellsCap($aArmySpellSize[0], $aArmySpellSize[1], $bNeedCapture) ; OCR read Spells and total capacity
 
 		$iCount = 0 ; reset OCR loop counter
-		While $sSpellsInfo = "" ; In case the CC donations received msg are blocking, need to keep checking numbers till valid
+		While $iCount < 3
+			Local $aSpellCapCheck = StringSplit($sSpellsInfo, "#")
+			Local $bValidSpellCap = False
+			If IsArray($aSpellCapCheck) Then
+				If $aSpellCapCheck[0] > 1 Then $bValidSpellCap = Number($aSpellCapCheck[2]) > 0 And Number($aSpellCapCheck[1]) <= Number($aSpellCapCheck[2])
+			EndIf
+			If $bValidSpellCap Then ExitLoop
+			If _Sleep($DELAYCHECKARMYCAMP5) Then Return
 			$sSpellsInfo = getSpellsCap($aArmySpellSize[0], $aArmySpellSize[1], $bNeedCapture) ; OCR read Spells and total capacity
 			$iCount += 1
-			If $iCount > 10 Then ExitLoop ; try reading 30 times for 250+150ms OCR for 4 sec
-			If _Sleep($DELAYCHECKARMYCAMP5) Then Return ; Wait 250ms
 		WEnd
 
 		If $g_bDebugSetLogTrain Then SetLog("$sSpellsInfo= " & $sSpellsInfo, $COLOR_DEBUG)
@@ -55,6 +60,10 @@ Func getArmySpellCapacity($bOpenArmyWindow = False, $bCloseArmyWindow = False, $
 			If $aGetSpellCap[0] > 1 Then
 				$g_iTotalSpells = Number($aGetSpellCap[2])
 				$g_iCurrentSpells = Number($aGetSpellCap[1])
+				If $g_iTotalSpells <= 0 Or $g_iCurrentSpells > $g_iTotalSpells Then
+					$g_iTotalSpells = $g_iTotalSpellValue
+					If $g_iCurrentSpells > $g_iTotalSpells Then $g_iCurrentSpells = $g_iTotalSpells
+				EndIf
 			Else
 				SetLog("Error in getArmySpellCapacity: Couldn't read all Capacity Values", $COLOR_ERROR) ; log if there is read error
 				$g_iCurrentSpells = 0
@@ -66,7 +75,7 @@ Func getArmySpellCapacity($bOpenArmyWindow = False, $bCloseArmyWindow = False, $
 			$g_iTotalSpells = $g_iTotalSpellValue
 		EndIf
 
-		If $bSetLog Then SetLog("Total Spell Factory Capacity: " & $g_iCurrentSpells & "/" & $g_iTotalSpells)
+		If $bSetLog Then SetLog("Total Spell Factory Capacity: " & $g_iCurrentSpells & "/" & $g_iTotalSpells, $COLOR_INFO)
 	EndIf
 
 	If $g_iTotalSpells <> $g_iTotalSpellValue And $bSetLog Then SetLog("Warning: Total Spell Capacity is not the same as in GUI", $COLOR_WARNING)

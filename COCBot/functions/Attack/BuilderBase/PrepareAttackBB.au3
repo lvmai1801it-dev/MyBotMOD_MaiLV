@@ -1,6 +1,6 @@
-; #FUNCTION# ====================================================================================================================
+﻿; #FUNCTION# ====================================================================================================================
 ; Name ..........: PrepareAttackBB
-; Description ...: This file controls attacking preperation of the builders base
+; Description ...: This file controls attacking preparation of the builders base
 ; Syntax ........:
 ; Parameters ....: None
 ; Return values .: None
@@ -14,38 +14,37 @@
 ; ===============================================================================================================================
 
 Func CheckBBGoldStorageFull($SetLog = True)
-	Local $aBBGoldFull[4] = [661, 35, 0xE7C00D, 10]
+	Local $aBBGoldFull[4] = [650, 29, 0xE7C00D, 10]
 	If _Sleep(500) Then Return
 	If _CheckPixel($aBBGoldFull, True, Default, "BB Gold Full") Then
-		If $SetLog Then SetLog("BB Gold Full")
+		If $SetLog Then SetLog("BB Gold Storages: Full", $COLOR_SUCCESS)
 		Return True
 	EndIf
 	Return False
 EndFunc   ;==>CheckBBGoldStorageFull
 
 Func CheckBBElixirStorageFull($SetLog = True)
-	Local $aBBElixirFull[4] = [661, 85, 0x7945C5, 10]
+	Local $aBBElixirFull[4] = [650, 66, 0x8027FF, 10]
 	If _Sleep(500) Then Return
 	If _CheckPixel($aBBElixirFull, True, Default, "BB Elixir Full") Then
-		If $SetLog Then SetLog("BB Elixir Full")
+		If $SetLog Then SetLog("BB Elixir Storages: Full", $COLOR_SUCCESS)
 		Return True
 	EndIf
 	Return False
 EndFunc   ;==>CheckBBElixirStorageFull
 
-Func PrepareAttackBB($AttackCount = 0)
+Func PrepareAttackBB($AttackCount, ByRef $bStarsUnavailable)
+	$bStarsUnavailable = False
 
 	If $g_bChkForceBBAttackOnClanGames And $g_bIsBBevent Then
-		SetLog("Running Challenge is BB Challenge : " & $CurrentActiveChallenge, $COLOR_ACTION)
-		SetLog("Force BB Attack on Clan Games Enabled", $COLOR_DEBUG2)
-		SetLog("Attack, No Matter What !!", $COLOR_DEBUG2)
+		SetLog("Builder Base Challenge: " & $CurrentActiveChallenge, $COLOR_ACTION)
+		SetLog("Clan Games Detected - Forcing BB Attack", $COLOR_DEBUG)
+		SetLog("Attack, no matter what!", $COLOR_DEBUG)
 		CheckLootAvail()
 		CheckBBGoldStorageFull()
 		CheckBBElixirStorageFull()
-		If $AttackCount = 0 Then CheckForSlots()
 		If Not ClickAttack() Then Return False
 		If _Sleep(1500) Then Return
-		CheckArmyReady()
 		CheckMachReady()
 		Return True
 	EndIf
@@ -60,54 +59,36 @@ Func PrepareAttackBB($AttackCount = 0)
 			Return False
 		EndIf
 	EndIf
-
-	If $g_bChkBBAttIfLootAvail Then
-		If Not CheckLootAvail() Then
-			If _Sleep(1500) Then Return
-			ClickAway()
-			Return False
-		EndIf
-	EndIf
-
-	If $g_bChkBBHaltOnGoldFull Then
-		If CheckBBGoldStorageFull() Then
+	
+	Local $bStarsAvailable = False
+	If $g_bChkBBStarsAvailable And Not $g_bBBSpamRunning Then
+		$bStarsAvailable = CheckLootAvail()
+		If Not $bStarsAvailable Then
+			$bStarsUnavailable = True
 			If _Sleep(1500) Then Return
 			Return False
 		EndIf
 	EndIf
 
-	If $g_bChkBBHaltOnElixirFull Then
-		If CheckBBElixirStorageFull() Then
+	; When enabled, only attack with stars available. Available stars take
+	; priority over the storage halt, even when both storages are full.
+	; BBSpam handles full storages and checks stars only when both are full.
+	If $g_bChkBBHaltOnStoragesFull And Not $bStarsAvailable And Not $g_bBBSpamRunning Then
+		If CheckBBGoldStorageFull() And CheckBBElixirStorageFull() Then
 			If _Sleep(1500) Then Return
 			Return False
 		EndIf
 	EndIf
-
-	If $AttackCount = 0 Then CheckForSlots()
-
 	If Not ClickAttack() Then Return False
 	If _Sleep(1000) Then Return
-
-	If Not CheckArmyReady() Then
-		If _Sleep(1500) Then Return
-		ClickAway()
-		Return False
-	EndIf
-
-	$g_bBBMachineReady = CheckMachReady()
-	If $g_bChkBBWaitForMachine And Not $g_bBBMachineReady Then
-		SetLog("Battle Machine is not ready.")
-		If _Sleep(1500) Then Return
-		ClickAway()
-		Return False
-	EndIf
 
 	Return True ; returns true if all checks succeed
 EndFunc   ;==>PrepareAttackBB
 
 Func CheckLootAvail($SetLog = True)
+	If $SetLog Then SetLog("Checking Stars Available", $COLOR_INFO)
 	Local $bRet = False, $iRemainStars = 0, $iMaxStars = 0
-	Local $sStars = getOcrAndCapture("coc-BBAttackAvail", 40, 568 + $g_iBottomOffsetY, 50, 20)
+	Local $sStars = _ReadBBStarsOCR()
 
 	If $g_bDebugSetLog Then SetLog("Stars: " & $sStars, $COLOR_DEBUG2)
 	If $sStars <> "" And StringInStr($sStars, "#") Then
@@ -116,21 +97,51 @@ Func CheckLootAvail($SetLog = True)
 			$iRemainStars = $aStars[0]
 			$iMaxStars = $aStars[1]
 		EndIf
-		If Number($iRemainStars) <= Number($iMaxStars) Then
-			If $SetLog Then SetLog("Remaining Stars : " & $iRemainStars & "/" & $iMaxStars, $COLOR_INFO)
+		If Number($iRemainStars) >= 0 And Number($iRemainStars) <= Number($iMaxStars) And Number($iMaxStars) > 0 Then
+			If $SetLog Then SetLog("Stars Available: " & $iRemainStars & "/" & $iMaxStars, $COLOR_INFO)
 			$bRet = True
 		Else
-			SetLog("All attacks used")
+			SetLog("Stars Unavailable")
 		EndIf
 	EndIf
 	Return $bRet
 EndFunc   ;==>CheckLootAvail
 
+; #FUNCTION# ===========================================================================================================
+; Name ..........: _ReadBBStarsOCR
+; Description ...: Reads the Builder Base available-stars counter with the dedicated OCR and updated builder fallback.
+; Remarks .......: Returns the OCR current/maximum separator as #.
+; ======================================================================================================================
+
+Func _ReadBBStarsOCR()
+	Local $aOffsets[5] = [0, -3, 3, -6, 6]
+	Local $aLanguages[3] = ["coc-BBAttackAvail", "coc-Builders", "coc-t-b"]
+	Local $sStars = ""
+	For $i = 0 To UBound($aOffsets) - 1
+		For $j = 0 To UBound($aLanguages) - 1
+			$sStars = StringStripWS(StringReplace(getOcrAndCapture($aLanguages[$j], $aBBStars[0], $aBBStars[1] + $aOffsets[$i], 60, 28, True), "/", "#"), $STR_STRIPALL)
+			If $aLanguages[$j] = "coc-t-b" And Not StringRegExp($sStars, "^\d+#\d+$") Then
+				Local $sStarDigits = StringRegExpReplace($sStars, "\D", "")
+				If StringLen($sStarDigits) = 3 And StringRight($sStarDigits, 2) = "11" Then $sStars = StringLeft($sStarDigits, 1) & "#11"
+				If StringLen($sStarDigits) = 4 And StringRight($sStarDigits, 2) = "11" Then $sStars = StringLeft($sStarDigits, 2) & "#11"
+			EndIf
+			If StringRegExp($sStars, "^\d+#\d+$") Then Return $sStars
+		Next
+	Next
+	; The star icon can confuse OCR at the edge of the counter; read numerator and denominator separately as a fallback.
+	For $i = 0 To UBound($aOffsets) - 1
+		Local $sCurrent = StringRegExpReplace(getOcrAndCapture("coc-t-b", $aBBStars[0], $aBBStars[1] + $aOffsets[$i], 17, 28, True), "\D", "")
+		Local $sMaximum = StringRegExpReplace(getOcrAndCapture("coc-t-b", $aBBStars[0] + 19, $aBBStars[1] + $aOffsets[$i], 25, 28, True), "\D", "")
+		If StringIsDigit($sCurrent) And StringIsDigit($sMaximum) And Number($sCurrent) <= Number($sMaximum) And Number($sMaximum) > 0 Then Return $sCurrent & "#" & $sMaximum
+	Next
+	Return $sStars
+EndFunc   ;==>_ReadBBStarsOCR
+
 Func CheckMachReady()
 	Local $bRet = False
 	If QuickMis("BC1", $g_sImgBBMachReady, 125, 275 + $g_iMidOffsetY, 180, 325 + $g_iMidOffsetY) Then
 		$bRet = True
-		SetLog("Battle Machine ready.")
+		SetDebugLog("Battle Machine: Ready", $COLOR_SUCCESS)
 	EndIf
 	Return $bRet
 EndFunc   ;==>CheckMachReady
@@ -140,13 +151,13 @@ Func CheckArmyReady()
 	Local $bReady = True, $bNeedTrain = False, $bTraining = False
 
 	If _ColorCheck(_GetPixelColor(123, 245 + $g_iMidOffsetY, True), Hex(0xE84E52, 6), 20) Then
-		SetLog("Army is not Ready", $COLOR_DEBUG)
+		SetLog("Army is not ready", $COLOR_DEBUG)
 		$bNeedTrain = True ;need train, so will train cannon cart
 		$bReady = False
 	EndIf
 
 	If Not $bReady And $bNeedTrain Then
-		SetLog("Train to Fill Army", $COLOR_INFO)
+		SetLog("Train to fill army", $COLOR_INFO)
 		ClickAway()
 		If _Sleep(2000) Then Return
 		ClickP($aArmyTrainButton, 1, 120, "BB Train Button")
@@ -180,9 +191,9 @@ Func CheckArmyReady()
 	EndIf
 
 	If Not $bReady Then
-		SetLog("Army is not ready.")
+		SetDebugLog("Army: Not Ready",	$COLOR_DEBUG)
 	Else
-		SetLog("Army is ready.")
+		SetDebugLog("Army: Ready", $COLOR_SUCCESS)
 	EndIf
 	Return $bReady
 EndFunc   ;==>CheckArmyReady
@@ -216,21 +227,36 @@ Func CheckForSlots()
 	If _Sleep(1000) Then Return ; wait for window close
 EndFunc   ;==>CheckForSlots
 
-Func ClickAttack()
-	Local $sSearchDiamond = GetDiamondFromRect2(10, 560 + $g_iBottomOffsetY, 115, 660 + $g_iBottomOffsetY)
-	Local $aCoords = decodeSingleCoord(findImage("ClickAttack", $g_sImgBBAttackButton, $sSearchDiamond, 1, True)) ; bottom
-	Local $bRet = False
+Func ClickAttack($bSuppressLog = False)
+	; The Start Attack window may already be open after a previous attempt.
+	If IsBBFindNowVisible() Then Return True
 
-	If IsArray($aCoords) And UBound($aCoords) = 2 Then
-		SetDebugLog(String($aCoords[0]) & " " & String($aCoords[1]))
-		PureClick($aCoords[0], $aCoords[1]) ; Click Attack Button
-		$bRet = True
-	Else
-		SetLog("Can not find button for Builders Base Attack button", $COLOR_ERROR)
-		If $g_bDebugImageSave Then SaveDebugDiamondImage("ClickAttack", $sSearchDiamond)
+	Local $aCoords
+
+	For $i = 1 To 3
+		$aCoords = findButton("AttackButton")
+		If IsArray($aCoords) And UBound($aCoords) >= 2 Then
+			SetDebugLog("Builder Base Battle button found at " & $aCoords[0] & "," & $aCoords[1])
+			PureClick($aCoords[0], $aCoords[1])
+			ExitLoop
+		EndIf
+		If _Sleep(250) Then Return False
+	Next
+
+	Local $bBattleFound = IsArray($aCoords)
+	If $bBattleFound Then $bBattleFound = UBound($aCoords) >= 2
+	If Not $bBattleFound Then
+		If IsMainPageBuilderBase(1) Then
+			SetDebugLog("Builder Base Battle image not found; using fixed button position", $COLOR_DEBUG)
+			Click(Random(45, 80, 1), Random(625 + $g_iBottomOffsetY, 645 + $g_iBottomOffsetY, 1), 1, 120, "Builder Base Battle")
+			$bBattleFound = True
+		Else
+			If Not $bSuppressLog Then SetLog("Can not find button for Builders Base Battle button", $COLOR_ERROR)
+			Return False
+		EndIf
 	EndIf
 
-	Return $bRet
+	Return True
 EndFunc   ;==>ClickAttack
 
 Func ReturnHomeDropTrophyBB($bOnlySurender = False)
@@ -248,7 +274,7 @@ Func ReturnHomeDropTrophyBB($bOnlySurender = False)
 				Click($g_iQuickMISX, $g_iQuickMISY)
 				If _Sleep(3000) Then Return
 			Case QuickMIS("BC1", $g_sImgBBAttackBonus, 360, 450 + $g_iMidOffsetY, 500, 510 + $g_iMidOffsetY) = True
-				SetLog("Congrats Chief, Stars Bonus Awarded", $COLOR_INFO)
+				SetLog("Congratulations chief, stars bonus awarded!", $COLOR_SUCCESS)
 				Click($g_iQuickMISX, $g_iQuickMISY)
 				If _Sleep(2000) Then Return
 				Return True
@@ -261,5 +287,6 @@ Func ReturnHomeDropTrophyBB($bOnlySurender = False)
 		If _Sleep(500) Then Return
 	Next
 
-	Return True
+	SetLog("Failed to return home after surrendering", $COLOR_ERROR)
+	Return False
 EndFunc   ;==>ReturnHomeDropTrophyBB

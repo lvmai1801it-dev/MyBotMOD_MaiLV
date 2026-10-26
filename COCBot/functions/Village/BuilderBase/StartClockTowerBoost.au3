@@ -17,11 +17,11 @@
 Func ClockTimeGained()
 	Local $aResult = BuildingInfo(242, 475 + $g_iBottomOffsetY)
 	Local $TowerClockLevel = $aResult[2]
-	SetLog("Clock Tower Level " & $TowerClockLevel & " Detected")
+	SetLog("Clock Tower Level: " & $TowerClockLevel, $COLOR_INFO)
 	Local $ClockTimeGained = 0
 	Switch $TowerClockLevel
 		Case 1
-			$ClockTimeGained = 126 ;boost lenght*(10-1) <=> boost lenght*9
+			$ClockTimeGained = 126 ;boost length*(10-1) <=> boost length*9
 		Case 2
 			$ClockTimeGained = 144
 		Case 3
@@ -33,7 +33,7 @@ Func ClockTimeGained()
 		Case 6
 			$ClockTimeGained = 216
 		Case 7
-			$ClockTimeGained = 236
+			$ClockTimeGained = 234
 		Case 8
 			$ClockTimeGained = 252
 		Case 9
@@ -41,7 +41,7 @@ Func ClockTimeGained()
 		Case 10
 			$ClockTimeGained = 288
 		Case Else
-			$ClockTimeGained = 270 ;30 minutes boost(?)
+			SetLog("Unable to determine Clock Tower boost duration", $COLOR_WARNING)
 	EndSwitch
 	Return $ClockTimeGained
 EndFunc   ;==>ClockTimeGained
@@ -54,7 +54,7 @@ Func StartClockTowerBoost($bSwitchToBB = False, $bSwitchToNV = False)
 	Local $TimeGained = 0
 
 	If $bSwitchToBB Then
-		ClearScreen("Defaut", False)
+		ClearScreen("Default", False)
 		If Not SwitchBetweenBases(True, True) Then Return ; Switching to Builders Base
 	EndIf
 
@@ -65,7 +65,7 @@ Func StartClockTowerBoost($bSwitchToBB = False, $bSwitchToNV = False)
 	EndIf
 
 	If Not $bCTBoost Then
-		SetLog("Skip Clock Tower Boost as no Building is currently under Upgrade!", $COLOR_INFO)
+		SetLog("Skip Clock Tower boost as no building is currently under upgrade")
 	Else ; Start Boosting
 		SetLog("Boosting Clock Tower", $COLOR_INFO)
 		If _Sleep($DELAYCOLLECT2) Then Return
@@ -88,23 +88,23 @@ Func StartClockTowerBoost($bSwitchToBB = False, $bSwitchToNV = False)
 				If IsArray($aCTBoost) Then
 					ClickP($aCTBoost)
 					If _Sleep($DELAYCLOCKTOWER2) Then Return
-					SetLog("Boosted Clock Tower successfully!", $COLOR_SUCCESS)
-					If $iStarLabFinishTimeMod > 0 Then
+					SetLog("Boosted Clock Tower Successfully", $COLOR_SUCCESS)
+					If $iStarLabFinishTimeMod > 0 And $TimeGained > 0 Then
 						$g_sStarLabUpgradeTime = _DateAdd('n', Ceiling($iStarLabFinishTimeMod - $TimeGained), _NowCalc())
-						SetLog("Recalculate Research Time, Boosting Clock Tower (" & $g_sStarLabUpgradeTime & ")")
+						SetLog("Recalculate research time, boosting Clock Tower (" & $g_sStarLabUpgradeTime & ")")
 						StarLabStatusGUIUpdate()
 					EndIf
 				Else
-					SetLog("Failed to find the BOOST window button", $COLOR_ERROR)
+					SetLog("Failed to find the Boost Window Button", $COLOR_ERROR)
 				EndIf
 			Else
 				SetLog("Cannot find the Boost Button of Clock Tower", $COLOR_ERROR)
 			EndIf
 		Else
-			SetLog("Clock Tower boost is not available!")
+			SetLog("Clock Tower Boost Unavailable", $COLOR_DEBUG)
 		EndIf
 	EndIf
-	ClearScreen("Defaut", False)
+	ClearScreen("Default", False)
 
 	If ProfileSwitchAccountEnabled() Then SwitchAccountVariablesReload("Save")
 

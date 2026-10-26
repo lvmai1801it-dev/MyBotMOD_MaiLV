@@ -15,15 +15,15 @@
 #include-once
 
 Global $g_hCmbGUILanguage = 0
-Global $g_hChkDisableSplash = 0, $g_hChkForMBRUpdates = 0, $g_hChkDeleteLogs = 0, $g_hTxtDeleteLogsDays = 0, $g_hChkDeleteTemp = 0, $g_hTxtDeleteTempDays = 0, _
+Global $g_hChkDisableSplash = 0, $g_hChkDeleteLogs = 0, $g_hTxtDeleteLogsDays = 0, $g_hChkDeleteTemp = 0, $g_hTxtDeleteTempDays = 0, _
 	   $g_hChkDeleteLoots = 0, $g_hTxtDeleteLootsDays = 0
-Global $g_hChkAutostart = 0, $g_hTxtAutostartDelay = 0, $g_hChkCheckGameLanguage = 0, $g_hChkAutoAlign = 0, $g_hTxtAlignOffsetX = 0, $g_hTxtAlignOffsetY = 0, _
+Global $g_hChkAutostart = 0, $g_hTxtAutostartDelay = 0, $g_hChkAutoHideAndroid = 0, $g_hChkCheckGameLanguage = 0, $g_hChkAutoAlign = 0, $g_hTxtAlignOffsetX = 0, $g_hTxtAlignOffsetY = 0, _
 	   $g_hCmbAlignmentOptions = 0
 Global $g_hTxtGlobalActiveBotsAllowed = 0, $g_hTxtGlobalThreads = 0, $g_hTxtThreads = 0
 ;Global $g_hChkUpdatingWhenMinimized = 0
 Global $g_hChkBotCustomTitleBarClick = 0, $g_hChkBotAutoSlideClick = 0, $g_hChkHideWhenMinimized = 0, $g_hChkUseRandomClick = 0, $g_hChkScreenshotType = 0, _
 	   $g_hChkScreenshotHideName = 0, $g_hTxtTimeAnotherDevice = 0
-Global $g_hChkFixClanCastle = 0, $g_hChkAutoResume = 0, $g_hTxtAutoResumeTime = 0, $g_hChkDisableNotifications = 0
+Global $g_hChkFixClanCastle = 0, $g_hChkAutoResume = 0, $g_hTxtAutoResumeTime = 0, $g_hChkDisableNotifications = 0, $g_hChkSkipInitialCheck = 0, $g_hChkSkipTrainingSystem = 0, $g_hChkSkipSearchFilter = 0, $g_hChkEnableBattleSpeed = 0
 Global $g_hChkSqlite = 0
 Global $g_hBtnExportData = 0
 
@@ -46,12 +46,7 @@ Func CreateBotOptions()
 			_GUICtrlSetTip(-1, GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "ChkDisableSplash_Info_01", "Disables the splash screen on startup."))
 			GUICtrlSetState(-1, $GUI_UNCHECKED)
 
-	$y += 20
-		$g_hChkForMBRUpdates = GUICtrlCreateCheckbox(GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "ChkForMBRUpdates", "Check for Updates"), $x, $y, -1, -1)
-			_GUICtrlSetTip(-1, GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "ChkForMBRUpdates_Info_01", "Check if you are running the latest version of the bot."))
-			GUICtrlSetState(-1, $GUI_CHECKED)
-
-	$y += 20
+	$y += 28
 		$g_hChkDeleteLogs = GUICtrlCreateCheckbox(GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "ChkDeleteLogs", "Delete Log Files")& ":", $x, $y, -1, -1)
 			$sTxtTip = GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "ChkDeleteLogs_Info_01", "Delete log files older than this specified No. of days.")
 			GUICtrlSetState(-1, $GUI_CHECKED)
@@ -62,7 +57,7 @@ Func CreateBotOptions()
 			GUICtrlSetLimit(-1, 2)
 		GUICtrlCreateLabel(GetTranslatedFileIni("MBR Global GUI Design", "days", "days"), $x + 150, $y + 4, 27, 15)
 
-	$y += 20
+	$y += 25
 		$g_hChkDeleteTemp = GUICtrlCreateCheckbox(GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "ChkDeleteTemp", "Delete Temp Files") & ":", $x, $y, -1, -1)
 			GUICtrlSetState(-1, $GUI_CHECKED)
 			_GUICtrlSetTip(-1, GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "ChkDeleteTemp_Info_01", "Delete temp files older than this specified No. of days."))
@@ -72,7 +67,7 @@ Func CreateBotOptions()
 			GUICtrlSetLimit(-1, 2)
 		GUICtrlCreateLabel(GetTranslatedFileIni("MBR Global GUI Design", "days", -1), $x + 150, $y + 4, 27, 15)
 
-	$y += 20
+	$y += 25
 		$g_hChkDeleteLoots = GUICtrlCreateCheckbox(GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "ChkDeleteLoots", "Delete Loot Images") & ":", $x, $y, -1, -1)
 			$sTxtTip = GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "ChkDeleteLoots_Info_01", "Delete loot image files older than this specified No. of days.")
 			GUICtrlSetState(-1, $GUI_CHECKED)
@@ -85,14 +80,19 @@ Func CreateBotOptions()
 	GUICtrlCreateGroup("", -99, -99, 1, 1)
 
 	$y += 48
-	GUICtrlCreateGroup(GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "Group_03", "When Bot Starts"), $x - 20, $y - 20, 210, 112)
+	GUICtrlCreateGroup(GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "Group_03", "When Bot Starts"), $x - 20, $y - 20, 210, 134)
 	$y -= 5
-		$g_hChkAutostart = GUICtrlCreateCheckbox(GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "ChkAutostart", "Auto START after") & ":", $x, $y, -1, -1)
+		$g_hChkAutostart = GUICtrlCreateCheckbox(GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "ChkAutostart", "Auto START After") & ":", $x, $y, -1, -1)
 			_GUICtrlSetTip(-1, GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "ChkAutostart_Info_01", "Auto START the Bot after this No. of seconds."))
 			GUICtrlSetOnEvent(-1, "chkAutostart")
 		$g_hTxtAutostartDelay = GUICtrlCreateInput("10", $x + 120, $y + 2, 25, 16, BitOR($GUI_SS_DEFAULT_INPUT, $ES_CENTER, $ES_NUMBER))
 			GUICtrlSetState(-1, $GUI_DISABLE)
 		GUICtrlCreateLabel(GetTranslatedFileIni("MBR Global GUI Design", "sec.", -1), $x + 150, $y + 4, 27, 18)
+
+	$y += 22
+		$g_hChkAutoHideAndroid = GUICtrlCreateCheckbox(GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "ChkAutoHideAndroid", "Auto Hide Android"), $x, $y, -1, -1)
+			_GUICtrlSetTip(-1, GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "ChkAutoHideAndroid_Info_01", "Automatically hide the Android emulator window when the bot starts."))
+			GUICtrlSetOnEvent(-1, "chkAutoHideAndroid")
 
 	$y += 22
 		$g_hChkCheckGameLanguage = GUICtrlCreateCheckbox(GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "ChkCheckGameLanguage", "Check Game Language (EN)"), $x, $y, -1, -1)
@@ -105,14 +105,14 @@ Func CreateBotOptions()
 			GUICtrlSetOnEvent(-1, "chkDisposeWindows")
 			_GUICtrlSetTip(-1, $sTxtTip)
 		GUICtrlCreateLabel(GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "LblAlignOffsetX", "Offset") & ":", $x + 60, $y + 4, 48, -1, $SS_RIGHT)
-		$g_hTxtAlignOffsetX = GUICtrlCreateInput("", $x + 110, $y + 2, 30, 16, BitOR($GUI_SS_DEFAULT_INPUT, $ES_CENTER, $ES_NUMBER))
+		$g_hTxtAlignOffsetX = GUICtrlCreateInput("", $x + 110, $y + 2, 30, 16, BitOR($GUI_SS_DEFAULT_INPUT, $ES_CENTER))
 			$sTxtTip = GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "TxtAlignOffsetX_Info_01", "Offset horizontal pixels between Android Emulator and BOT windows.")
 			_GUICtrlSetTip(-1, $sTxtTip)
-			GUICtrlSetLimit(-1, 4)
-		$g_hTxtAlignOffsetY= GUICtrlCreateInput("", $x + 145, $y + 2, 30, 16, BitOR($GUI_SS_DEFAULT_INPUT, $ES_CENTER, $ES_NUMBER))
+			GUICtrlSetLimit(-1, 6)
+		$g_hTxtAlignOffsetY= GUICtrlCreateInput("", $x + 145, $y + 2, 30, 16, BitOR($GUI_SS_DEFAULT_INPUT, $ES_CENTER))
 			$sTxtTip = GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "TxtAlignOffsetY_Info_01", "Offset vertical pixels between Android Emulator and BOT windows.")
 			_GUICtrlSetTip(-1, $sTxtTip)
-			GUICtrlSetLimit(-1, 4)
+			GUICtrlSetLimit(-1, 6)
 
 	$y += 23
 		$g_hCmbAlignmentOptions = GUICtrlCreateCombo("", $x, $y, 175, 20, BitOR($CBS_DROPDOWNLIST, $CBS_AUTOHSCROLL))
@@ -122,7 +122,11 @@ Func CreateBotOptions()
 							   GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "CmbAlignmentOptions_Item_04", "SNAP: Bot TopLeft to Android") & "|" & _
 							   GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "CmbAlignmentOptions_Item_05", "SNAP: Bot BottomRight to Android") & "|" & _
 							   GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "CmbAlignmentOptions_Item_06", "SNAP: Bot BottomLeft to Android") & "|" & _
-							   GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "CmbAlignmentOptions_Item_07", "DOCK: Android into Bot"), GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "CmbAlignmentOptions_Item_07", -1))
+							   GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "CmbAlignmentOptions_Item_07", "DOCK: Android into Bot") & "|" & _
+							   GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "CmbAlignmentOptions_Item_08", "FIXED: Android - Bot TopRight") & "|" & _
+							   GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "CmbAlignmentOptions_Item_09", "FIXED: Android - Bot TopLeft") & "|" & _
+							   GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "CmbAlignmentOptions_Item_10", "FIXED: Android - Bot BottomRight") & "|" & _
+							   GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "CmbAlignmentOptions_Item_11", "FIXED: Android - Bot BottomLeft"), GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "CmbAlignmentOptions_Item_07", -1))
 			_GUICtrlSetTip(-1, GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "CmbAlignmentOptions_Info_01", "0,0: Reposition Android Emulator screen to position 0,0 on windows desktop and align Bot window right or left to it.") & @CRLF & _
 							   GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "CmbAlignmentOptions_Info_02", "SNAP: Only reorder windows, Align Bot window to Android Emulator window at Top Right, Top Left, Bottom Right or Bottom Left.\r\n" & _
 													"DOCK: Integrate Android Screen into bot window."))
@@ -168,7 +172,7 @@ Func CreateBotOptions()
 			_GUICtrlSetTip(-1, GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "ChkUpdatingWhenMinimized_Info_01", "Enable different minimize routine for bot window.\r\nWhen bot is minimized, screen updates are shown in taskbar preview."))
 		$y += 19
 		#ce
-		$g_hChkBotCustomTitleBarClick = GUICtrlCreateCheckbox(GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "ChkBotCustomTitleBarClick", "My Bot design Title Bar"), $x, $y, -1, -1)
+		$g_hChkBotCustomTitleBarClick = GUICtrlCreateCheckbox(GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "ChkBotCustomTitleBarClick", "MyBot Design Title Bar"), $x, $y, -1, -1)
 			If BitAND($g_iBotDesignFlags, 1) Then GUICtrlSetState(-1, $GUI_CHECKED)
 			GUICtrlSetOnEvent(-1, "chkBotCustomTitleBarClick")
 			_GUICtrlSetTip(-1, GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "ChkBotCustomTitleBarClick_Info_01", "Enable optimized My Bot Window Title Bar and\r\nthin Window Border (restart of bot is required)"))
@@ -179,11 +183,11 @@ Func CreateBotOptions()
 			GUICtrlSetOnEvent(-1, "chkBotAutoSlideClick")
 			_GUICtrlSetTip(-1, GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "ChkBotAutoSlideClick_Info_01", "Enable auto sliding when Android is docked\r\non bot window activation/deactivation"))
 	$y += 19
-		$g_hChkHideWhenMinimized = GUICtrlCreateCheckbox(GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "ChkHideWhenMinimized", "Hide when minimized"), $x, $y, -1, -1)
+		$g_hChkHideWhenMinimized = GUICtrlCreateCheckbox(GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "ChkHideWhenMinimized", "Hide When Minimized"), $x, $y, -1, -1)
 			GUICtrlSetOnEvent(-1, "chkHideWhenMinimized")
 			_GUICtrlSetTip(-1, GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "ChkHideWhenMinimized_Info_01", "Hide bot window in taskbar when minimized.\r\nUse trayicon 'Show bot' to display bot window again."))
 	$y += 19
-		$g_hChkAutoResume = GUICtrlCreateCheckbox(GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "ChkAutoResume", "Auto resume Bot after") & ":", $x, $y, -1, -1)
+		$g_hChkAutoResume = GUICtrlCreateCheckbox(GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "ChkAutoResume", "Auto Resume Bot After") & ":", $x, $y, -1, -1)
 			_GUICtrlSetTip(-1,GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "ChkAutoResume_Info_01", "This will auto resume your bot after x minutes"))
 			GUICtrlSetOnEvent(-1, "chkAutoResume")
 		$g_hTxtAutoResumeTime = GUICtrlCreateInput("5",$x + 132, $y + 2, 30, 16, BitOR($GUI_SS_DEFAULT_INPUT, $ES_CENTER, $ES_NUMBER))
@@ -201,11 +205,11 @@ Func CreateBotOptions()
 
 	$y += 45
 	GUICtrlCreateGroup(GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "Group_05", "Photo Screenshot Options"), $x - 20, $y - 17, 225, 60)
-		$g_hChkScreenshotType = GUICtrlCreateCheckbox(GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "ChkScreenshotType", "Make in PNG format"), $x, $y, -1, -1)
+		$g_hChkScreenshotType = GUICtrlCreateCheckbox(GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "ChkScreenshotType", "Make In PNG Format"), $x, $y, -1, -1)
 			GUICtrlSetState(-1, $GUI_CHECKED)
 			GUICtrlSetOnEvent(-1, "chkScreenshotType")
 	$y += 19
-		$g_hChkScreenshotHideName = GUICtrlCreateCheckbox(GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "ChkScreenshotHideName", "Hide Village and Clan Castle Name"), $x, $y, -1, -1)
+		$g_hChkScreenshotHideName = GUICtrlCreateCheckbox(GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "ChkScreenshotHideName", "Hide Village && Clan Castle Name"), $x, $y, -1, -1)
 			GUICtrlSetState(-1, $GUI_CHECKED)
 			GUICtrlSetOnEvent(-1, "chkScreenshotHideName")
 	GUICtrlCreateGroup("", -99, -99, 1, 1)
@@ -213,7 +217,7 @@ Func CreateBotOptions()
 	$y += 48
 	GUICtrlCreateGroup(GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "Group_06", "Remote Device"), $x - 20, $y - 20 , 225, 42)
 	$y -= 5
-		GUICtrlCreateLabel(GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "LblTimeAnotherDevice", "When 'Another Device' wait") & ":", $x - 10, $y + 2, -1, -1)
+		GUICtrlCreateLabel(GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "LblTimeAnotherDevice", "When 'Another Device' Wait") & ":", $x - 10, $y + 2, -1, -1)
 		$sTxtTip = GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "LblTimeAnotherDevice_Info_01", "Enter the time to wait (in Minutes) before the Bot reconnects when another device took control.")
 			_GUICtrlSetTip(-1, $sTxtTip)
 		$g_hTxtTimeAnotherDevice = GUICtrlCreateInput("2", $x + 132, $y, 30, 16, BitOR($GUI_SS_DEFAULT_INPUT, $ES_CENTER, $ES_NUMBER))
@@ -223,21 +227,40 @@ Func CreateBotOptions()
 	GUICtrlCreateGroup("", -99, -99, 1, 1)
 
 	$y += 51
-	GUICtrlCreateGroup(GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "Group_07", "Other Options"), $x - 20, $y - 20, 225, 100)
-		$g_hChkFixClanCastle = GUICtrlCreateCheckbox(GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "ChkFixClanCastle", "Force Clan Castle Detection"), $x, $y + 2, -1, -1)
-			_GUICtrlSetTip(-1, GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "ChkFixClanCastle_Info_01", "If clan Castle it is undetected and it is NOT placed in the last slot, force bot to consider the undetected slot as Clan Castle"))
-			GUICtrlSetState(-1, $GUI_UNCHECKED)
-
-	$y += 20
-		$g_hChkSqlite = GUICtrlCreateCheckbox(GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "ChkSqlite", "Use SQLite for statistics"), $x, $y + 2, -1, -1)
+	GUICtrlCreateGroup(GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "Group_07", "Other Options"), $x - 20, $y - 20, 225, 157)
+	$y -= 1
+		$g_hChkSqlite = GUICtrlCreateCheckbox(GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "ChkSqlite", "Enable SQLite Statistics"), $x, $y, -1, -1)
 			_GUICtrlSetTip(-1, GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "ChkSqlite_Info_01", "Will collect data from attacks to SQlite, exporting to CSV.") & @CRLF & _
 							   GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "ChkSqlite_Info_02", "Excellent to use with Smart-Farm, to collect sides, resources inside and outside, etc."))
 			GUICtrlSetOnEvent(-1, "chkSQLite")
 			GUICtrlSetState(-1, $GUI_UNCHECKED)
 
-		$g_hBtnExportData = GUICtrlCreateButton( GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "BtnExportData", "ExportData"), $x + 137 , $y + 14)
+		$g_hBtnExportData = GUICtrlCreateButton( GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "BtnExportData", "ExportData"), $x + 140 , $y - 3)
 			GUICtrlSetOnEvent(-1, "SQLiteExport")
 
-	GUICtrlCreateGroup("", -99, -99, 1, 1)
+	$y += 23
+		$g_hChkEnableBattleSpeed = GUICtrlCreateCheckbox(GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "ChkEnableBattleSpeed", "Enable Battle Speed"), $x, $y, -1, -1)
+			_GUICtrlSetTip(-1, GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "ChkEnableBattleSpeed_Info_01", "Enable automatic battle speed activation when the battle speed button appears."))
+			GUICtrlSetState(-1, $GUI_CHECKED)
+
+	$y += 23
+		$g_hChkFixClanCastle = GUICtrlCreateCheckbox(GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "ChkFixClanCastle", "Force Clan Castle Detection"), $x, $y, -1, -1)
+			_GUICtrlSetTip(-1, GetTranslatedFileIni("MBR GUI Design Child Bot - Options", "ChkFixClanCastle_Info_01", "If clan Castle it is undetected and it is NOT placed in the last slot, force bot to consider the undetected slot as Clan Castle"))
+			GUICtrlSetState(-1, $GUI_UNCHECKED)
+
+	$y += 23
+		$g_hChkSkipInitialCheck = GUICtrlCreateCheckbox("Skip Initial Check", $x, $y, -1, -1)
+			_GUICtrlSetTip(-1, "Skip initial checks like Clan Games, Collect Capital Gold, etc.")
+			GUICtrlSetState(-1, $GUI_UNCHECKED)
+
+	$y += 23
+		$g_hChkSkipSearchFilter = GUICtrlCreateCheckbox("Skip Search Filter", $x, $y, -1, -1)
+			_GUICtrlSetTip(-1, "Skip search filters and attack the first detected village when an attack mode is active.")
+			GUICtrlSetState(-1, $GUI_UNCHECKED)
+
+	$y += 23
+		$g_hChkSkipTrainingSystem = GUICtrlCreateCheckbox("Skip Training System", $x, $y, -1, -1)
+			_GUICtrlSetTip(-1, "Skip all army checks and training; only verify Super Troops.")
+			GUICtrlSetState(-1, $GUI_UNCHECKED)
 
 EndFunc   ;==>CreateBotOptions

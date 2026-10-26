@@ -39,10 +39,11 @@ Func TogglePauseUpdateState($Source)
 
 	$g_bTogglePauseUpdateState = False
     If $g_bBotPaused Then
-		AndroidShield("TogglePauseImpl paused", False)
+		If $g_bIsHidden And Not $g_bAndroidEmbedded Then HideAndroidWindow(False, False, True, "TogglePause")
+		AndroidShieldPause()
 		TrayTip($g_sBotTitle, "", 1)
 		If Not $g_bDisableNotifications Then TrayTip($g_sBotTitle, "was Paused!", 1, $TIP_ICONEXCLAMATION)
-		SetLog("Bot was Paused!", $COLOR_ERROR)
+		SetLog("Bot Paused", $COLOR_ACTION)
 		If Not $g_bSearchMode Then
 			$g_iTimePassed += Int(__TimerDiff($g_hTimerSinceStarted))
 			If ProfileSwitchAccountEnabled() Then $g_aiRunTime[$g_iCurAccount] += Int(__TimerDiff($g_ahTimerSinceSwitched[$g_iCurAccount]))
@@ -56,10 +57,11 @@ Func TogglePauseUpdateState($Source)
 		_ITaskBar_UpdateTBButton($g_hTblPause, $THBF_DISABLED)
 		;GUICtrlSetState($btnMakeScreenshot, $GUI_ENABLE)
 	Else
-		AndroidShield("TogglePauseImpl resumed")
+		AndroidShieldResume()
+		If $g_bIsHidden And Not $g_bAndroidEmbedded Then reHide()
 		TrayTip($g_sBotTitle, "", 1)
 		If Not $g_bDisableNotifications Then TrayTip($g_sBotTitle, "was Resumed.", 1, $TIP_ICONASTERISK)
-		SetLog("Bot was Resumed.", $COLOR_SUCCESS)
+		SetLog("Bot Resumed", $COLOR_ACTION)
 		If Not $g_bSearchMode Then
 			$g_hTimerSinceStarted = __TimerInit()
 			If ProfileSwitchAccountEnabled() Then $g_ahTimerSinceSwitched[$g_iCurAccount] = $g_hTimerSinceStarted

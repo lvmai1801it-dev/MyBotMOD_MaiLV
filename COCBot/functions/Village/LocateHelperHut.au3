@@ -1,4 +1,4 @@
-; #FUNCTION# ====================================================================================================================
+﻿; #FUNCTION# ====================================================================================================================
 ; Name ..........: LocateHelperHut
 ; Description ...:
 ; Syntax ........: LocateHelperHut()
@@ -13,31 +13,37 @@
 ; Example .......: No
 ; ===============================================================================================================================
 Func LocateHelperHut($bCollect = True)
-	; reset position
+	If $g_iTownHallLevel < 9 Then
+		SetLog("Townhall Level " & $g_iTownHallLevel & " has no Helper Hut, so skip locating", $COLOR_DEBUG)
+		Return False
+	EndIf
+
+	Local $aPreviousHelperHutPos[2] = [$g_aiHelperHutPos[0], $g_aiHelperHutPos[1]]
 	$g_aiHelperHutPos[0] = -1
 	$g_aiHelperHutPos[1] = -1
 
-	If $g_iTownHallLevel < 9 Then
-		SetLog("Townhall Lvl " & $g_iTownHallLevel & " has no Helper Hut, so skip locating.", $COLOR_DEBUG)
-		Return
+	; auto locate
+	If ImgLocateHelperHut(False, False, $aPreviousHelperHutPos) Then
+		SetLog("Helper Hut Detected: (" & $g_aiHelperHutPos[0] & "," & $g_aiHelperHutPos[1] & ")", $COLOR_SUCCESS)
+		Return True
 	EndIf
 
-	; auto locate
-	ImgLocateHelperHut()
+	If Not isInsideDiamond($aPreviousHelperHutPos) Then LogUnknownBuildingPosition("Helper Hut")
 
-	SetLog("Helper Hut: (" & $g_aiHelperHutPos[0] & "," & $g_aiHelperHutPos[1] & ")", $COLOR_DEBUG)
+	If Not _LocateHelperHut($bCollect) Then
+		$g_aiHelperHutPos[0] = $aPreviousHelperHutPos[0]
+		$g_aiHelperHutPos[1] = $aPreviousHelperHutPos[1]
+		Return False
+	EndIf
 
-	If $g_aiHelperHutPos[1] = "" Or $g_aiHelperHutPos[1] = -1 Then _LocateHelperHut($bCollect) ; manual locate
+	Return True
 EndFunc   ;==>LocateHelperHut
 
 Func _LocateHelperHut($bCollect = True)
 	Local $stext, $MsgBox, $iStupid = 0, $iSilly = 0, $sErrorText = ""
 
-	SetLog("Locating Helper Hut", $COLOR_INFO)
-
 	WinGetAndroidHandle()
-	checkMainScreen()
-	If $bCollect Then Collect(False)
+	checkMainScreen(False)
 
 	While 1
 		_ExtMsgBoxSet(1 + 64, $SS_CENTER, 0x004080, 0xFFFF00, 12, "Comic Sans MS", 600)
@@ -55,7 +61,7 @@ Func _LocateHelperHut($bCollect = True)
 				Select
 					Case $iStupid = 1
 						$sErrorText = "Helper Hut Location Not Valid!" & @CRLF
-						SetLog("Location not valid, try again", $COLOR_ERROR)
+						SetDebugLog("Location not valid, try again", $COLOR_DEBUG)
 						ContinueLoop
 					Case $iStupid = 2
 						$sErrorText = "Please try to click inside the grass field!" & @CRLF
@@ -67,7 +73,7 @@ Func _LocateHelperHut($bCollect = True)
 						$sErrorText = "Last Chance, DO NOT MAKE ME ANGRY, or" & @CRLF & "I will give ALL of your gold to Barbarian King," & @CRLF & "And ALL of your Gems to the Archer Queen!" & @CRLF
 						ContinueLoop
 					Case $iStupid > 4
-						SetLog(" Operator Error - Bad Helper Hut Location.", $COLOR_ERROR)
+						SetDebugLog(" Operator Error - Bad Helper Hut Location.", $COLOR_DEBUG)
 						ClearScreen()
 						Return False
 				EndSelect
@@ -75,7 +81,7 @@ Func _LocateHelperHut($bCollect = True)
 		Else
 			SetLog("Locate Helper Hut Cancelled", $COLOR_INFO)
 			ClearScreen()
-			Return
+			Return False
 		EndIf
 		Local $sHelperHutInfo = BuildingInfo(242, 475 + $g_iBottomOffsetY)
 		If $sHelperHutInfo[0] > 1 Or $sHelperHutInfo[0] = "" Then
@@ -97,34 +103,54 @@ Func _LocateHelperHut($bCollect = True)
 						$sErrorText = $sLocMsg & " ?!?!?!" & @CRLF & @CRLF & "Last Chance, DO NOT MAKE ME ANGRY, or" & @CRLF & "I will give ALL of your gold to Barbarian King," & @CRLF & "And ALL of your Gems to the Archer Queen!" & @CRLF
 						ContinueLoop
 					Case $iSilly > 4
-						SetLog("Ok, you really think that's a Helper Hut?" & @CRLF & "I don't care anymore, go ahead with it!", $COLOR_ERROR)
+						SetDebugLog("Ok, you really think that's a Helper Hut?" & @CRLF & "I don't care anymore, go ahead with it!", $COLOR_DEBUG)
 						ClearScreen()
 						ExitLoop
 				EndSelect
 			EndIf
 		Else
-			SetLog(" Operator Error - Bad Helper Hut Location: " & "(" & $g_aiHelperHutPos[0] & "," & $g_aiHelperHutPos[1] & ")", $COLOR_ERROR)
+			SetDebugLog(" Operator Error - Bad Helper Hut Location: " & "(" & $g_aiHelperHutPos[0] & "," & $g_aiHelperHutPos[1] & ")", $COLOR_DEBUG)
 			$g_aiHelperHutPos[0] = -1
 			$g_aiHelperHutPos[1] = -1
 			ClearScreen()
 			Return False
 		EndIf
-		SetLog("Locate Helper Hut Success: " & "(" & $g_aiHelperHutPos[0] & "," & $g_aiHelperHutPos[1] & ")", $COLOR_SUCCESS)
+		SetLog("Helper Hut Detected: (" & $g_aiHelperHutPos[0] & "," & $g_aiHelperHutPos[1] & ")", $COLOR_SUCCESS)
 		ExitLoop
 	WEnd
 	ClearScreen()
+	Return True
 
 EndFunc   ;==>_LocateHelperHut
 
 ; Image Search for Helper Hut
-Func ImgLocateHelperHut()
+Func ImgLocateHelperHut($bSilent = False, $bKeepSelected = False, $aPreviousPos = Default)
 	Local $sImgDir = @ScriptDir & "\imgxml\Buildings\HelperHut\"
 
 	Local $sSearchArea = "FV"
-	Local $avHelperHut = findMultiple($sImgDir, $sSearchArea, $sSearchArea, 0, 1000, 1, "objectname,objectpoints", True)
+	Local $avHelperHut, $bLocalSearch = False
+
+	; Fast path: search around the last known position first.
+	If IsArray($aPreviousPos) And UBound($aPreviousPos) >= 2 And $aPreviousPos[0] > 0 And $aPreviousPos[1] > 0 Then
+		Local $iLeft = $aPreviousPos[0] - 90
+		Local $iTop = $aPreviousPos[1] - 90
+		Local $iRight = $aPreviousPos[0] + 90
+		Local $iBottom = $aPreviousPos[1] + 90
+		If $iLeft < 0 Then $iLeft = 0
+		If $iTop < 0 Then $iTop = 0
+		If $iRight > $g_iGAME_WIDTH Then $iRight = $g_iGAME_WIDTH
+		If $iBottom > $g_iGAME_HEIGHT Then $iBottom = $g_iGAME_HEIGHT
+		Local $sLocalArea = GetDiamondFromRect2($iLeft, $iTop, $iRight, $iBottom)
+		$avHelperHut = findMultiple($sImgDir, $sLocalArea, $sLocalArea, 0, 1000, 1, "objectname,objectpoints", True)
+		$bLocalSearch = True
+	EndIf
+
+	; Fallback: preserve the original full-village search.
+	If Not IsArray($avHelperHut) Or UBound($avHelperHut, $UBOUND_ROWS) <= 0 Then _
+		$avHelperHut = findMultiple($sImgDir, $sSearchArea, $sSearchArea, 0, 1000, 1, "objectname,objectpoints", Not $bLocalSearch)
 
 	If Not IsArray($avHelperHut) Or UBound($avHelperHut, $UBOUND_ROWS) <= 0 Then
-		SetLog("Couldn't find Helper Hut on main village", $COLOR_ERROR)
+		If Not $bSilent Then SetDebugLog("Couldn't find Helper Hut on main village", $COLOR_DEBUG)
 		If $g_bDebugImageSave Then SaveDebugImage("HelperHut", False)
 		Return False
 	EndIf
@@ -135,14 +161,24 @@ Func ImgLocateHelperHut()
 	; loop thro the detected images
 	For $i = 0 To UBound($avHelperHut, $UBOUND_ROWS) - 1
 		$avHelperHutRes = $avHelperHut[$i]
-		SetLog("Helper Hut Search find : " & $avHelperHutRes[0])
 		$aiHelperHutCoords = decodeSingleCoord($avHelperHutRes[1])
 	Next
 
 	If IsArray($aiHelperHutCoords) And UBound($aiHelperHutCoords, $UBOUND_ROWS) > 1 Then
 		$g_aiHelperHutPos[0] = $aiHelperHutCoords[0]
-		$g_aiHelperHutPos[1] = $aiHelperHutCoords[1] + 12
-		Return True
+		$g_aiHelperHutPos[1] = $aiHelperHutCoords[1]
+		BuildingClick($g_aiHelperHutPos[0], $g_aiHelperHutPos[1])
+		If _Sleep($DELAYIMGLOCATE1) Then Return
+		Local $sHelperHutInfo = BuildingInfo(242, 475 + $g_iBottomOffsetY)
+		If StringInStr($sHelperHutInfo[1], "Helper") Then
+			If $bSilent Then SetLog("Helper Hut Detected: (" & $g_aiHelperHutPos[0] & "," & $g_aiHelperHutPos[1] & ")", $COLOR_SUCCESS)
+			If _Sleep($DELAYIMGLOCATE1) Then Return
+			If Not $bKeepSelected Then ClearScreen()
+			Return True
+		EndIf
+		If Not $bSilent Then SetDebugLog("Wrong click position, please manually locate", $COLOR_DEBUG)
+		If _Sleep($DELAYIMGLOCATE1) Then Return
+		ClearScreen()
 	EndIf
 
 	Return False

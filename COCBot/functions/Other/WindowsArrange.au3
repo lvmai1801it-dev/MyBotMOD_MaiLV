@@ -92,7 +92,7 @@ Func WindowsArrange($position, $offsetX = 0, $offsetY = 0)
 					Case "SNAP-BR" ; position BOT botom right of BS, do not move Android
 						If $offsetX == "" Then $offsetX = 0
 						If $offsetY == "" Then $offsetY = 0
-						$bAdjusted = $AndroidX <> $AndroidX + $AndroidW + $offsetX Or $AndroidY <> $AndroidY + ($AndroidH - $BotH) + $offsetY
+						$bAdjusted = $BotX <> $AndroidX + $AndroidW + $offsetX Or $BotY <> $AndroidY + ($AndroidH - $BotH) + $offsetY
 						If $bAdjusted Then WinMove($g_hFrmBot, "", $AndroidX + $AndroidW + $offsetX, $AndroidY + ($AndroidH - $BotH) + $offsetY)
 					Case "SNAP-TL" ; position BOT top left of Android, do not move Android
 						If $offsetX == "" Then $offsetX = 0
@@ -104,6 +104,93 @@ Func WindowsArrange($position, $offsetX = 0, $offsetY = 0)
 						If $offsetY == "" Then $offsetY = 0
 						$bAdjusted = $BotX <> $AndroidX - $BotW - $offsetX Or $BotY <> $AndroidY + ($AndroidH - $BotH) + $offsetY
 						If $bAdjusted Then WinMove($g_hFrmBot, "", $AndroidX - $BotW - $offsetX, $AndroidY + ($AndroidH - $BotH) + $offsetY)
+					Case "FIXED-RIGHT" ; Move Android to given absolute coordinate and align BOT to its right
+						If $offsetX == "" Then $offsetX = 0
+						If $offsetY == "" Then $offsetY = 0
+						If Number($offsetX) > -30000 And Number($offsetY) > -30000 Then
+							$bAdjusted = $AndroidX <> Number($offsetX) Or $AndroidY <> Number($offsetY)
+							If $bAdjusted Then
+								WinMove($g_hAndroidWindow, "", Number($offsetX), Number($offsetY))
+								If _Sleep($DELAYWINDOWSARRANGE1, True, False) Then Return
+								$AndroidPos = WinGetPos($g_hAndroidWindow)
+								If Not IsArray($AndroidPos) Then Return False
+								$AndroidX = $AndroidPos[0]
+								$AndroidY = $AndroidPos[1]
+								$AndroidW = $AndroidPos[2]
+							EndIf
+							$g_iAndroidPosX = $AndroidX
+							$g_iAndroidPosY = $AndroidY
+							Local $nBotX = $AndroidX + $AndroidW
+							Local $nBotY = $AndroidY
+							$bAdjusted = $bAdjusted Or $BotX <> $nBotX Or $BotY <> $nBotY
+							If $BotX <> $nBotX Or $BotY <> $nBotY Then WinMove($g_hFrmBot, "", $nBotX, $nBotY)
+						EndIf
+
+					Case "FIXED-LEFT" ; Move Android to given absolute coordinate and align BOT to its left
+						If $offsetX == "" Then $offsetX = 0
+						If $offsetY == "" Then $offsetY = 0
+						If Number($offsetX) > -30000 And Number($offsetY) > -30000 Then
+							$bAdjusted = $AndroidX <> Number($offsetX) Or $AndroidY <> Number($offsetY)
+							If $bAdjusted Then
+								WinMove($g_hAndroidWindow, "", Number($offsetX), Number($offsetY))
+								If _Sleep($DELAYWINDOWSARRANGE1, True, False) Then Return
+								$AndroidPos = WinGetPos($g_hAndroidWindow)
+								If Not IsArray($AndroidPos) Then Return False
+								$AndroidX = $AndroidPos[0]
+								$AndroidY = $AndroidPos[1]
+							EndIf
+							$g_iAndroidPosX = $AndroidX
+							$g_iAndroidPosY = $AndroidY
+							Local $nBotX = $AndroidX - $BotW
+							Local $nBotY = $AndroidY
+							$bAdjusted = $bAdjusted Or $BotX <> $nBotX Or $BotY <> $nBotY
+							If $BotX <> $nBotX Or $BotY <> $nBotY Then WinMove($g_hFrmBot, "", $nBotX, $nBotY)
+						EndIf
+
+					Case "FIXED-BOTTOMRIGHT" ; Move Android to given absolute coordinate and align BOT to its bottom right
+						If $offsetX == "" Then $offsetX = 0
+						If $offsetY == "" Then $offsetY = 0
+						If Number($offsetX) > -30000 And Number($offsetY) > -30000 Then
+							$bAdjusted = $AndroidX <> Number($offsetX) Or $AndroidY <> Number($offsetY)
+							If $bAdjusted Then
+								WinMove($g_hAndroidWindow, "", Number($offsetX), Number($offsetY))
+								If _Sleep($DELAYWINDOWSARRANGE1, True, False) Then Return
+								$AndroidPos = WinGetPos($g_hAndroidWindow)
+								If Not IsArray($AndroidPos) Then Return False
+								$AndroidX = $AndroidPos[0]
+								$AndroidY = $AndroidPos[1]
+								$AndroidW = $AndroidPos[2]
+								$AndroidH = $AndroidPos[3]
+							EndIf
+							$g_iAndroidPosX = $AndroidX
+							$g_iAndroidPosY = $AndroidY
+							Local $nBotX = $AndroidX + $AndroidW
+							Local $nBotY = $AndroidY + ($AndroidH - $BotH)
+							$bAdjusted = $bAdjusted Or $BotX <> $nBotX Or $BotY <> $nBotY
+							If $BotX <> $nBotX Or $BotY <> $nBotY Then WinMove($g_hFrmBot, "", $nBotX, $nBotY)
+						EndIf
+
+					Case "FIXED-BOTTOMLEFT" ; Move Android to given absolute coordinate and align BOT to its bottom left
+						If $offsetX == "" Then $offsetX = 0
+						If $offsetY == "" Then $offsetY = 0
+						If Number($offsetX) > -30000 And Number($offsetY) > -30000 Then
+							$bAdjusted = $AndroidX <> Number($offsetX) Or $AndroidY <> Number($offsetY)
+							If $bAdjusted Then
+								WinMove($g_hAndroidWindow, "", Number($offsetX), Number($offsetY))
+								If _Sleep($DELAYWINDOWSARRANGE1, True, False) Then Return
+								$AndroidPos = WinGetPos($g_hAndroidWindow)
+								If Not IsArray($AndroidPos) Then Return False
+								$AndroidX = $AndroidPos[0]
+								$AndroidY = $AndroidPos[1]
+								$AndroidH = $AndroidPos[3]
+							EndIf
+							$g_iAndroidPosX = $AndroidX
+							$g_iAndroidPosY = $AndroidY
+							Local $nBotX = $AndroidX - $BotW
+							Local $nBotY = $AndroidY + ($AndroidH - $BotH)
+							$bAdjusted = $bAdjusted Or $BotX <> $nBotX Or $BotY <> $nBotY
+							If $BotX <> $nBotX Or $BotY <> $nBotY Then WinMove($g_hFrmBot, "", $nBotX, $nBotY)
+						EndIf
 				EndSwitch
 			EndIf
 			If $bAdjusted = True Then
@@ -143,9 +230,70 @@ Func DisposeWindows()
 				WindowsArrange("SNAP-BL", $g_iAutoAlignOffsetX, $g_iAutoAlignOffsetY)
 			Case 6
 				WindowsArrange("EMBED", $g_iAutoAlignOffsetX, $g_iAutoAlignOffsetY)
+			Case 7
+				WindowsArrange("FIXED-RIGHT", $g_iAutoAlignOffsetX, $g_iAutoAlignOffsetY)
+			Case 8
+				WindowsArrange("FIXED-LEFT", $g_iAutoAlignOffsetX, $g_iAutoAlignOffsetY)
+			Case 9
+				WindowsArrange("FIXED-BOTTOMRIGHT", $g_iAutoAlignOffsetX, $g_iAutoAlignOffsetY)
+			Case 10
+				WindowsArrange("FIXED-BOTTOMLEFT", $g_iAutoAlignOffsetX, $g_iAutoAlignOffsetY)
 		EndSwitch
 	EndIf
 EndFunc   ;==>DisposeWindows
+
+Func AutoAlignWindowsCheck()
+	Static $hTimer = 0, $bActive = False
+
+	If Not $g_bAutoAlignEnable Or $g_bAndroidEmbedded Or $g_bIsHidden Then Return
+	If $g_iAutoAlignPosition < 2 Or $g_iAutoAlignPosition = 6 Or $g_iAutoAlignPosition > 10 Then Return
+	If $hTimer <> 0 And __TimerDiff($hTimer) < 500 Then Return
+	$hTimer = __TimerInit()
+
+	If $bActive Or Not IsHWnd($g_hAndroidWindow) Or Not IsHWnd($g_hFrmBot) Then Return
+	If _WinAPI_IsIconic($g_hAndroidWindow) Or _WinAPI_IsIconic($g_hFrmBot) Then Return
+
+	Local $aAndroidPos = WinGetPos($g_hAndroidWindow)
+	Local $aBotPos = WinGetPos($g_hFrmBot)
+	If Not IsArray($aAndroidPos) Or Not IsArray($aBotPos) Then Return
+	If $aAndroidPos[0] < -30000 Or $aAndroidPos[1] < -30000 Then Return
+
+	Local $iAndroidX = $aAndroidPos[0], $iAndroidY = $aAndroidPos[1]
+	Local $iBotX, $iBotY
+	Local $iOffsetX = ($g_iAutoAlignOffsetX = "" ? 0 : Number($g_iAutoAlignOffsetX))
+	Local $iOffsetY = ($g_iAutoAlignOffsetY = "" ? 0 : Number($g_iAutoAlignOffsetY))
+
+	$bActive = True
+	$g_iAndroidPosX = $iAndroidX
+	$g_iAndroidPosY = $iAndroidY
+	Switch $g_iAutoAlignPosition
+		Case 2 ; SNAP-TR
+			$iBotX = $iAndroidX + $aAndroidPos[2] + $iOffsetX
+			$iBotY = $iAndroidY + $iOffsetY
+		Case 3 ; SNAP-TL
+			$iBotX = $iAndroidX - $aBotPos[2] - $iOffsetX
+			$iBotY = $iAndroidY + $iOffsetY
+		Case 4 ; SNAP-BR
+			$iBotX = $iAndroidX + $aAndroidPos[2] + $iOffsetX
+			$iBotY = $iAndroidY + ($aAndroidPos[3] - $aBotPos[3]) + $iOffsetY
+		Case 5 ; SNAP-BL
+			$iBotX = $iAndroidX - $aBotPos[2] - $iOffsetX
+			$iBotY = $iAndroidY + ($aAndroidPos[3] - $aBotPos[3]) + $iOffsetY
+		Case 7 To 10 ; FIXED corners
+			If $iAndroidX <> $iOffsetX Or $iAndroidY <> $iOffsetY Then
+				WinMove($g_hAndroidWindow, "", $iOffsetX, $iOffsetY)
+				$iAndroidX = $iOffsetX
+				$iAndroidY = $iOffsetY
+			EndIf
+			$g_iAndroidPosX = $iAndroidX
+			$g_iAndroidPosY = $iAndroidY
+			$iBotX = ($g_iAutoAlignPosition = 7 Or $g_iAutoAlignPosition = 9) ? $iAndroidX + $aAndroidPos[2] : $iAndroidX - $aBotPos[2]
+			$iBotY = ($g_iAutoAlignPosition = 9 Or $g_iAutoAlignPosition = 10) ? $iAndroidY + ($aAndroidPos[3] - $aBotPos[3]) : $iAndroidY
+	EndSwitch
+
+	If $aBotPos[0] <> $iBotX Or $aBotPos[1] <> $iBotY Then WinMove($g_hFrmBot, "", $iBotX, $iBotY)
+	$bActive = False
+EndFunc   ;==>AutoAlignWindowsCheck
 
 ; WinMove2 resizes Window without triggering a change event in target process.
 ; Replacement for WinMove ( "title", "text", x, y [, width [, height [, speed]]] )
@@ -235,7 +383,7 @@ Func ControlGetHandle2($title, $text, $controlID, $iMinWidth = Default, $iMinHei
 				; check for min width or height
 				Local $aPos = WinGetPos($hCtrl)
 				If UBound($aPos) > 3 Then
-					If ($iMinWidth = Default Or $aPos[2] >= $iMinWidth) And ($iMinHeight = Default Or $aPos[2] >= $iMinHeight) Then
+					If ($iMinWidth = Default Or $aPos[2] >= $iMinWidth) And ($iMinHeight = Default Or $aPos[3] >= $iMinHeight) Then
 						$g_sControlGetHandle2_Classname = $sClass
 						Return $hCtrl
 					EndIf

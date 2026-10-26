@@ -16,14 +16,14 @@
 
 Global $g_hGUI_ACTIVEBASE_ATTACK_SCRIPTED = 0
 Global $g_hCmbScriptNameAB = 0, $g_hCmbScriptRedlineImplAB = 0, $g_hCmbScriptDroplineAB = 0
-Global $g_hLblNotesScriptAB = 0 , $g_hbtnAttNow
+Global $g_hLblNotesScriptAB = 0, $g_hLblCSVHelpAB = 0
 
 Func CreateAttackSearchActiveBaseScripted()
 	$g_hGUI_ACTIVEBASE_ATTACK_SCRIPTED = _GUICreate("", $_GUI_MAIN_WIDTH - 195, $g_iSizeHGrpTab4, 150, 25, BitOR($WS_CHILD, $WS_TABSTOP), -1, $g_hGUI_ACTIVEBASE)
 	;GUISetBkColor($COLOR_WHITE, $g_hGUI_ACTIVEBASE_ATTACK_SCRIPTED)
 
 	Local $x = 25, $y = 20
-	GUICtrlCreateGroup(GetTranslatedFileIni("MBR GUI Design Child Attack - Attack Scripted", "Group_01",  -1), $x - 20, $y - 20, 270, $g_iSizeHGrpTab4)
+	GUICtrlCreateGroup(GetTranslatedFileIni("MBR GUI Design Child Attack - Attack Scripted", "Group_01",  -1), $x - 25, $y - 20, 276, $g_iSizeHGrpTab4)
 
 	$y += 15
 		$g_hCmbScriptNameAB = GUICtrlCreateCombo("", $x , $y, 200, -1, BitOR($CBS_DROPDOWNLIST, $CBS_AUTOHSCROLL, $WS_VSCROLL))
@@ -49,12 +49,6 @@ Func CreateAttackSearchActiveBaseScripted()
 			GUICtrlSetState(-1, $GUI_UNCHECKED)
 			GUICtrlSetOnEvent(-1, "cmbScriptDroplineAB")
 
-		$g_hbtnAttNow = GUICtrlCreateButton("Attack Now", $x + 70, $y + 250, 91, 25)
-			;GUISetState(@SW_SHOW)
-			_GUICtrlSetTip(-1, GetTranslatedFileIni("MBR GUI Design Child Attack - Attack Scripted", "btnAttNow_Info_01", "Attack now Button Which it will make CSV Makers/testers life Easy. You should be in Attack Screen"))
-			GUICtrlSetOnEvent(-1, "AttackNow")
-			GUICtrlSetState(-1, $GUI_HIDE)
-
 		_GUICtrlCreateIcon($g_sLibIconPath, $eIcnEdit, $x + 210, $y + 2, 16, 16)
 			_GUICtrlSetTip(-1, GetTranslatedFileIni("MBR GUI Design Child Attack - Attack Scripted", "IconShow-Edit_Info_01", -1))
 			GUICtrlSetOnEvent(-1, "EditScriptAB")
@@ -73,6 +67,17 @@ Func CreateAttackSearchActiveBaseScripted()
 		_GUICtrlCreateIcon($g_sLibIconPath, $eIcnTrain, $x + 210, $y + 2, 16, 16)
 			_GUICtrlSetTip(-1, GetTranslatedFileIni("MBR GUI Design Child Attack - Attack Scripted", "IconApply_Info_01", -1))
 			GUICtrlSetOnEvent(-1, "ApplyScriptAB")
+
+		_GUICtrlCreateIcon($g_sLibIconPath, $eIcnHelp, 191, $g_iSizeHGrpTab4 - 39, 36, 36)
+			GUICtrlSetOnEvent(-1, "ShowCSVShortNamesHelp")
+			GUICtrlSetCursor(-1, 0)
+			_GUICtrlSetTip(-1, GetTranslatedFileIni("MBR GUI Design Child Attack - Attack Scripted", "LblCSVHelp_Info_01", "Show troop, spell, siege machine and hero shortnames accepted by CSV attack scripts."))
+		$g_hLblCSVHelpAB = GUICtrlCreateLabel(GetTranslatedFileIni("MBR GUI Design Child Attack - Attack Scripted", "LblCSVHelp", "Help ?"), 231, $g_iSizeHGrpTab4 - 29, 42, 24)
+			GUICtrlSetOnEvent(-1, "ShowCSVShortNamesHelp")
+			GUICtrlSetCursor(-1, 0)
+			GUICtrlSetFont(-1, 8.5, $FW_BOLD)
+			GUICtrlSetColor(-1, $COLOR_NAVY)
+			_GUICtrlSetTip(-1, GetTranslatedFileIni("MBR GUI Design Child Attack - Attack Scripted", "LblCSVHelp_Info_01", "Show troop, spell, siege machine and hero shortnames accepted by CSV attack scripts."))
 	GUICtrlCreateGroup("", -99, -99, 1, 1)
 
 	;------------------------------------------------------------------------------------------

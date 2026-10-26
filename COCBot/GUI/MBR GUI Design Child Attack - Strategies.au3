@@ -37,7 +37,7 @@ Func CreateAttackStrategies()
 		$g_hTxtPresetMessage = GUICtrlCreateEdit("", $x, $y, 225, 250, BitOR($ES_WANTRETURN, $ES_AUTOVSCROLL))
 			GUICtrlSetState(-1, $GUI_HIDE)
 
-		Local $loadmessage = GetTranslatedFileIni("MBR GUI Design Child Attack - Strategies", "LblLoadPresetMessage", "LOAD PRECONFIGURED SETTINGS.\n\n- Load ALL Train Army Tab Settings\n- Load ALL Search && Attack Tab Settings\n\n- EXCEPT: Share Replay Settings\n- EXCEPT: Take Loot Snapshot Settings\n- EXCEPT: Gem Boost Settings")
+		Local $loadmessage = GetTranslatedFileIni("MBR GUI Design Child Attack - Strategies", "LblLoadPresetMessage", "LOAD PRECONFIGURED SETTINGS.\n\n- Load ALL Train Army Tab Settings\n- Load ALL Search && Attack Tab Settings\n\n- EXCEPT: Share Replay Settings\n- EXCEPT: Take Loot Snapshot Settings")
 		$g_hLblLoadPresetMessage = GUICtrlCreateLabel(StringReplace($loadmessage, "\n", @crlf ), $x + 15, $y + 25, 400)
 	$x += 5
 	$y += 255
@@ -67,7 +67,7 @@ Func CreateAttackStrategies()
 	$x = $xStart
 	$y += 30
 		GUICtrlCreateLabel(GetTranslatedFileIni("MBR GUI Design Child Attack - Strategies", "LblSaveFilenameNote", "Notes") & ":" , $x, $y + 4, 200, 25, $SS_RIGHT)
-		Local $savemessage = GetTranslatedFileIni("MBR GUI Design Child Attack - Strategies", "LblSavePresetMessage", "SAVE SETTINGS\n--------------------------------------\nSave ALL:\n- Train Army Tab Settings\n- Search && Attack Tab Settings\n\nExcept:\n- Share Replay Settings\n- Take Loot Snapshot Settings\n- Gem Boost Settings\n--------------------------------------")
+		Local $savemessage = GetTranslatedFileIni("MBR GUI Design Child Attack - Strategies", "LblSavePresetMessage", "SAVE SETTINGS\n--------------------------------------\nSave ALL:\n- Train Army Tab Settings\n- Search && Attack Tab Settings\n\nExcept:\n- Share Replay Settings\n- Take Loot Snapshot Settings\n--------------------------------------")
 		GUICtrlCreateLabel(StringReplace($savemessage, "\n", @crlf), $x + 15, $y + 4 + 25, 280)
 
 	$x += 205

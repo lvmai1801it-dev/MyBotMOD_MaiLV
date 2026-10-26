@@ -18,7 +18,7 @@ Func FindTownHall($bCheck = True, $forceCaptureRegion = True)
 	Local $THString = ""
 	$g_iSearchTH = "-"
 	$g_iTHx = 0
-	$g_iTHy = 0 ;if not check, find bully mode, always find				if deadbase enabled, and TH lvl or Outside checked, find          same with ActiveBase
+	$g_iTHy = 0
 
 	If $bCheck Or ($isModeActive[$DB] And ($g_abFilterMeetTH[$DB] Or $g_abFilterMeetTHOutsideEnable[$DB])) Or ($isModeActive[$LB] And ($g_abFilterMeetTH[$LB] Or $g_abFilterMeetTHOutsideEnable[$LB])) Then
 

@@ -13,17 +13,16 @@
 ; Example .......: No
 ; ===============================================================================================================================
 
-Func isElixirFull()
-	Local $aElixirFull = _FullResPixelSearch($aIsElixirFull[0], $aIsElixirFull[0] + 4, $aIsElixirFull[1], 1, Hex(0x0D0D0D, 6), $aIsElixirFull[2], $aIsElixirFull[3])
-	If IsArray($aElixirFull) Then
-		SetLog("Elixir Storages are full!", $COLOR_SUCCESS)
+Func isElixirFull($bLog = True)
+	If _CheckPixel($aMainStorageElixirFullLight, $g_bCapturePixel) And _CheckPixel($aMainStorageElixirFull, $g_bCapturePixel) Then
+		If $bLog Then SetLog("Elixir Storages: Full", $COLOR_SUCCESS)
 		$g_abFullStorage[$eLootElixir] = True
 	ElseIf $g_abFullStorage[$eLootElixir] Then
 		If Number($g_aiCurrentLoot[$eLootElixir]) >= Number($g_aiResumeAttackLoot[$eLootElixir]) Then
-			SetLog("Elixir Storages is relatively full: " & $g_aiCurrentLoot[$eLootElixir], $COLOR_SUCCESS)
+			If $bLog Then SetLog("Elixir Storages Almost Full: " & $g_aiCurrentLoot[$eLootElixir], $COLOR_SUCCESS)
 			$g_abFullStorage[$eLootElixir] = True
 		Else
-			SetLog("Switching back to normal when Elixir drops below " & $g_aiResumeAttackLoot[$eLootElixir], $COLOR_SUCCESS)
+			If $bLog Then SetLog("Resume Normal Mode: Elixir < " & $g_aiResumeAttackLoot[$eLootElixir], $COLOR_SUCCESS)
 			$g_abFullStorage[$eLootElixir] = False
 		EndIf
 	EndIf

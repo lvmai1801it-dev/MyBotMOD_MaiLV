@@ -23,7 +23,7 @@ Func UpgradeBuilding()
 	Local $iAvailBldr, $iAvailGold, $iAvailElixir, $iAvailDark
 	Local $Endtime, $Endperiod, $TimeAdd
 	Local $iUpGrdEndTimeDiff = 0
-	Local $aCheckFrequency[15] = [5, 15, 20, 30, 60, 60, 120, 240, 240, 240, 240, 280, 280, 300, 300] ; Dwell Time in minutes between each repeat upgrade check TH3-17.  TH reference are game TH level - 3.  So TH17 = 14 in this array.
+	Local $aCheckFrequency[16] = [5, 15, 20, 30, 60, 60, 120, 240, 240, 240, 240, 280, 280, 300, 300, 300] ; Dwell Time in minutes between each repeat upgrade check TH3-18.  TH reference are game TH level - 3.  So TH18 = 15 in this array.
 	Local $iDTDiff
 	Local $bChkAllRptUpgrade = False
 	Local $sTime
@@ -131,7 +131,7 @@ Func UpgradeBuilding()
 				EndIf
 				If UpgradeNormal($iz) = False Then ContinueLoop
 				$iUpgradeAction += 2 ^ ($iz + 1)
-				SetLog("Gold used = " & _NumberFormat($g_avBuildingUpgrades[$iz][2], True), $COLOR_INFO)
+				SetLog("Gold Used = " & _NumberFormat($g_avBuildingUpgrades[$iz][2], True), $COLOR_INFO)
 				$g_iNbrOfBuildingsUppedGold += 1
 				$g_iCostGoldBuilding += $g_avBuildingUpgrades[$iz][2]
 				UpdateStats()
@@ -144,7 +144,7 @@ Func UpgradeBuilding()
 				EndIf
 				If UpgradeNormal($iz) = False Then ContinueLoop
 				$iUpgradeAction += 2 ^ ($iz + 1)
-				SetLog("Elixir used = " & _NumberFormat($g_avBuildingUpgrades[$iz][2], True), $COLOR_INFO)
+				SetLog("Elixir Used = " & _NumberFormat($g_avBuildingUpgrades[$iz][2], True), $COLOR_INFO)
 				If $g_avBuildingUpgrades[$iz][4] = "Grand Warden" Then
 					$g_iNbrOfWardenUpped += 1
 					$g_iCostElixirWarden += $g_avBuildingUpgrades[$iz][2]
@@ -166,7 +166,7 @@ Func UpgradeBuilding()
 					$g_iCostDElixirBuilding += $g_avBuildingUpgrades[$iz][2]
 				EndIf
 				$iUpgradeAction += 2 ^ ($iz + 1)
-				SetLog("Dark Elixir used = " & _NumberFormat($g_avBuildingUpgrades[$iz][2], True), $COLOR_INFO)
+				SetLog("Dark Elixir Used = " & _NumberFormat($g_avBuildingUpgrades[$iz][2], True), $COLOR_INFO)
 				UpdateStats()
 				$iAvailDark -= $g_avBuildingUpgrades[$iz][2]
 				$iAvailBldr -= 1
@@ -216,6 +216,18 @@ Func UpgradeBuilding()
 	Return $iUpgradeAction
 
 EndFunc   ;==>UpgradeBuilding
+
+Func ReservedBuildersForBuildings($bSetLog = True)
+	Local $bBuildingUpgradeEnabled = False
+	For $i = 0 To UBound($g_abBuildingUpgradeEnable) - 1
+		If Not $g_abBuildingUpgradeEnable[$i] Then ContinueLoop
+		$bBuildingUpgradeEnabled = True
+		ExitLoop
+	Next
+	Local $iReserved = ($bBuildingUpgradeEnabled ? Number($g_iBuildingReservedBuilder) : 0)
+	If $bSetLog And $iReserved > 0 Then SetLog("Free builders reserved for building upgrades: " & $iReserved)
+	Return $iReserved
+EndFunc   ;==>ReservedBuildersForBuildings
 ;
 Func UpgradeNormal($iUpgradeNumber)
 	ClearScreen()
@@ -325,7 +337,7 @@ Func UpgradeNormal($iUpgradeNumber)
 					Return False
 				EndIf
 				If IsArray($aiSupercharge) Then $g_avBuildingUpgrades[$iUpgradeNumber][5] = StringReplace($g_avBuildingUpgrades[$iUpgradeNumber][5], "+", "", 0)
-				SetLog("Upgrade #" & $iUpgradeNumber + 1 & " " & $g_avBuildingUpgrades[$iUpgradeNumber][4] & " started", $COLOR_SUCCESS)
+				SetLog("Upgrade #" & $iUpgradeNumber + 1 & " " & $g_avBuildingUpgrades[$iUpgradeNumber][4] & " Started", $COLOR_SUCCESS)
 				_GUICtrlSetImage($g_hPicUpgradeStatus[$iUpgradeNumber], $g_sLibIconPath, $eIcnGreenLight) ; Change GUI upgrade status to done
 				$g_aiPicUpgradeStatus[$iUpgradeNumber] = $eIcnGreenLight ; Change GUI upgrade status to done
 				GUICtrlSetData($g_hTxtUpgradeValue[$iUpgradeNumber], -($g_avBuildingUpgrades[$iUpgradeNumber][2])) ; Show Negative Upgrade value in GUI

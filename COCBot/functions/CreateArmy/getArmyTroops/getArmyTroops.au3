@@ -51,13 +51,11 @@ Func getArmyTroops($bOpenArmyWindow = False, $bCloseArmyWindow = False, $bCheckW
 
 	Local $aTempTroopArray, $aTroopCoords
 	Local $sTroopName = ""
-	Local $iTroopIndex = -1, $iDropTrophyIndex = -1
+	Local $iTroopIndex = -1
 	Local $aCurrentTroopsEmpty[$eTroopCount] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] ; Local Copy to reset Troops Array
-	Local $aTroopsForTropyDropEmpty[8][2] = [["Barb", 0], ["Arch", 0], ["Giant", 0], ["Wall", 0], ["Gobl", 0], ["Mini", 0], ["Ball", 0], ["Wiza", 0]] ; Local Copy to reset Troop Drop Trophy Array
 	Local $aCurrentTroopsLog[0][3] ; [0] = Name [1] = Quantities [3] Xaxis
 
 	$g_aiCurrentTroops = $aCurrentTroopsEmpty ; Reset Current Troops Array
-	$g_avDTtroopsToBeUsed = $aTroopsForTropyDropEmpty ; Reset Drop Trophy Troops Array
 	If UBound($aCurrentTroops, 1) >= 1 Then
 		For $i = 0 To UBound($aCurrentTroops, 1) - 1 ; Loop through found Troops
 			$aTempTroopArray = $aCurrentTroops[$i] ; Declare Array to Temp Array
@@ -68,10 +66,12 @@ Func getArmyTroops($bOpenArmyWindow = False, $bCloseArmyWindow = False, $bCheckW
 
 			If $iTroopIndex = -1 Then ContinueLoop
 
-			$g_aiCurrentTroops[$iTroopIndex] = Number(getBarracksNewTroopQuantity(Slot($aTroopCoords[0], $aTroopCoords[1]), 236 + $g_iMidOffsetY, $bNeedCapture)) ; Get The Quantity of the Troop, Slot() Does return the exact spot to read the Number from
-
-			$iDropTrophyIndex = _ArraySearch($g_avDTtroopsToBeUsed, $aTempTroopArray[0]) ; Search the Troops ShortName in the Drop Trophy Global to check if it is a Drop Trophy Troop
-			If $iDropTrophyIndex <> -1 Then $g_avDTtroopsToBeUsed[$iDropTrophyIndex][1] += $g_aiCurrentTroops[$iTroopIndex] ; If there was a Match in the Array then add the Troop Quantity to it
+			Local $sTroopQuantity = getBarracksNewTroopQuantity(Slot($aTroopCoords[0], $aTroopCoords[1]), 236 + $g_iMidOffsetY, $bNeedCapture)
+			Local $iMaxTroopQuantity = Floor($g_iTotalCampSpace / $g_aiTroopSpace[$iTroopIndex])
+			While $g_iTotalCampSpace > 0 And StringLen($sTroopQuantity) > 1 And Number($sTroopQuantity) > $iMaxTroopQuantity
+				$sTroopQuantity = StringTrimRight($sTroopQuantity, 1)
+			WEnd
+			$g_aiCurrentTroops[$iTroopIndex] = Number($sTroopQuantity)
 
 			$sTroopName = $g_aiCurrentTroops[$iTroopIndex] >= 2 ? $g_asTroopNamesPlural[$iTroopIndex] : $g_asTroopNames[$iTroopIndex] ; Select the right Troop Name, If more than one then use the Plural
 			_ArrayAdd($aCurrentTroopsLog, $sTroopName & "|" & $g_aiCurrentTroops[$iTroopIndex] & "|" & Slot($aTroopCoords[0], $aTroopCoords[1]))
@@ -82,7 +82,7 @@ Func getArmyTroops($bOpenArmyWindow = False, $bCloseArmyWindow = False, $bCheckW
 	; Just a good log from left to right
 	_ArraySort($aCurrentTroopsLog, 0, 0, 0, 2)
 	For $index = 0 To UBound($aCurrentTroopsLog) - 1
-		If $aCurrentTroopsLog[$index][1] > 0 And $bSetLog Then SetLog(" - " & $aCurrentTroopsLog[$index][1] & " " & $aCurrentTroopsLog[$index][0] & " Available", $COLOR_SUCCESS)
+		If $aCurrentTroopsLog[$index][1] > 0 And $bSetLog Then SetLog(" - " & $aCurrentTroopsLog[$index][1] & " " & $aCurrentTroopsLog[$index][0] & " Available")
 	Next
 
 	If $bCloseArmyWindow Then

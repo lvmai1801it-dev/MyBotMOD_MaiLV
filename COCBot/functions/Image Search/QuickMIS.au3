@@ -69,7 +69,6 @@ Func QuickMIS($ValueReturned, $directory, $Left = 0, $Top = 0, $Right = $g_iGAME
 		SetDebugLog(" QuickMIS DLL Error : " & $error & " --- " & $extError)
 		Return -1
 	EndIf
-	If $g_bDebugImageSave Then SaveDebugImage("QuickMIS_" & $ValueReturned, False)
 
 	If IsArray($Res) Then
 		;_ArrayDisplay($Res)
@@ -98,7 +97,7 @@ Func QuickMIS($ValueReturned, $directory, $Left = 0, $Top = 0, $Right = $g_iGAME
 					Return "none"
 			EndSwitch
 
-		ElseIf StringInStr($Res[0], "-1") <> 0 Then
+		ElseIf $Res[0] = "-1" Then
 			SetLog("DLL Error", $COLOR_RED)
 
 		Else
@@ -113,9 +112,16 @@ Func QuickMIS($ValueReturned, $directory, $Left = 0, $Top = 0, $Right = $g_iGAME
 						If UBound(decodeSingleCoord($DLLRes[0])) > 1 Then $Result &= $DLLRes[0] & "|"
 					Next
 					If StringRight($Result, 1) = "|" Then $Result = StringLeft($Result, (StringLen($Result) - 1))
-					Local $aCords = decodeSingleCoord($Result)
-					If UBound($aCords) < 2 Then
-						SetDebugLog("Error: decodeSingleCoord failed, retcoord: " & UBound($aCords), $COLOR_ERROR)
+					; decodeMultipleCoords handles single or multiple coordinate pairs
+					Local $aCordsArr = decodeMultipleCoords($Result)
+					If Not IsArray($aCordsArr) Or UBound($aCordsArr) = 0 Then
+						SetDebugLog("Error: decodeMultipleCoords failed, retcoord: 0", $COLOR_ERROR)
+						Return False
+					EndIf
+					Local $aCords = $aCordsArr[0]
+
+					If Not IsArray($aCords) Or UBound($aCords) < 2 Then
+						SetDebugLog("Error: invalid coordinate returned", $COLOR_ERROR)
 						Return False
 					EndIf
 

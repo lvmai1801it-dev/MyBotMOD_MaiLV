@@ -14,13 +14,21 @@
 ; ===============================================================================================================================
 Func ChkAttackCSVConfig()
 	;check if exists attackscript Files
-	If Not (FileExists($g_sCSVAttacksPath & "\" & $g_sAttackScrScriptName[$DB] & ".csv")) Then
+	If ScriptRotationIsActive() Then
+		If Not FileExists($g_sCSVAttacksPath & "\" & GetAttackCSVScriptName($LB) & ".csv") Then
+			SetLog("Script Rotation attack file does not exist", $COLOR_ERROR)
+			SetLog("Please select a valid script in 'Script Rotation'", $COLOR_ERROR)
+			btnStop()
+		EndIf
+		Return
+	EndIf
+	If Not (FileExists($g_sCSVAttacksPath & "\" & GetAttackCSVScriptName($DB) & ".csv")) Then
 		SetLog("Dead base scripted attack file do not exists (renamed, deleted?)", $COLOR_ERROR)
 		SetLog("Please select a new scripted algorithm from 'scripted attack' tab", $COLOR_ERROR)
 		PopulateComboScriptsFilesDB()
 		btnStop()
 	EndIf
-	If Not (FileExists($g_sCSVAttacksPath & "\" & $g_sAttackScrScriptName[$LB] & ".csv")) Then
+	If Not (FileExists($g_sCSVAttacksPath & "\" & GetAttackCSVScriptName($LB) & ".csv")) Then
 		SetLog("Dead base scripted attack file do not exists (renamed, deleted?)", $COLOR_ERROR)
 		SetLog("Please select a new scripted algorithm from 'scripted attack' tab", $COLOR_ERROR)
 		PopulateComboScriptsFilesAB()

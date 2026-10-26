@@ -18,34 +18,66 @@
 
 Func TrainSystem()
 	If Not $g_bTrainEnabled Then ; check for training disabled in halt mode
-		If $g_bDebugSetLogTrain Then SetLog("Halt mode - training disabled", $COLOR_DEBUG)
+		If $g_bDebugSetLogTrain Then SetLog("Halt Mode - Training Disabled", $COLOR_DEBUG)
 		Return
 	EndIf
 
 	$g_sTimeBeforeTrain = _NowCalc()
 	StartGainCost()
-
+	If ScriptRotationIsActive() Then
+		If Not ScriptRotationIsRecipeApplied() Then
+			BoostSuperTroop()
+			If Not $g_bRunState Then
+				EndGainCost("Train")
+				Return
+			EndIf
+			If Not ScriptRotationUseSavedRecipe() Then
+				EndGainCost("Train")
+				Return
+			EndIf
+			CheckArmyCamp(False, False, False, True)
+			$g_bFullArmy = True
+			$g_bFullArmySpells = True
+			$g_bIsFullArmywithHeroesAndSpells = True
+			$g_bWaitForCCTroopSpell = False
+			If IsTrainPage(False, 1) Then
+				CloseWindow()
+				If _Sleep(500) Then Return
+				Click(Random(730, 800, 1), Random(25, 35, 1), 1, 120, "Return to Main Village")
+				If _Sleep(500) Then Return
+			EndIf
+		EndIf
+		EndGainCost("Train")
+		Return
+	EndIf
+	Local $bSkipTraining = $g_bSkipTrainingSystem
 	BoostSuperTroop()
 
-	If $g_bQuickTrainEnable Then CheckQuickTrainTroop() ; update values of $g_aiArmyComTroops, $g_aiArmyComSpells
+	If Not $bSkipTraining And $g_bQuickTrainEnable Then CheckQuickTrainTroop() ; update values of $g_aiArmyComTroops, $g_aiArmyComSpells
+	If Not $bSkipTraining Then SetLog("Checking Army Status", $COLOR_INFO)
+	; Read the initial state silently; the complete report is emitted after training.
+	CheckIfArmyIsReady(True, False)
 
-	CheckIfArmyIsReady()
-
-	If $g_bQuickTrainEnable Then
-		QuickTrain()
-	Else
-		TrainCustomArmy()
+	If Not $bSkipTraining Then
+		If $g_bQuickTrainEnable Then
+			QuickTrain()
+		Else
+			TrainCustomArmy()
+		EndIf
+		TrainSiege()
+		CheckIfArmyIsReady()
 	EndIf
-
-	TrainSiege()
 
 	If $g_bDonationEnabled And $g_bChkDonate Then ResetVariables("donated")
 
-	CloseWindow()
+	If Not $bSkipTraining Then
+		CloseWindow()
+		If _Sleep(500) Then Return
+		Click(Random(730, 800, 1), Random(25, 35, 1), 1, 120, "Return to Main Village")
+	EndIf
 	If _Sleep(500) Then Return ; Delay AFTER the click Away Prevents lots of coc restarts
 
 	EndGainCost("Train")
-
 EndFunc   ;==>TrainSystem
 
 Func TrainCustomArmy()
@@ -68,21 +100,25 @@ Func TrainCustomArmy()
 		Local $rWhatToTrain = WhatToTrain()
 		If DoWhatToTrainContainTroop($rWhatToTrain) Then TrainUsingWhatToTrain($rWhatToTrain)
 		If DoWhatToTrainContainSpell($rWhatToTrain) Then BrewUsingWhatToTrain($rWhatToTrain)
-		CheckIfArmyIsReady(False)
 	EndIf
 
 	If _Sleep(250) Then Return
 	If Not $g_bRunState Then Return
 EndFunc   ;==>TrainCustomArmy
 
-Func CheckIfArmyIsReady($IstoOpen = True)
+Func CheckIfArmyIsReady($IstoOpen = True, $bSetLog = True)
 
 	If Not $g_bRunState Then Return
+	If $g_bSkipTrainingSystem Then
+		$g_bFullArmy = True
+		$g_bFullArmySpells = True
+		$g_bIsFullArmywithHeroesAndSpells = True
+		$g_bWaitForCCTroopSpell = False
+		Return True
+	EndIf
 
 	Local $bFullArmyCC = False
 	Local $iTotalSpellsToBrew = 0
-	Local $bFullArmyHero = False
-	Local $g_bCheckSiege = False
 	$g_bWaitForCCTroopSpell = False ; reset for waiting CC in SwitchAcc
 
 	If $IstoOpen Then
@@ -92,7 +128,7 @@ Func CheckIfArmyIsReady($IstoOpen = True)
 		If Not IsTrainPage() Then Return
 	EndIf
 
-	CheckArmyCamp(False, False, True, True)
+	CheckArmyCamp(False, False, True, $bSetLog)
 
 	If $g_bDebugSetLogTrain Then
 		SetLog(" - $g_CurrentCampUtilization : " & $g_CurrentCampUtilization)
@@ -118,68 +154,36 @@ Func CheckIfArmyIsReady($IstoOpen = True)
 		EndIf
 	EndIf
 
-	$g_bCheckSpells = CheckSpells()
-
-	; add to the hereos available, the ones upgrading so that it ignores them... we need this logic or the bitwise math does not work out correctly
-	$g_iHeroAvailable = BitOR($g_iHeroAvailable, $g_iHeroUpgradingBit)
-	$bFullArmyHero = (BitAND($g_aiSearchHeroWaitEnable[$DB], $g_iHeroAvailable) = $g_aiSearchHeroWaitEnable[$DB] And $g_abAttackTypeEnable[$DB]) Or _
-			(BitAND($g_aiSearchHeroWaitEnable[$LB], $g_iHeroAvailable) = $g_aiSearchHeroWaitEnable[$LB] And $g_abAttackTypeEnable[$LB]) Or _
-			($g_aiSearchHeroWaitEnable[$DB] = $eHeroNone And $g_aiSearchHeroWaitEnable[$LB] = $eHeroNone)
-
-	If $g_bDebugSetLogTrain Then
-		SetLog("Heroes are Ready: " & String($bFullArmyHero))
-		SetLog("Heroes Available Num: " & $g_iHeroAvailable) ;  	$eHeroNone = 0, $eHeroKing = 1, $eHeroQueen = 2, $eHeroPrince = 4, $eHeroWarden = 8, $eHeroChampion = 16
-		SetLog("Search Hero Wait Enable [$DB] Num: " & $g_aiSearchHeroWaitEnable[$DB]) ; 	what you are waiting for : 1 is King , 3 is King + Queen , etc etc
-		SetLog("Search Hero Wait Enable [$LB] Num: " & $g_aiSearchHeroWaitEnable[$LB])
-		SetLog("Dead Base BitAND: " & BitAND($g_aiSearchHeroWaitEnable[$DB], $g_iHeroAvailable))
-		SetLog("Live Base BitAND: " & BitAND($g_aiSearchHeroWaitEnable[$LB], $g_iHeroAvailable))
-		SetLog("Are you 'not' waiting for Heroes: " & String($g_aiSearchHeroWaitEnable[$DB] = $eHeroNone And $g_aiSearchHeroWaitEnable[$LB] = $eHeroNone))
-		SetLog("Is Wait for Heroes Active : " & IsWaitforHeroesActive())
-	EndIf
-
 	$bFullArmyCC = IsFullClanCastle()
-	$g_bCheckSiege = CheckSiegeMachine()
 
-	; If Drop Trophy with Heroes is checked and a Hero is Available or under the trophies range, then set $g_bFullArmyHero to True
-	If Not IsWaitforHeroesActive() And $g_bDropTrophyUseHeroes Then $bFullArmyHero = True
-	If Not IsWaitforHeroesActive() And Not $g_bDropTrophyUseHeroes And Not $bFullArmyHero Then
-		If $g_iHeroAvailable > 0 Or Number($g_aiCurrentLoot[$eLootTrophy]) <= Number($g_iDropTrophyMax) Then
-			$bFullArmyHero = True
-		Else
-			SetLog("Waiting for Heroes to drop trophies!", $COLOR_ACTION)
-		EndIf
-	EndIf
-
-	If $g_bFullArmy And $g_bCheckSpells And $bFullArmyHero And $bFullArmyCC And $g_bCheckSiege Then
+	If $g_bFullArmy And $bFullArmyCC Then
 		$g_bIsFullArmywithHeroesAndSpells = True
 	Else
 		If $g_bDebugSetLog Then
 			SetDebugLog(" $g_bFullArmy: " & String($g_bFullArmy), $COLOR_DEBUG)
-			SetDebugLog(" $g_bCheckSpells: " & String($g_bCheckSpells), $COLOR_DEBUG)
-			SetDebugLog(" $bFullArmyHero: " & String($bFullArmyHero), $COLOR_DEBUG)
-			SetDebugLog(" $g_bCheckSiege: " & String($g_bCheckSiege), $COLOR_DEBUG)
 			SetDebugLog(" $bFullArmyCC: " & String($bFullArmyCC), $COLOR_DEBUG)
 		EndIf
 		$g_bIsFullArmywithHeroesAndSpells = False
 	EndIf
-	If $g_bFullArmy And $g_bCheckSpells And $bFullArmyHero Then ; Force Switch while waiting for CC in SwitchAcc
+	If $g_bFullArmy Then ; Force Switch while waiting for CC in SwitchAcc
 		If Not $bFullArmyCC Then $g_bWaitForCCTroopSpell = True
 	EndIf
 
 	Local $sLogText = ""
 	If Not $g_bFullArmy Then $sLogText &= " Troops,"
-	If Not $g_bCheckSpells Then $sLogText &= " Spells,"
-	If Not $bFullArmyHero Then $sLogText &= " Heroes,"
-	If Not $g_bCheckSiege Then $sLogText &= " Siege Machine,"
 	If Not $bFullArmyCC Then $sLogText &= " Clan Castle,"
 	If StringRight($sLogText, 1) = "," Then $sLogText = StringTrimRight($sLogText, 1) ; Remove last "," as it is not needed
 
 	If $g_bIsFullArmywithHeroesAndSpells Then
-		If $g_bNotifyTGEnable And $g_bNotifyAlertCampFull Then PushMsg("CampFull")
-		SetLog("Chief, is your Army ready? Yes, it is!", $COLOR_SUCCESS)
+		If $bSetLog Then
+			If $g_bNotifyTGEnable And $g_bNotifyAlertCampFull Then PushMsg("CampFull")
+			SetLog("Chief, is your army ready? Yes, it is!", $COLOR_SUCCESS)
+		EndIf
 	Else
-		SetLog("Chief, is your Army ready? No, not yet!", $COLOR_ACTION)
-		If $sLogText <> "" Then SetLog(@TAB & "Waiting for " & $sLogText, $COLOR_ACTION)
+		If $bSetLog Then
+			SetLog("Chief, is your army ready? No, not yet!", $COLOR_ACTION)
+			If $sLogText <> "" Then SetLog(@TAB & "Awaiting" & $sLogText, $COLOR_ACTION)
+		EndIf
 	EndIf
 
 	; Force to Request CC troops or Spells
@@ -190,49 +194,7 @@ Func CheckIfArmyIsReady($IstoOpen = True)
 		SetDebugLog(" $g_bIsFullArmywithHeroesAndSpells: " & String($g_bIsFullArmywithHeroesAndSpells), $COLOR_DEBUG)
 		SetDebugLog(" $g_iTownHallLevel: " & Number($g_iTownHallLevel), $COLOR_DEBUG)
 	EndIf
-
 EndFunc   ;==>CheckIfArmyIsReady
-
-Func CheckSpells()
-	If Not $g_bRunState Then Return
-
-	Local $bToReturn = False
-
-	If (Not $g_abSearchSpellsWaitEnable[$DB] And Not $g_abSearchSpellsWaitEnable[$LB]) Or ($g_bFullArmySpells And ($g_abSearchSpellsWaitEnable[$DB] Or $g_abSearchSpellsWaitEnable[$LB])) Then
-		Return True
-	EndIf
-
-	If (($g_abAttackTypeEnable[$DB] And $g_abSearchSpellsWaitEnable[$DB]) Or ($g_abAttackTypeEnable[$LB] And $g_abSearchSpellsWaitEnable[$LB])) And $g_iTownHallLevel >= 5 Then
-		$bToReturn = $g_bFullArmySpells
-	Else
-		$bToReturn = True
-	EndIf
-
-	Return $bToReturn
-EndFunc   ;==>CheckSpells
-
-Func CheckSiegeMachine()
-
-	If Not $g_bRunState Then Return
-
-	Local $bToReturn = False
-
-	If IsWaitforSiegeMachine() Then
-		For $i = $eSiegeWallWrecker To $eSiegeMachineCount - 1
-			If $g_aiArmyCompSiegeMachines[$i] > 0 Then
-				If $g_aiCurrentSiegeMachines[$i] > 0 Then $bToReturn = True
-				If $g_bDebugSetLogTrain Then
-					SetLog("$g_aiCurrentSiegeMachines[" & $g_asSiegeMachineNames[$i] & "]: " & $g_aiCurrentSiegeMachines[$i])
-					SetLog("$g_aiArmyCompSiegeMachine[" & $g_asSiegeMachineNames[$i] & "]: " & $g_aiArmyCompSiegeMachines[$i])
-				EndIf
-			EndIf
-		Next
-	Else
-		$bToReturn = True
-	EndIf
-
-	Return $bToReturn
-EndFunc   ;==>CheckSiegeMachine
 
 Func TrainUsingWhatToTrain($rWTT, $bQueue = $g_bIsFullArmywithHeroesAndSpells)
 	If Not $g_bRunState Then Return
@@ -242,42 +204,36 @@ Func TrainUsingWhatToTrain($rWTT, $bQueue = $g_bIsFullArmywithHeroesAndSpells)
 	Local $aLeftSpace = GetOCRCurrent(393, 212 + $g_iMidOffsetY, "troops")
 	Local $LeftSpace = $aLeftSpace[1] - $aLeftSpace[0]
 
-	; Loop through needed troops to Train
+	; Train event troops first if present.
+	Local $aTempTroops = [$eTroopDebtCollector, $eTroopElephantRider, $eTroopGiantGiant, $eTroopKANE, $eTroopYEETer, $eTroopTheDisarmer, $eTroopYetiUndertaker, $eTroopBarbarianKicker, $eTroopGiantThrower, $eTroopBroomWitch, _
+			$eTroopMECHA, $eTroopIceMinion, $eTroopIceWizard, $eTroopPartyWizard, $eTroopCOOKIE, $eTroopFirecracker, $eTroopRamRider, _
+			$eTroopPumpkinBarbarian, $eTroopRoyalGhost, $eTroopBarcher, $eTroopHogWizard, $eTroopLavaloon, $eTroopTotemThrower, $eTroopWitchGolem, $eTroopGiantSkeleton, $eTroopSkeletonBarrel, $eTroopAzureDragon, $eTroopGoldenDragon]
+	For $j = 0 To UBound($rWTT) - 1
+		Local $iTroopIndexTemp = TroopIndexLookup($rWTT[$j][0], "TrainUsingWhatToTrain")
+		If _ArraySearch($aTempTroops, $iTroopIndexTemp) >= 0 And $rWTT[$j][1] > 0 Then
+			If Not IsTrainPageGrayed(False, 1) Then
+				If Not OpenTroopsTab(True, "TrainUsingWhatToTrain") Then Return
+			EndIf
+			; No DragIfNeeded for temp troops
+			Local $sTroopName = ($rWTT[$j][1] > 1 ? $g_asTroopNamesPlural[$iTroopIndexTemp] : $g_asTroopNames[$iTroopIndexTemp])
+			SetLog("Training " & $rWTT[$j][1] & "x " & $sTroopName, $COLOR_SUCCESS)
+			TrainIt($iTroopIndexTemp, $rWTT[$j][1], $g_iTrainClickDelay)
+			$LeftSpace -= $g_aiTroopSpace[$iTroopIndexTemp] * $rWTT[$j][1]
+			$rWTT[$j][1] = 0 ; Mark as trained
+		EndIf
+	Next
+
+	; Train regular troops before super troops. Super troops are at the end of the in-game training list.
 	For $i = 0 To (UBound($rWTT) - 1)
 		If Not $g_bRunState Then Return
-		If $rWTT[$i][1] > 0 Then ; If Count to Train Was Higher Than ZERO
-			If IsSpellToBrew($rWTT[$i][0]) Then ContinueLoop
+		If Not _TrainUsingWhatToTrainTroop($rWTT, $i, $LeftSpace, False) Then Return False
+		If _Sleep($DELAYRESPOND) Then Return ; add 5ms delay to catch TrainIt errors, and force return to back to main loop
+	Next
 
-			Local $iTroopIndex = TroopIndexLookup($rWTT[$i][0], "TrainUsingWhatToTrain()")
-
-			If $iTroopIndex >= $eBarb And $iTroopIndex <= $eFurn Then
-				Local $NeededSpace = $g_aiTroopSpace[$iTroopIndex] * $rWTT[$i][1]
-			EndIf
-
-			If $NeededSpace > $LeftSpace Then
-				If $iTroopIndex >= $eBarb And $iTroopIndex <= $eFurn Then
-					$rWTT[$i][1] = Int($LeftSpace / $g_aiTroopSpace[$iTroopIndex])
-				EndIf
-			EndIf
-
-			If $rWTT[$i][1] > 0 Then
-
-				If Not IsTrainPageGrayed(False, 1) Then
-					If Not OpenTroopsTab(True, "TrainUsingWhatToTrain()") Then Return
-				EndIf
-
-				If Not DragIfNeeded($rWTT[$i][0]) Then Return False
-
-				If $iTroopIndex >= $eBarb And $iTroopIndex <= $eFurn Then
-					Local $sTroopName = ($rWTT[$i][1] > 1 ? $g_asTroopNamesPlural[$iTroopIndex] : $g_asTroopNames[$iTroopIndex])
-				EndIf
-
-				SetLog("Training " & $rWTT[$i][1] & "x " & $sTroopName, $COLOR_SUCCESS)
-				TrainIt($iTroopIndex, $rWTT[$i][1], $g_iTrainClickDelay)
-				$LeftSpace -= $rWTT[$i][1] * $g_aiTroopSpace[$iTroopIndex]
-
-			EndIf
-		EndIf
+	; Super troops are trained last so DragIfNeeded can move directly to the final troop page.
+	For $i = 0 To (UBound($rWTT) - 1)
+		If Not $g_bRunState Then Return
+		If Not _TrainUsingWhatToTrainTroop($rWTT, $i, $LeftSpace, True) Then Return False
 		If _Sleep($DELAYRESPOND) Then Return ; add 5ms delay to catch TrainIt errors, and force return to back to main loop
 	Next
 
@@ -288,6 +244,63 @@ Func TrainUsingWhatToTrain($rWTT, $bQueue = $g_bIsFullArmywithHeroesAndSpells)
 
 	Return True
 EndFunc   ;==>TrainUsingWhatToTrain
+
+Func _TrainUsingWhatToTrainTroop(ByRef $rWTT, $i, ByRef $LeftSpace, $bTrainSuperTroops)
+	If $rWTT[$i][1] <= 0 Then Return True ; If Count to Train Was Higher Than ZERO
+	If IsSpellToBrew($rWTT[$i][0]) Then Return True
+
+	Local $iTroopIndex = TroopIndexLookup($rWTT[$i][0], "TrainUsingWhatToTrain()")
+	If _IsTrainSuperTroop($iTroopIndex) <> $bTrainSuperTroops Then Return True
+
+	Local $iSpace = 0
+	If $iTroopIndex >= $eBarb And $iTroopIndex <= $eGDrag Then
+		$iSpace = $g_aiTroopSpace[$iTroopIndex]
+	ElseIf $iTroopIndex >= $eLSpell And $iTroopIndex <= $eASpell Then
+		$iSpace = $g_aiSpellSpace[$iTroopIndex - $eLSpell]
+	EndIf
+	Local $NeededSpace = $iSpace * $rWTT[$i][1]
+
+	If $NeededSpace > $LeftSpace Then
+		$rWTT[$i][1] = Int($LeftSpace / $iSpace)
+	EndIf
+
+	If $rWTT[$i][1] > 0 Then
+
+		If Not IsTrainPageGrayed(False, 1) Then
+			If Not OpenTroopsTab(True, "TrainUsingWhatToTrain()") Then Return False
+		EndIf
+
+		Local $bTroopVisible = False
+		Local $aVisibleTrainPos = GetTrainPos($iTroopIndex)
+		If IsArray($aVisibleTrainPos) Then
+			If UBound($aVisibleTrainPos) > 0 And $aVisibleTrainPos[0] <> -1 Then $bTroopVisible = True
+		EndIf
+		If Not $bTroopVisible Then
+			If Not DragIfNeeded($rWTT[$i][0]) Then Return False
+		EndIf
+
+		Local $sTroopName = ""
+		If $iTroopIndex >= $eBarb And $iTroopIndex <= $eGDrag Then
+			$sTroopName = ($rWTT[$i][1] > 1 ? $g_asTroopNamesPlural[$iTroopIndex] : $g_asTroopNames[$iTroopIndex])
+		ElseIf $iTroopIndex >= $eLSpell And $iTroopIndex <= $eASpell Then
+			$sTroopName = $g_asSpellNames[$iTroopIndex - $eLSpell] & ($rWTT[$i][1] > 1 ? " Spells" : " Spell")
+		EndIf
+
+		SetLog("Training " & $rWTT[$i][1] & "x " & $sTroopName, $COLOR_SUCCESS)
+		TrainIt($iTroopIndex, $rWTT[$i][1], $g_iTrainClickDelay)
+		$LeftSpace -= $rWTT[$i][1] * $iSpace
+	EndIf
+
+	Return True
+EndFunc   ;==>_TrainUsingWhatToTrainTroop
+
+Func _IsTrainSuperTroop($iTroopIndex)
+	For $i = 0 To $iSuperTroopsCount - 1
+		If $iTroopIndex = $g_asSuperTroopIndex[$i] Then Return True
+	Next
+
+	Return False
+EndFunc   ;==>_IsTrainSuperTroop
 
 Func BrewUsingWhatToTrain($rWTT, $bQueue = $g_bIsFullArmywithHeroesAndSpells)
 	If Not $g_bRunState Then Return
@@ -358,7 +371,7 @@ Func DragTrainBar($iIndex, ByRef $iTrainPage, $iEventTroops = 0)
 			$iPageTarget = 0
 		Case (18 - $iEventTroops) To 29 ; Minion - EventTroop slots To Furn
 			$iPageTarget = 1
-		Case 30 To 45 ; Suba To SBowl
+		Case 30 To $eRuinW ; Suba To Ruin Witch
 			$iPageTarget = 2
 	EndSwitch
 
@@ -417,10 +430,27 @@ Func DragIfNeeded($Troop)
 		$iEventTroops = IsEventTroops()
 	EndIf
 
+	If _IsTrainSuperTroop($iIndex) Then
+		DragTrainBarToEnd($iTrainPage)
+		Return True
+	EndIf
+
 	DragTrainBar($iIndex, $iTrainPage, $iEventTroops)
 	Return True
 
 EndFunc   ;==>DragIfNeeded
+
+Func DragTrainBarToEnd(ByRef $iTrainPage)
+	If Not $g_bRunState Then Return
+
+	For $i = 1 To 2
+		ClickDrag(755, 564 + $g_iBottomOffsetY, 305, 564 + $g_iBottomOffsetY)
+		SetDebugLog("Moving to final troop page")
+		If _Sleep(Random(1500, 2000, 1)) Then Return
+	Next
+
+	$iTrainPage = 2
+EndFunc   ;==>DragTrainBarToEnd
 
 Func IsEventTroops()
 
@@ -443,23 +473,23 @@ Func IsEventTroops()
 		SetDebugLog("Found barbarian at " & $aiTileCoord[0] & ", " & $aiTileCoord[1])
 
 		If PointInRect($aSlot1[0], $aSlot1[1], $aSlot1[2], $aSlot1[3], $aiTileCoord[0], $aiTileCoord[1]) Then
-			SetLog("Found Barbarian moved 1 slot")
+			SetDebugLog("Barbarian Detected - Moving 1 Slot", $COLOR_ACTION)
 			If _Sleep(100) Then Return
 			Return 1
 		ElseIf PointInRect($aSlot2[0], $aSlot2[1], $aSlot2[2], $aSlot2[3], $aiTileCoord[0], $aiTileCoord[1]) Then
-			SetLog("Found Barbarian moved 2 slots")
+			SetDebugLog("Barbarian Detected - Moving 2 Slots", $COLOR_ACTION)
 			If _Sleep(100) Then Return
 			Return 2
 		ElseIf PointInRect($aSlot3[0], $aSlot3[1], $aSlot3[2], $aSlot3[3], $aiTileCoord[0], $aiTileCoord[1]) Then
-			SetLog("Found Barbarian moved 3 slots")
+			SetDebugLog("Barbarian Detected - Moving 3 Slots", $COLOR_ACTION)
 			If _Sleep(100) Then Return
 			Return 3
 		ElseIf PointInRect($aSlot4[0], $aSlot4[1], $aSlot4[2], $aSlot4[3], $aiTileCoord[0], $aiTileCoord[1]) Then
-			SetLog("Found Barbarian moved 4 slots")
+			SetDebugLog("Barbarian Detected - Moving 4 Slots", $COLOR_ACTION)
 			If _Sleep(100) Then Return
 			Return 4
 		ElseIf PointInRect($aSlot5[0], $aSlot5[1], $aSlot5[2], $aSlot5[3], $aiTileCoord[0], $aiTileCoord[1]) Then
-			SetLog("Found Barbarian moved 5 slots")
+			SetDebugLog("Barbarian Detected - Moving 5 Slots", $COLOR_ACTION)
 			If _Sleep(100) Then Return
 			Return 5
 		EndIf
@@ -491,15 +521,15 @@ Func ExtendedSlots($iEventTroops = 0)
 				If _Sleep(100) Then Return
 				Return 0
 			ElseIf PointInRect($aSlot2[0], $aSlot2[1], $aSlot2[2], $aSlot2[3], $aiTileCoord[0], $aiTileCoord[1]) Then
-				SetLog("Found Minion moved 1 column")
+				SetDebugLog("Minion Detected - Moving 1 Column", $COLOR_ACTION)
 				If _Sleep(100) Then Return
 				Return 1
 			ElseIf PointInRect($aSlot3[0], $aSlot3[1], $aSlot3[2], $aSlot3[3], $aiTileCoord[0], $aiTileCoord[1]) Then
-				SetLog("Found Minion moved 2 columns")
+				SetDebugLog("Minion Detected - Moving 2 Columns", $COLOR_ACTION)
 				If _Sleep(100) Then Return
 				Return 2
 			ElseIf PointInRect($aSlot4[0], $aSlot4[1], $aSlot4[2], $aSlot4[3], $aiTileCoord[0], $aiTileCoord[1]) Then
-				SetLog("Found Minion moved 3 columns")
+				SetDebugLog("Minion Detected - Moving 3 Columns", $COLOR_ACTION)
 				If _Sleep(100) Then Return
 				Return 3
 			EndIf
@@ -519,19 +549,19 @@ Func ExtendedSlots($iEventTroops = 0)
 			SetDebugLog("Found Minion at " & $aiTileCoord[0] & ", " & $aiTileCoord[1])
 
 			If PointInRect($aSlot1[0], $aSlot1[1], $aSlot1[2], $aSlot1[3], $aiTileCoord[0], $aiTileCoord[1]) Then
-				SetLog("Found Minion moved 1 slot, same column")
+				SetDebugLog("Minion Detected - Moving 1 Slot, Same Column", $COLOR_ACTION)
 				If _Sleep(100) Then Return
 				Return 0
 			ElseIf PointInRect($aSlot2[0], $aSlot2[1], $aSlot2[2], $aSlot2[3], $aiTileCoord[0], $aiTileCoord[1]) Then
-				SetLog("Found Minion moved 2 slots, same column")
+				SetDebugLog("Minion Detected - Moving 2 Slots, Same Column", $COLOR_ACTION)
 				If _Sleep(100) Then Return
 				Return 0
 			ElseIf PointInRect($aSlot3[0], $aSlot3[1], $aSlot3[2], $aSlot3[3], $aiTileCoord[0], $aiTileCoord[1]) Then
-				SetLog("Found Minion moved 1 column")
+				SetDebugLog("Minion Detected - Moving 1 Column", $COLOR_ACTION)
 				If _Sleep(100) Then Return
 				Return 1
 			ElseIf PointInRect($aSlot4[0], $aSlot4[1], $aSlot4[2], $aSlot4[3], $aiTileCoord[0], $aiTileCoord[1]) Then
-				SetLog("Found Minion moved 1 column")
+				SetDebugLog("Minion Detected - Moving 1 Column", $COLOR_ACTION)
 				If _Sleep(100) Then Return
 				Return 1
 			EndIf
@@ -661,25 +691,25 @@ EndFunc   ;==>IsElixirTroop
 
 Func IsDarkTroop($Troop)
 	Local $iIndex = TroopIndexLookup($Troop, "IsDarkTroop")
-	If $iIndex >= $eMini And $iIndex <= $eFurn Then Return True
+	If $iIndex >= $eMini And $iIndex <= $eGDrag Then Return True
 	Return False
 EndFunc   ;==>IsDarkTroop
 
 Func IsElixirSpell($Spell)
 	Local $iIndex = TroopIndexLookup($Spell, "IsElixirSpell")
-	If $iIndex >= $eLSpell And $iIndex <= $eISpell Then Return True
+	If $iIndex >= $eLSpell And $iIndex <= $eTSpell Then Return True
 	Return False
 EndFunc   ;==>IsElixirSpell
 
 Func IsDarkSpell($Spell)
 	Local $iIndex = TroopIndexLookup($Spell, "IsDarkSpell")
-	If $iIndex >= $ePSpell And $iIndex <= $eOgSpell Then Return True
+	If $iIndex >= $ePSpell And $iIndex <= $eASpell Then Return True
 	Return False
 EndFunc   ;==>IsDarkSpell
 
 Func IsSpellToBrew($sName)
 	Local $iIndex = TroopIndexLookup($sName, "IsSpellToBrew")
-	If $iIndex >= $eLSpell And $iIndex <= $eOgSpell Then Return True
+	If $iIndex >= $eLSpell And $iIndex <= $eASpell Then Return True
 	Return False
 EndFunc   ;==>IsSpellToBrew
 
@@ -704,7 +734,7 @@ Func RemoveExtraTroops($toRemove)
 		Next
 
 		If $TroopsToRemove > 0 Then
-			SetLog("Troops Removing.", $COLOR_INFO)
+			SetLog("Removing Troops", $COLOR_INFO)
 			Click(793, 218 + $g_iMidOffsetY)
 			If _Sleep(250) Then Return
 			Local $aiOkayButton = findButton("Okay", Default, 1, True)
@@ -715,7 +745,7 @@ Func RemoveExtraTroops($toRemove)
 		EndIf
 
 		If $SpellsToRemove > 0 Then
-			SetLog("Spells Removing.", $COLOR_INFO)
+			SetLog("Removing Spells", $COLOR_INFO)
 			Click(637, 326 + $g_iMidOffsetY)
 			If _Sleep(250) Then Return
 			Local $aiOkayButton = findButton("Okay", Default, 1, True)
@@ -905,7 +935,7 @@ Func GetSlotNumber($bSpells = False)
 		Case $bSpells = False
 			Local Const $Orders = [$eBarb, $eSBarb, $eArch, $eSArch, $eGiant, $eSGiant, $eGobl, $eSGobl, $eWall, $eSWall, $eBall, $eRBall, $eWiza, $eSWiza, $eHeal, $eDrag, $eSDrag, _
 					$eYeti, $eRDrag, $ePekk, $eBabyD, $eInfernoD, $eMine, $eSMine, $eEDrag, $eETitan, $eRootR, $eThrower, _
-					$eMini, $eSMini, $eHogs, $eSHogs, $eValk, $eSValk, $eGole, $eWitc, $eSWitc, $eLava, $eIceH, $eBowl, $eSBowl, $eIceG, $eHunt, $eAppWard, $eDruid, $eFurn] ; Set Order of troop display in Army Tab
+					$eMini, $eSMini, $eHogs, $eSHogs, $eValk, $eSValk, $eGole, $eWitc, $eSWitc, $eLava, $eIceH, $eBowl, $eSBowl, $eIceG, $eHunt, $eAppWard, $eDruid, $eFurn, $eRuinW] ; Set Order of troop display in Army Tab
 
 			Local $allCurTroops[UBound($Orders)]
 
@@ -929,7 +959,7 @@ Func GetSlotNumber($bSpells = False)
 		Case $bSpells = True
 
 			; Set Order of Spells display in Army Tab
-			Local Const $SpellsOrders = [$eLSpell, $eHSpell, $eRSpell, $eJSpell, $eFSpell, $eCSpell, $eISpell, $eReSpell, $eRvSpell, $ePSpell, $eESpell, $eHaSpell, $eSkSpell, $eBtSpell, $eOgSpell]
+			Local Const $SpellsOrders = [$eLSpell, $eHSpell, $eRSpell, $eJSpell, $eFSpell, $eCSpell, $eISpell, $eReSpell, $eRvSpell, $eTSpell, $ePSpell, $eESpell, $eHaSpell, $eSkSpell, $eBtSpell, $eOgSpell, $eIBSpell, $eASpell]
 
 			Local $allCurSpells[UBound($SpellsOrders)]
 
@@ -957,7 +987,7 @@ Func WhatToTrain($ReturnExtraTroopsOnly = False, $bFullArmy = $g_bIsFullArmywith
 	If $bFullArmy And Not $ReturnExtraTroopsOnly Then
 		If Not $g_bFullArmySpells Then getArmySpells(False, False, False, False) ; in case $g_bIsFullArmywithHeroesAndSpells but not $g_bFullArmySpells
 
-		Local $bHaltAttack = $g_iCommandStop = 3 Or $g_iCommandStop = 0 Or ($g_abDonateOnly[$g_iCurAccount] And ProfileSwitchAccountEnabled())
+		Local $bHaltAttack = $g_iCommandStop = 3 Or $g_iCommandStop = 0
 		If Not $bHaltAttack Then
 			SetDebugLog(" - Your Army is Full", $COLOR_INFO)
 			; Elixir Troops
@@ -980,11 +1010,7 @@ Func WhatToTrain($ReturnExtraTroopsOnly = False, $bFullArmy = $g_bIsFullArmywith
 				EndIf
 			Next
 		Else
-			If $g_iCommandStop = 3 Or $g_iCommandStop = 0 Then
-				SetLog("You are in halt attack mode and your Army is prepared!", $COLOR_INFO)
-			Else
-				SetLog("Donate Only mode and your Army is prepared!", $COLOR_INFO)
-			EndIf
+			SetLog("You are in halt attack mode and your Army is prepared!", $COLOR_INFO)
 			If Not $g_bFullArmySpells Then
 				For $i = 0 To $eSpellCount - 1
 					Local $BrewIndex = $g_aiBrewOrder[$i]
@@ -1576,4 +1602,3 @@ Func ValidateSearchArmyResult($aSearchResult, $iIndex = 0)
 	EndIf
 	Return False
 EndFunc   ;==>ValidateSearchArmyResult
-

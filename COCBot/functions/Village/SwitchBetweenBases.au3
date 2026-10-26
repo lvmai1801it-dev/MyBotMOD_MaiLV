@@ -14,24 +14,31 @@
 ; ===============================================================================================================================
 
 Func SwitchBetweenBases($bCheckMainScreen = True, $GoToBB = False)
-	Local $sSwitchFrom, $sSwitchTo, $bIsOnBuilderBase = False, $aButtonCoords, $avBoat, $avTempArray
+	Local $sSwitchFrom, $sSwitchTo, $bIsOnBuilderBase = False, $bIsOnMainVillage = False, $aButtonCoords, $avBoat, $avTempArray
 	Local $sTile, $sTileDir, $sRegionToSearch
 	Local $bSwitched = False
 
 	If Not $g_bRunState Then Return
 
 	For $i = 0 To 3
-		If isOnBuilderBase(True) Then
+		$bIsOnBuilderBase = isOnBuilderBase(True)
+		$bIsOnMainVillage = Not $bIsOnBuilderBase And isOnMainVillage(True)
+
+		If ($GoToBB And $bIsOnBuilderBase) Or (Not $GoToBB And $bIsOnMainVillage) Then
+			$g_bStayOnBuilderBase = $GoToBB
+			If $bCheckMainScreen Then checkMainScreen(True, $GoToBB)
+			Return True
+		EndIf
+
+		If $bIsOnBuilderBase Then
 			$sSwitchFrom = "Builder Base"
 			$sSwitchTo = "Normal Village"
-			$bIsOnBuilderBase = True
 			$sTile = "BoatBuilderBase"
 			$sTileDir = $g_sImgBoatBB
 			$sRegionToSearch = GetDiamondFromRect("480,40,710,250")
 		Else
 			$sSwitchFrom = "Normal Village"
 			$sSwitchTo = "Builder Base"
-			$bIsOnBuilderBase = False
 			$sTile = "BoatNormalVillage"
 			$sTileDir = $g_sImgBoat
 			$sRegionToSearch = GetDiamondFromRect("60,430,390,630")
@@ -42,7 +49,7 @@ Func SwitchBetweenBases($bCheckMainScreen = True, $GoToBB = False)
 
 		ZoomOut() ; ensure boat is visible
 
-		SwitchToBuilderBase()
+		If $bIsOnBuilderBase Then SwitchToBuilderBase()
 
 		If Not $g_bRunState Then Return
 
@@ -54,17 +61,11 @@ Func SwitchBetweenBases($bCheckMainScreen = True, $GoToBB = False)
 			If _Sleep(250) Then Return
 		Next
 
-		If $GoToBB Then
-			$g_bStayOnBuilderBase = True
-		Else
-			$g_bStayOnBuilderBase = False
-		EndIf
-
 		If Not IsArray($avBoat) Or UBound($avBoat, $UBOUND_ROWS) <= 0 Then
-			SetLog("Couldn't find Boat on " & $sSwitchFrom, $COLOR_ERROR)
+			SetLog("Couldn't find boat on " & $sSwitchFrom, $COLOR_ERROR)
 			If $g_bDebugImageSave Then SaveDebugImage("SwitchBetweenBases", False)
 			If $i = 2 Then
-				If $g_bStayOnBuilderBase And $sSwitchFrom = "Normal Village" Then $g_bStayOnBuilderBase = False
+				If $GoToBB And $sSwitchFrom = "Normal Village" Then $g_bStayOnBuilderBase = False
 				If $sSwitchFrom = "Builder Base" Then
 					CloseCoC(True)
 					checkMainScreen(False, True)
@@ -75,11 +76,10 @@ Func SwitchBetweenBases($bCheckMainScreen = True, $GoToBB = False)
 			; loop through the detected images
 			For $j = 0 To UBound($avBoat, $UBOUND_ROWS) - 1
 				$avTempArray = $avBoat[$j]
-				SetLog("Boat Search find : " & $avTempArray[0])
+				SetLog("Builder Base Boat Detected", $COLOR_SUCCESS)
 				$aButtonCoords = decodeSingleCoord($avTempArray[1])
 
 				If IsArray($aButtonCoords) And UBound($aButtonCoords, $UBOUND_ROWS) = 2 Then
-					SetLog("[" & $i & "] Going to " & $sSwitchTo, $COLOR_INFO)
 					ClickP($aButtonCoords)
 					If _Sleep($DELAYSWITCHBASES1) Then Return
 
@@ -94,19 +94,21 @@ Func SwitchBetweenBases($bCheckMainScreen = True, $GoToBB = False)
 					WEnd
 
 					If $bSwitched Then
+						$g_bStayOnBuilderBase = $GoToBB
 						If $bCheckMainScreen Then checkMainScreen(True, Not $bIsOnBuilderBase)
+						If $g_bNotifyAlertBuilderBaseSwitch Then PushMsg("BuilderBaseSwitch", $sSwitchFrom & " -> " & $sSwitchTo)
 						Return True
 					Else
 						SetLog("Failed to go to the " & $sSwitchTo, $COLOR_ERROR)
-						If $i = 2 And $g_bStayOnBuilderBase And $sSwitchTo = "Builder Base" Then $g_bStayOnBuilderBase = False
+						If $i = 2 And $GoToBB And $sSwitchTo = "Builder Base" Then $g_bStayOnBuilderBase = False
 					EndIf
 				Else
 					SetLog("[" & $i & "] SwitchBetweenBases Tile: " & $sTile, $COLOR_ERROR)
 					SetLog("[" & $i & "] SwitchBetweenBases isOnBuilderBase: " & isOnBuilderBase(True), $COLOR_ERROR)
 					If $bIsOnBuilderBase Then
-						SetLog("Cannot find the Boat on the Coast", $COLOR_ERROR)
+						SetLog("Cannot find the boat on the coast", $COLOR_ERROR)
 					Else
-						SetLog("Cannot find the Boat on the Coast. Maybe it is still broken or not visible", $COLOR_ERROR)
+						SetLog("Cannot find the boat on the coast. Maybe it is still broken or not visible", $COLOR_ERROR)
 						If $i = 2 Then $g_bStayOnBuilderBase = False
 					EndIf
 
@@ -123,9 +125,7 @@ Func SwitchBetweenBases($bCheckMainScreen = True, $GoToBB = False)
 EndFunc   ;==>SwitchBetweenBases
 
 Func SwitchToBuilderBase()
-
 	If QuickMIS("BC1", $sImgTunnel, 0, 190 + $g_iMidOffsetY, $g_iGAME_WIDTH, $g_iGAME_HEIGHT) Then
-		SetLog("Back To Main Builder Base", $COLOR_INFO)
 		If $g_iQuickMISName = "OOTunnel" Then
 			SetDebugLog("Found OOTunnel", $COLOR_INFO)
 			Click($g_iQuickMISX - Random(25, 70, 1), $g_iQuickMISY + Random(0, 30, 1))
@@ -141,5 +141,4 @@ Func SwitchToBuilderBase()
 		If $g_bDebugImageSave Then SaveDebugImage("OO2BBTunnel") ;
 		Return False
 	EndIf
-
 EndFunc   ;==>SwitchToBuilderBase

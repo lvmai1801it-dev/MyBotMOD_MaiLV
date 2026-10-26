@@ -140,6 +140,9 @@ Func PureClick($x, $y, $times = 1, $speed = 120, $debugtxt = "")
 
 	If $g_bAndroidAdbClick = True Then
 		For $i = 1 To $times
+			; Tag Team end-of-battle detection is handled between completed troop batches.
+			; Never run the blocking Return Home detector before each individual deploy click.
+			If $g_bTagTeamRemainingDeployActive And $g_bTagTeamRemainingDeployAbort Then ExitLoop
 			AndroidClick($x, $y, 1, $speed, False)
 		Next
 		Return
@@ -148,11 +151,16 @@ Func PureClick($x, $y, $times = 1, $speed = 120, $debugtxt = "")
 	Local $SuspendMode = ResumeAndroid()
 	If $times <> 1 Then
 		For $i = 0 To ($times - 1)
+			If $g_bTagTeamRemainingDeployActive And $g_bTagTeamRemainingDeployAbort Then ExitLoop
 			MoveMouseOutBS()
 			_ControlClick($x, $y)
 			If _Sleep($speed, False) Then ExitLoop
 		Next
 	Else
+		If $g_bTagTeamRemainingDeployActive And $g_bTagTeamRemainingDeployAbort Then
+			SuspendAndroid($SuspendMode)
+			Return
+		EndIf
 		MoveMouseOutBS()
 		_ControlClick($x, $y)
 	EndIf
@@ -184,9 +192,7 @@ Func PureClickTrain($x, $y, $times = 1, $speed = 165, $debugtxt = "")
 	If TestCapture() Then Return
 
 	If $g_bAndroidAdbClick = True Then
-		For $i = 1 To $times
-			AndroidClick($x, $y, 1, $speed, False)
-		Next
+		AndroidClick($x, $y, $times, $speed, False)
 		Return
 	EndIf
 
@@ -283,6 +289,7 @@ Func GemClickP($point, $howMuch = 1, $speed = 120, $debugtxt = "")
 EndFunc   ;==>GemClickP
 
 Func AttackClick($x, $y, $times = 1, $speed = 120, $afterDelay = 0, $debugtxt = "")
+	If $g_bTagTeamRemainingDeployActive And $g_bTagTeamRemainingDeployAbort Then Return False
 	If $speed = 0 Then $speed = 120
 	$speed = Random($speed - $speed * 0.1, $speed + $speed * 0.1, 1)
 	Local $timer = __TimerInit()
@@ -290,6 +297,7 @@ Func AttackClick($x, $y, $times = 1, $speed = 120, $afterDelay = 0, $debugtxt = 
 	If $y > 555 + $g_iBottomOffsetY Then $y = 555 + $g_iBottomOffsetY
 	AttackRemainingTime(False) ; flag attack started
 	Local $result = PureClick($x, $y, $times, $speed, $debugtxt)
+	If $g_bTagTeamRemainingDeployActive And $g_bTagTeamRemainingDeployAbort Then Return False
 	Local $delay = $times * $speed + $afterDelay - __TimerDiff($timer)
 	If IsKeepClicksActive() = False And $delay > 0 Then _Sleep($delay, False)
 	Return $result
@@ -298,6 +306,7 @@ EndFunc   ;==>AttackClick
 Func AttackClickCSV($x, $y, $times = 1, $speed = 120, $afterDelay = 0, $debugtxt = "")
 	If $speed = 0 Then $speed = 120
 	Local $timer = __TimerInit()
+	Local $iTagTeamPauseStart = GetTagTeamPauseTime()
 	; Protect the Attack Bar
 	If $y > 555 + $g_iBottomOffsetY Then
 		$y = Random(553, 555, 1) + $g_iBottomOffsetY
@@ -309,8 +318,15 @@ Func AttackClickCSV($x, $y, $times = 1, $speed = 120, $afterDelay = 0, $debugtxt
 	EndIf
 	AttackRemainingTime(False) ; flag attack started
 	Local $result = PureClickTrain($x, $y, $times, $speed, $debugtxt)
-	Local $delay = $times * $speed + $afterDelay - __TimerDiff($timer)
-	If IsKeepClicksActive() = False And $delay > 0 Then _Sleep($delay, False)
+	Local $delay = $times * $speed + $afterDelay - (__TimerDiff($timer) - (GetTagTeamPauseTime() - $iTagTeamPauseStart))
+	If IsKeepClicksActive() Then
+		Local $iClickDownExtra = GetClickDownDelay() - $speed
+		If $iClickDownExtra < 0 Then $iClickDownExtra = 0
+		Local $iQueuedDelay = $afterDelay - ($times * (GetClickUpDelay() + $iClickDownExtra))
+		If $iQueuedDelay > 0 Then AddQueuedClickDelay($iQueuedDelay)
+	ElseIf $delay > 0 Then
+		_Sleep($delay, False)
+	EndIf
 	Return $result
 EndFunc   ;==>AttackClickCSV
 
@@ -333,6 +349,12 @@ Func ClickAway2()
 	If $g_bDebugClick Then SetDebugLog("ClickAway2(): on X:" & $aiSpot[0] & ", Y:" & $aiSpot[1], $COLOR_DEBUG)
 	ClickP($aiSpot, 1, 180, "#0000")
 EndFunc   ;==>ClickAway2
+
+Func ClickBorder()
+	Local $aiSpot[2] = [Random(845, 855, 1), Random(360, 370, 1)]
+	If $g_bDebugClick Then SetDebugLog("ClickBorder(): on X:" & $aiSpot[0] & ", Y:" & $aiSpot[1], $COLOR_DEBUG)
+	ClickP($aiSpot, 1, 180, "#0000")
+EndFunc   ;==>ClickBorder
 
 Func _DecodeDebug($message)
 	Local $separator = " | "

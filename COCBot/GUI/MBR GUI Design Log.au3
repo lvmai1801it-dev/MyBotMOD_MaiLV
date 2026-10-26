@@ -16,7 +16,8 @@
 
 Global $g_hGUI_LOG = 0
 Global $g_hTxtLog = 0, $g_hDivider = 0, $g_hTxtAtkLog = 0
-Global $g_hCmbLogDividerOption, $g_hBtnAtkLogClear, $g_hBtnAtkLogCopyClipboard
+Global $g_hLblLogDividerOption, $g_hCmbLogDividerOption, $g_hBtnAtkLogClear, $g_hBtnAtkLogCopyClipboard, $g_hBtnOpenProfileFolder
+Global $g_iMiniLogDividerY = -1
 
 Func CreateLogTab($hWHndLogsOnly = False)
 	Local $i
@@ -25,11 +26,40 @@ Func CreateLogTab($hWHndLogsOnly = False)
 	Local $activeHWnD = WinGetHandle("") ; RichEdit Controls tamper with active window
 
 	If $hWHndLogsOnly Then
-		; only create so logs are available when switching to normal mode
-		$g_hTxtLog = _GUICtrlRichEdit_Create($hWHndLogsOnly, "", 0, 0, 20, 20, BitOR($ES_MULTILINE, $ES_READONLY, $WS_VSCROLL, $WS_HSCROLL, $ES_UPPERCASE, $ES_AUTOHSCROLL, $ES_AUTOVSCROLL, $ES_NUMBER, 0x200), $WS_EX_STATICEDGE)
-		WinSetState($g_hTxtLog, "", @SW_MINIMIZE)
-		$g_hTxtAtkLog = _GUICtrlRichEdit_Create($hWHndLogsOnly, "", 0, 0, 20, 20, BitOR($ES_MULTILINE, $ES_READONLY, $WS_VSCROLL, 8908), $WS_EX_STATICEDGE) ; 8909 = $ES_NUMBER, $ES_AUTOHSCROLL, $ES_AUTOVSCROLL, $ES_MULTILINE, $ES_UPPERCASE, 0x200
-		WinSetState($g_hTxtAtkLog, "", @SW_MINIMIZE)
+		If Not IsHWnd($g_hGUI_LOG) Then
+			$g_hGUI_LOG = GUICreate("", $_GUI_MAIN_WIDTH - 20, $_GUI_MAIN_HEIGHT - $_GUI_BOTTOM_HEIGHT - 90, 10, 85 + $_GUI_MAIN_TOP, BitOR($WS_CHILD, 0), -1, $hWHndLogsOnly)
+		EndIf
+		GUISwitch($g_hGUI_LOG)
+
+		If IsHWnd($g_hTxtLog) Then
+			_WinAPI_SetParent($g_hTxtLog, $g_hGUI_LOG)
+			_WinAPI_SetWindowLong($g_hTxtLog, $GWL_HWNDPARENT, $g_hGUI_LOG)
+			WinSetState($g_hTxtLog, "", @SW_RESTORE)
+		Else
+			$g_hTxtLog = _GUICtrlRichEdit_Create($g_hGUI_LOG, "", 0, 0, 20, 20, BitOR($ES_MULTILINE, $ES_READONLY, $WS_VSCROLL, $WS_HSCROLL, $ES_UPPERCASE, $ES_AUTOHSCROLL, $ES_AUTOVSCROLL, $ES_NUMBER, 0x200), $WS_EX_STATICEDGE)
+		EndIf
+
+		If IsHWnd($g_hTxtAtkLog) Then
+			_WinAPI_SetParent($g_hTxtAtkLog, $g_hGUI_LOG)
+			_WinAPI_SetWindowLong($g_hTxtAtkLog, $GWL_HWNDPARENT, $g_hGUI_LOG)
+			WinSetState($g_hTxtAtkLog, "", @SW_RESTORE)
+		Else
+			$g_hTxtAtkLog = _GUICtrlRichEdit_Create($g_hGUI_LOG, "", 0, 0, 20, 20, BitOR($ES_MULTILINE, $ES_READONLY, $WS_VSCROLL, 8908), $WS_EX_STATICEDGE) ; 8909 = $ES_NUMBER, $ES_AUTOHSCROLL, $ES_AUTOVSCROLL, $ES_MULTILINE, $ES_UPPERCASE, 0x200
+		EndIf
+
+		If $g_hDivider = 0 Or Not IsHWnd(GUICtrlGetHandle($g_hDivider)) Then
+			$g_hDivider = GUICtrlCreateLabel("", 0, 0, 20, 20, $SS_SUNKEN + $SS_BLACKRECT)
+			GUICtrlSetCursor(-1, 11)
+		EndIf
+
+		If $g_hLblLogDividerOption Then GUICtrlSetState($g_hLblLogDividerOption, $GUI_HIDE)
+		If $g_hCmbLogDividerOption Then GUICtrlSetState($g_hCmbLogDividerOption, $GUI_HIDE)
+		If $g_hBtnAtkLogClear Then GUICtrlSetState($g_hBtnAtkLogClear, $GUI_HIDE)
+		If $g_hBtnAtkLogCopyClipboard Then GUICtrlSetState($g_hBtnAtkLogCopyClipboard, $GUI_HIDE)
+		If $g_hBtnOpenProfileFolder Then GUICtrlSetState($g_hBtnOpenProfileFolder, $GUI_HIDE)
+
+		LayoutMiniLogPanel()
+		GUISetState(@SW_SHOWNOACTIVATE, $g_hGUI_LOG)
 		WinActivate($activeHWnD) ; restore current active window
 		Return
 	EndIf
@@ -64,7 +94,7 @@ Func CreateLogTab($hWHndLogsOnly = False)
 	WinActivate($activeHWnD) ; restore current active window
 
 	$y = 410
-	GUICtrlCreateLabel(GetTranslatedFileIni("MBR GUI Design Log", "LblLog_Style", "Log Style") & ":", $x, $y + 5, -1, -1)
+	$g_hLblLogDividerOption = GUICtrlCreateLabel(GetTranslatedFileIni("MBR GUI Design Log", "LblLog_Style", "Log Style") & ":", $x, $y + 5, -1, -1)
 	GUICtrlSetResizing(-1, $GUI_DOCKLEFT + $GUI_DOCKBOTTOM + $GUI_DOCKWIDTH + $GUI_DOCKHEIGHT)
 
 	$g_hCmbLogDividerOption = GUICtrlCreateCombo("", $x + 50, $y, 180, 25, BitOR($CBS_DROPDOWNLIST, $CBS_AUTOHSCROLL))
@@ -78,16 +108,38 @@ Func CreateLogTab($hWHndLogsOnly = False)
 			GetTranslatedFileIni("MBR GUI Design Log", "CmbLogDividerOption_Item_06", "Hide Bot Log, Full Attack Log"), GetTranslatedFileIni("MBR GUI Design Log", "CmbLogDividerOption_Item_01", -1))
 	GUICtrlSetOnEvent(-1, "cmbLog")
 
-	$g_hBtnAtkLogClear = GUICtrlCreateButton(GetTranslatedFileIni("MBR GUI Design Log", "BtnAtkLogClear", "Clear Atk. Log"), $x + 270, $y - 1, 80, 23)
-	GUICtrlSetResizing(-1, $GUI_DOCKLEFT + $GUI_DOCKBOTTOM + $GUI_DOCKWIDTH + $GUI_DOCKHEIGHT)
+	$x = $g_iSizeWGrpTab1 - 84
+	$g_hBtnAtkLogClear = _GUICtrlCreateIcon($g_sLibIconPath, $eIcnReload, $x, $y + 1, 22, 22)
+	GUICtrlSetResizing(-1, $GUI_DOCKRIGHT + $GUI_DOCKBOTTOM + $GUI_DOCKWIDTH + $GUI_DOCKHEIGHT)
 	_GUICtrlSetTip(-1, GetTranslatedFileIni("MBR GUI Design Log", "BtnAtkLogClear_Info_01", "Use this to clear the Attack Log."))
 	GUICtrlSetOnEvent(-1, "btnAtkLogClear")
-	If $g_bBtnColor Then GUICtrlSetBkColor(-1, 0x22C4F5)
 
-	$g_hBtnAtkLogCopyClipboard = GUICtrlCreateButton(GetTranslatedFileIni("MBR GUI Design Log", "BtnAtkLogCopyClipboard", "Copy to Clipboard"), $x + 350, $y - 1, 100, 23)
-	GUICtrlSetResizing(-1, $GUI_DOCKLEFT + $GUI_DOCKBOTTOM + $GUI_DOCKWIDTH + $GUI_DOCKHEIGHT)
+	$x += 29
+	$g_hBtnAtkLogCopyClipboard = _GUICtrlCreateIcon($g_sLibIconPath, $eIcnCopy, $x, $y + 1, 22, 22)
+	GUICtrlSetResizing(-1, $GUI_DOCKRIGHT + $GUI_DOCKBOTTOM + $GUI_DOCKWIDTH + $GUI_DOCKHEIGHT)
 	_GUICtrlSetTip(-1, GetTranslatedFileIni("MBR GUI Design Log", "BtnAtkLogCopyClipboard_Info_01", "Use this to copy the Attack Log to the Clipboard (CTRL+C)"))
 	GUICtrlSetOnEvent(-1, "btnAtkLogCopyClipboard")
-	If $g_bBtnColor Then GUICtrlSetBkColor(-1, 0x22C4F5)
+
+	$x += 29
+	$g_hBtnOpenProfileFolder = _GUICtrlCreateIcon($g_sLibIconPath, $eIcnEdit, $x, $y + 1, 22, 22)
+	GUICtrlSetResizing(-1, $GUI_DOCKRIGHT + $GUI_DOCKBOTTOM + $GUI_DOCKWIDTH + $GUI_DOCKHEIGHT)
+	_GUICtrlSetTip(-1, GetTranslatedFileIni("MBR GUI Design Log", "BtnOpenProfileFolder_Info_01", "Use this to open the Profile folder."))
+	GUICtrlSetOnEvent(-1, "btnOpenProfileFolder")
 
 EndFunc   ;==>CreateLogTab
+
+Func LayoutMiniLogPanel()
+	Local $iWidth = $_GUI_MAIN_WIDTH - 20
+	Local $iHeight = $_GUI_MAIN_HEIGHT - $_GUI_BOTTOM_HEIGHT - 90
+	If $iHeight < 80 Then $iHeight = 80
+
+	WinMove($g_hGUI_LOG, "", 10, 85 + $_GUI_MAIN_TOP, $iWidth, $iHeight)
+
+	If $g_iMiniLogDividerY < Int($iHeight / 4) Or $g_iMiniLogDividerY > Int($iHeight * 3 / 4) Then $g_iMiniLogDividerY = Int($iHeight * 3 / 4)
+	ControlShow($g_hGUI_LOG, "", $g_hTxtLog)
+	ControlShow($g_hGUI_LOG, "", $g_hDivider)
+	ControlShow($g_hGUI_LOG, "", $g_hTxtAtkLog)
+	ControlMove($g_hGUI_LOG, "", $g_hTxtLog, 0, 0, $iWidth, $g_iMiniLogDividerY)
+	ControlMove($g_hGUI_LOG, "", $g_hDivider, 0, $g_iMiniLogDividerY, $iWidth, $g_iLogDividerHeight)
+	ControlMove($g_hGUI_LOG, "", $g_hTxtAtkLog, 0, $g_iMiniLogDividerY + $g_iLogDividerHeight, $iWidth, $iHeight - $g_iMiniLogDividerY - $g_iLogDividerHeight)
+EndFunc   ;==>LayoutMiniLogPanel

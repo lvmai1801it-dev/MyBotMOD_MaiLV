@@ -31,7 +31,7 @@ Func TrainIt($iIndex, $iQuantity = 1, $iSleep = 400)
 			Else
 				ForceCaptureRegion()
 				Local $sBadPixelColor = _GetPixelColor($aTrainPos[0], $aTrainPos[1], $g_bCapturePixel)
-				If $g_bDebugSetLogTrain Then SetLog("Positon X: " & $aTrainPos[0] & "| Y : " & $aTrainPos[1] & " |Color get: " & $sBadPixelColor & " | Need: " & $aTrainPos[2])
+				If $g_bDebugSetLogTrain Then SetLog("Positon X: " & $aTrainPos[0] & "| Y : " & $aTrainPos[1] & " |Color get: " & $sBadPixelColor & " | Need: " & $aTrainPos[2], $COLOR_DEBUG)
 				If StringMid($sBadPixelColor, 1, 2) = StringMid($sBadPixelColor, 3, 2) And StringMid($sBadPixelColor, 1, 2) = StringMid($sBadPixelColor, 5, 2) Then
 					; Pixel is gray, so queue is full -> nothing to inform the user about
 					SetLog("Troop " & GetTroopName($iIndex) & " is not available due to full queue", $COLOR_DEBUG)
@@ -45,13 +45,23 @@ Func TrainIt($iIndex, $iQuantity = 1, $iSleep = 400)
 			EndIf
 		Else
 			If UBound($aTrainPos) > 0 And $aTrainPos[0] = -1 Then
+				If $iIndex = $eASpell And $i = 1 Then
+					ClickDrag(755, 564 + $g_iBottomOffsetY, 305, 564 + $g_iBottomOffsetY)
+					If _Sleep(Random(1200, 1600, 1)) Then Return
+					ContinueLoop
+				EndIf
+
 				If $i < 5 Then
 					ForceCaptureRegion()
 				Else
 					If $g_bDebugSetLogTrain Then SaveDebugImage("TroopIconNotFound_" & GetTroopName($iIndex))
 					SetLog("TrainIt troop position " & GetTroopName($iIndex) & " did not find icon", $COLOR_ERROR)
 					If $i = 5 Then
-						SetLog("Seems all your barracks are upgrading!", $COLOR_ERROR)
+						If $iIndex >= $eWallW And $iIndex <= $eSkyW Then
+							SetLog("Siege machine icon not found in workshop!", $COLOR_ERROR)
+						Else
+							SetLog("Seems all your barracks are upgrading!", $COLOR_ERROR)
+						EndIf
 						$g_bAllBarracksUpgd = True
 					EndIf
 				EndIf
@@ -67,33 +77,33 @@ Func GetTrainPos(Const $iIndex)
 	If $g_bDebugSetLogTrain Then SetLog("GetTrainPos($iIndex=" & $iIndex & ")", $COLOR_DEBUG)
 
 	; Get the Image path to search
-	If ($iIndex >= $eBarb And $iIndex <= $eFurn) Then
+	If ($iIndex >= $eBarb And $iIndex <= $eGDrag) Then
 		Local $sFilter = String($g_asTroopShortNames[$iIndex]) & "*"
 		Local $asImageToUse = _FileListToArray($g_sImgTrainTroops, $sFilter, $FLTA_FILES, True)
 		If Not @error Then
-			If $g_bDebugSetLogTrain Then SetLog("$asImageToUse Troops: " & _ArrayToString($asImageToUse, "|"))
+			If $g_bDebugSetLogTrain Then SetLog("$asImageToUse Troops: " & _ArrayToString($asImageToUse, "|"), $COLOR_DEBUG)
 			Return GetVariable($asImageToUse, $iIndex)
 		Else
 			Return 0
 		EndIf
 	EndIf
 
-	If $iIndex >= $eLSpell And $iIndex <= $eOgSpell Then
+	If $iIndex >= $eLSpell And $iIndex <= $eASpell Then
 		Local $sFilter = String($g_asSpellShortNames[$iIndex - $eLSpell]) & "*"
 		Local $asImageToUse = _FileListToArray($g_sImgTrainSpells, $sFilter, $FLTA_FILES, True)
 		If Not @error Then
-			If $g_bDebugSetLogTrain Then SetLog("$asImageToUse Spell: " & $asImageToUse[1])
+			If $g_bDebugSetLogTrain Then SetLog("$asImageToUse Spell: " & $asImageToUse[1], $COLOR_DEBUG)
 			Return GetVariable($asImageToUse, $iIndex)
 		Else
 			Return 0
 		EndIf
 	EndIf
 
-	If $iIndex >= $eWallW And $iIndex <= $eTroopL Then
+	If $iIndex >= $eWallW And $iIndex <= $eSkyW Then
 		Local $sFilter = String($g_asSiegeMachineShortNames[$iIndex - $eWallW]) & "*"
 		Local $asImageToUse = _FileListToArray($g_sImgTrainSieges, $sFilter, $FLTA_FILES, True)
 		If Not @error Then
-			If $g_bDebugSetLogTrain Then SetLog("$asImageToUse Spell: " & $asImageToUse[1])
+			If $g_bDebugSetLogTrain Then SetLog("$asImageToUse Spell: " & $asImageToUse[1], $COLOR_DEBUG)
 			Return GetVariable($asImageToUse, $iIndex)
 		Else
 			Return 0
@@ -123,7 +133,7 @@ Func GetVariable(Const $asImageToUse, Const $iIndex)
 			ElseIf $asResult[0] = "-2" Then
 				$iError = -2
 			Else
-				If $g_bDebugSetLogTrain Then SetLog("String: " & $asResult[0])
+				If $g_bDebugSetLogTrain Then SetLog("String: " & $asResult[0], $COLOR_DEBUG)
 				Local $aResult = StringSplit($asResult[0], "|", $STR_NOCOUNT)
 				If UBound($aResult) > 1 Then
 					Local $aCoordinates = StringSplit($aResult[1], ",", $STR_NOCOUNT)
@@ -138,19 +148,19 @@ Func GetVariable(Const $asImageToUse, Const $iIndex)
 						If $g_bDebugSetLogTrain Then SetLog("$iTolerance: " & $iTolerance, $COLOR_SUCCESS)
 						Return $aTrainPos
 					Else
-						SetLog("Don't know how to train the troop with index " & $iIndex & " yet.")
+					SetLog("Don't know how to train the troop with index " & $iIndex & " yet.", $COLOR_ERROR)
 					EndIf
 				Else
-					SetLog("Don't know how to train the troop with index " & $iIndex & " yet")
+				SetLog("Don't know how to train the troop with index " & $iIndex & " yet", $COLOR_ERROR)
 				EndIf
 			EndIf
 		Else
-			SetLog("Don't know how to train the troop with index " & $iIndex & " yet")
+		SetLog("Don't know how to train the troop with index " & $iIndex & " yet", $COLOR_ERROR)
 		EndIf
 	Next
 
 	If $iError = 0 Then
-		SetLog("No " & GetTroopName($iIndex) & " Icon found!", $COLOR_ERROR)
+		If $g_bDebugSetLogTrain Then SetLog(GetTroopName($iIndex) & " icon not found!", $COLOR_DEBUG)
 	ElseIf $iError = -1 Then
 		SetLog("TrainIt.au3 GetVariable(): ImgLoc DLL Error Occured!", $COLOR_ERROR)
 	ElseIf $iError = -2 Then

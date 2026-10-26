@@ -1,4 +1,4 @@
-; #FUNCTION# ====================================================================================================================
+﻿; #FUNCTION# ====================================================================================================================
 ; Name ..........: UpdateStats
 ; Description ...: This function will update the statistics in the GUI.
 ; Syntax ........: UpdateStats()
@@ -17,6 +17,7 @@
 Global $ResetStats = 0
 
 Func UpdateStats($bForceUpdate = False)
+	_UpdateVillageBuilderBaseStats()
 	; old values
 	Static $s_iOldSmartZapGain = 0, $s_iOldNumLSpellsUsed = 0, $s_iOldNumEQSpellsUsed = 0
 	Static $topgoldloot = 0, $topelixirloot = 0, $topdarkloot = 0, $topTrophyloot = 0
@@ -100,12 +101,11 @@ Func UpdateStats($bForceUpdate = False)
 
 	If $g_iFirstRun = 1 Then
 		;GUICtrlSetState($g_hLblResultStatsTemp, $GUI_HIDE)
-		GUICtrlSetState($g_hLblVillageReportTemp, $GUI_HIDE)
 		GUICtrlSetState($g_hPicResultGoldTemp, $GUI_HIDE)
 		GUICtrlSetState($g_hPicResultElixirTemp, $GUI_HIDE)
 		GUICtrlSetState($g_hPicResultDETemp, $GUI_HIDE)
 
-		GUICtrlSetState($g_hLblResultGoldNow, $GUI_SHOW + $GUI_DISABLE) ; $GUI_DISABLE to trigger default view in btnVillageStat
+		GUICtrlSetState($g_hLblResultGoldNow, $GUI_SHOW)
 		GUICtrlSetState($g_hPicResultGoldNow, $GUI_SHOW)
 		GUICtrlSetState($g_hLblResultElixirNow, $GUI_SHOW)
 		GUICtrlSetState($g_hPicResultElixirNow, $GUI_SHOW)
@@ -138,7 +138,7 @@ Func UpdateStats($bForceUpdate = False)
 			$iOldCurrentLoot[$eLootDarkElixir] = $g_aiCurrentLoot[$eLootDarkElixir]
 		EndIf
 		GUICtrlSetData($g_ahLblStatsStartedWith[$eLootTrophy], _NumberFormat($g_aiCurrentLoot[$eLootTrophy], True))
-		GUICtrlSetData($g_hLblResultTrophyNow, _NumberFormat($g_aiCurrentLoot[$eLootTrophy], True))
+		GUICtrlSetData($g_hLblResultTrophyNow, _FormatClanGamesScoreForStats($g_sClanGamesScore))
 		$iOldCurrentLoot[$eLootTrophy] = $g_aiCurrentLoot[$eLootTrophy]
 		GUICtrlSetData($g_hLblResultGemNow, _NumberFormat($g_iGemAmount, True))
 		$iOldGemAmount = $g_iGemAmount
@@ -233,7 +233,6 @@ Func UpdateStats($bForceUpdate = False)
 
 	If $iOldCurrentLoot[$eLootTrophy] <> $g_aiCurrentLoot[$eLootTrophy] Then
 		$bStatsUpdated = True
-		GUICtrlSetData($g_hLblResultTrophyNow, _NumberFormat($g_aiCurrentLoot[$eLootTrophy], True))
 		$iOldCurrentLoot[$eLootTrophy] = $g_aiCurrentLoot[$eLootTrophy]
 	EndIf
 
@@ -450,10 +449,9 @@ Func UpdateStats($bForceUpdate = False)
 		$iOldDElixirFromDrills = $g_iDElixirFromDrills
 	EndIf
 
-	For $i = 0 To $eTroopCount - 1
+	For $i = $eTroopBarbarian To $eTroopRuinWitch
 		If $g_aiDonateStatsTroops[$i][0] <> $g_aiDonateStatsTroops[$i][1] Then
 			$bStatsUpdated = True
-			GUICtrlSetData($g_hLblDonTroop[$i], _NumberFormat($g_aiDonateStatsTroops[$i][0], True))
 			If $g_aiDonateStatsTroops[$i][0] > $g_aiDonateStatsTroops[$i][1] Then
 				$g_iTotalDonateStatsTroops += ($g_aiDonateStatsTroops[$i][0] - $g_aiDonateStatsTroops[$i][1])
 				$g_iTotalDonateStatsTroopsXP += (($g_aiDonateStatsTroops[$i][0] - $g_aiDonateStatsTroops[$i][1]) * $g_aiTroopDonateXP[$i])
@@ -464,6 +462,7 @@ Func UpdateStats($bForceUpdate = False)
 	Next
 	If $bDonateTroopsStatsChanged Then
 		$bStatsUpdated = True
+		UpdateDonTroopPage()
 		GUICtrlSetData($g_hLblTotalTroopsQ, _NumberFormat($g_iTotalDonateStatsTroops, True))
 		GUICtrlSetData($g_hLblTotalTroopsXP, _NumberFormat($g_iTotalDonateStatsTroopsXP, True))
 		$bDonateTroopsStatsChanged = False
@@ -639,8 +638,12 @@ Func UpdateStats($bForceUpdate = False)
 	EndIf
 
 	If $g_sClanGamesScore <> $sOldClanGamesScore Then
+		Local $sClanGamesScoreDisplay = _FormatClanGamesScoreForStats($g_sClanGamesScore)
 		GUICtrlSetData($g_hLblYourScore, $g_sClanGamesScore)
+		GUICtrlSetData($g_hLblResultTrophyNow, $sClanGamesScoreDisplay)
+		If ProfileSwitchAccountEnabled() Then GUICtrlSetData($g_ahLblResultTrophyNowAcc[$g_iCurAccount], $sClanGamesScoreDisplay)
 		$sOldClanGamesScore = $g_sClanGamesScore
+		$bStatsUpdated = True
 	EndIf
 
 	; update Builder Base stats
@@ -656,22 +659,22 @@ Func UpdateStats($bForceUpdate = False)
 	If Not _DateIsValid($g_sPetUpgradeTime) Then GUICtrlSetData($g_hLbLPetTime, "")
 
 	If ProfileSwitchAccountEnabled() Then
-		;village report
+		; village report
 		GUICtrlSetData($g_ahLblResultGoldNowAcc[$g_iCurAccount], _NumberFormat($g_aiCurrentLoot[$eLootGold], True))
 		GUICtrlSetData($g_ahLblResultElixirNowAcc[$g_iCurAccount], _NumberFormat($g_aiCurrentLoot[$eLootElixir], True))
 		GUICtrlSetData($g_ahLblResultDENowAcc[$g_iCurAccount], _NumberFormat($g_aiCurrentLoot[$eLootDarkElixir], False))
-		GUICtrlSetData($g_ahLblResultTrophyNowAcc[$g_iCurAccount], _NumberFormat($g_aiCurrentLoot[$eLootTrophy], True))
+		GUICtrlSetData($g_ahLblResultTrophyNowAcc[$g_iCurAccount], _FormatClanGamesScoreForStats($g_sClanGamesScore))
 		GUICtrlSetData($g_ahLblResultBuilderNowAcc[$g_iCurAccount], $g_iFreeBuilderCount & "/" & $g_iTotalBuilderCount)
 		Local $TempGemDisplay = $g_iGemAmount < 10000 ? $g_iGemAmount : Round($g_iGemAmount / 1000, 1)
 		GUICtrlSetData($g_ahLblResultGemNowAcc[$g_iCurAccount], _NumberFormat($TempGemDisplay, True))
 
-		;gain stats
+		; gain stats
 		SwitchAccountVariablesReload("UpdateStats")
 		GUICtrlSetData($g_ahLblResultAttacked[$g_iCurAccount], $g_aiAttackedCount)
 		GUICtrlSetData($g_ahLblResultSkipped[$g_iCurAccount], $g_iSkippedVillageCount)
 
-		;Clan Capital
-		If ($g_iLootCCGold And $g_iLootCCMedal And $g_iCCTrophies) = 0 Then
+		; Clan Capital
+		If $g_iLootCCGold = 0 And $g_iLootCCMedal = 0 And $g_iCCTrophies = 0 Then
 			GUICtrlSetData($g_ahLbLLootCCGold[$g_iCurAccount], "")
 			GUICtrlSetData($g_ahLbLLootCCMedal[$g_iCurAccount], "")
 			GUICtrlSetData($g_ahLblTrophiesCC[$g_iCurAccount], "")
@@ -681,7 +684,7 @@ Func UpdateStats($bForceUpdate = False)
 			GUICtrlSetData($g_ahLblTrophiesCC[$g_iCurAccount], _NumberFormat($g_iCCTrophies, True))
 		EndIf
 
-		;Builders Base
+		; Builder Base
 		If $g_iTotalBuilderCountBB = 0 Then
 			GUICtrlSetData($g_ahLblResultBBuilderNowAcc[$g_iCurAccount], "")
 		Else
@@ -790,12 +793,11 @@ Func ResetStats()
 	$g_iTotalDonateStatsSiegeMachinesXP = 0
 	If ProfileSwitchAccountEnabled() Then
 		SwitchAccountVariablesReload("Reset")
-		For $i = 0 To 7
-			GUICtrlSetData($g_ahLblResultRuntimeNowAcc[$i], "00:00:00")
+		For $i = 0 To UBound($g_aiRunTime) - 1
 			$g_aiRunTime[$i] = 0
-			GUICtrlSetData($g_hLbLLabTime, "")
-			GUICtrlSetData($g_hLbLPetTime, "")
 		Next
+		GUICtrlSetData($g_hLbLLabTime, "")
+		GUICtrlSetData($g_hLbLPetTime, "")
 	EndIf
 	UpdateStats()
 EndFunc   ;==>ResetStats
@@ -804,11 +806,19 @@ Func WallsStatsMAJ()
 	$g_aiWallsCurrentCount[$g_iCmbUpgradeWallsLevel + 4] -= Number($g_iNbrOfWallsUpped)
 	$g_aiWallsCurrentCount[$g_iCmbUpgradeWallsLevel + 5] += Number($g_iNbrOfWallsUpped)
 	$g_iNbrOfWallsUpped = 0
-	For $i = 4 To 18
+	For $i = 4 To 19
 		GUICtrlSetData($g_ahWallsCurrentCount[$i], $g_aiWallsCurrentCount[$i])
 	Next
 	SaveConfig()
 EndFunc   ;==>WallsStatsMAJ
+
+Func _FormatClanGamesScoreForStats($sScore)
+	Local $sValue = StringStripWS(String($sScore), 8)
+	If StringInStr($sValue, "/") Then $sValue = StringLeft($sValue, StringInStr($sValue, "/") - 1)
+	$sValue = StringRegExpReplace($sValue, "[^0-9]", "")
+	If $sValue = "" Then Return "0"
+	Return _NumberFormat(Number($sValue), True)
+EndFunc   ;==>_FormatClanGamesScoreForStats
 
 Func UpdateStats_ClearArray(ByRef $a)
 	For $i = 0 To UBound($a) - 1

@@ -23,18 +23,18 @@ Global $g_hGUI_DropOrder = 0
 #include "MBR GUI Design Child Attack - Strategies.au3"
 
 Func LoadTranslatedDropOrderList()
-	Global $g_asDropOrderList = ["", _
+	Global $g_asDropOrderList = [ _
 			"Barbarians", "Super Barbarians", "Archers", "Super Archers", "Giants", "Super Giants", "Goblins", "Sneaky Goblins", _
 			"Wall Breakers", "Super Wall Breakers", "Balloons", "Rocket Balloons", "Wizards", "Super Wizards", "Healers", _
-			"Dragons", "Super Dragons", "Pekkas", "Baby Dragons", "Inferno Dragons", "Miners", "Super Miners", "Electro Dragons", "Yetis", "Dragon Riders", _
-			"Electro Titans", "Root Riders", "Throwers", "Minions", "Super Minions", "Hog Riders", "Super Hog Riders", "Valkyries", "Super Valkyries", "Golems", _
-			"Witchs", "Super Witchs", "Lava Hounds", "Ice Hounds", "Bowlers", "Super Bowlers", "Ice Golems", "Headhunters", "Apprentice Wardens", "Druids", "Furnaces", _
-			"Clan Castle", "Heroes"]
-EndFunc   ;==>LoadTranslatedDropOrderList
-
+ 			"Dragons", "Super Dragons", "Pekkas", "Baby Dragons", "Inferno Dragons", "Miners", "Super Miners", "Electro Dragons", "Yetis", "Super Yetis", "Dragon Riders", _
+ 			"Electro Titans", "Root Riders", "Throwers", "Meteor Golems", "Minions", "Super Minions", "Hog Riders", "Super Hog Riders", "Valkyries", "Super Valkyries", "Golems", _
+			"Witches", "Super Witches", "Lava Hounds", "Ice Hounds", "Bowlers", "Super Bowlers", "Ice Golems", "Headhunters", "Apprentice Wardens", "Druids", "Furnaces", "Ruin Witches", _
+			"Heroes", "Clan Castle", "Debt Collectors", "Elephant Riders", "Giant Giants", "KANES", "YEETers", "The Disarmers", "Yeti Undertakers", "Barbarian Kickers", "Giant Throwers", "Broom Witches", "MECHAS", "Ice Minions", "Ice Wizards", "Party Wizards", "COOKIES", "Firecrackers", "Ram Riders", "Pumpkin Barbarians", "Royal Ghosts", "Barchers", "Hog Wizards", "Lavaloons", "Totem Throwers", "Witch Golems", "Giant Skeletons", "Skeleton Barrels", "Azure Dragons", "Golden Dragons"]
+ EndFunc   ;==>LoadTranslatedDropOrderList
+ 
 Global $g_hChkCustomDropOrderEnable = 0
-Global $g_ahCmbDropOrder[$eDropOrderCount] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-Global $g_ahImgDropOrder[$eDropOrderCount] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+Global $g_ahCmbDropOrder[$eDropOrderCount]
+Global $g_ahImgDropOrder[$eDropOrderCount]
 Global $g_hBtnDropOrderSet = 0, $g_ahImgDropOrderSet = 0
 Global $g_hBtnRemoveDropOrder = 0
 
@@ -61,12 +61,12 @@ EndFunc   ;==>CreateAttackTab
 
 Func CreateDropOrderGUI()
 
-	$g_hGUI_DropOrder = _GUICreate(GetTranslatedFileIni("MBR GUI Design Child Attack - Attack", "GUI_DropOrder", "Attack Custom Dropping Order"), 525, 520, -1, -1, $WS_BORDER, $WS_EX_CONTROLPARENT)
+	$g_hGUI_DropOrder = _GUICreate(GetTranslatedFileIni("MBR GUI Design Child Attack - Attack", "GUI_DropOrder", "Attack Custom Dropping Order"), 440, 375, -1, -1, $WS_BORDER, $WS_EX_CONTROLPARENT)
 	SetDefaultDropOrderGroup(False)
 	LoadTranslatedDropOrderList()
 
 	Local $x = 25, $y = 25
-	GUICtrlCreateGroup(GetTranslatedFileIni("MBR GUI Design Child Attack - Attack", "Group_03", "Custom Dropping Order"), $x - 20, $y - 20, 511, 397)
+	GUICtrlCreateGroup(GetTranslatedFileIni("MBR GUI Design Child Attack - Attack", "Group_03", "Custom Dropping Order"), $x - 20, $y - 20, 426, 335)
 	$x += 10
 	$y += 20
 
@@ -85,7 +85,7 @@ Func CreateDropOrderGUI()
 
 	Local $g_hTxtDropOrder = GetTranslatedFileIni("MBR GUI Design Child Attack - Attack", "TxtDropOrder", "Enter sequence order for drop of troop #")
 
-	$x += 50
+	$x += 35
 	$y += 20
 	For $p = 0 To UBound($g_ahCmbDropOrder) - 1
 		If $p < 6 Then
@@ -118,8 +118,8 @@ Func CreateDropOrderGUI()
 		EndIf
 	Next
 
-	$x = 125
-	$y = 310
+	$x = 101
+	$y = 275
 	; Create push button to set training order once completed
 	$g_hBtnDropOrderSet = GUICtrlCreateButton(GetTranslatedFileIni("MBR GUI Design Child Attack - Attack", "BtnDropOrderSet", "Apply New Order"), $x, $y, 100, 25)
 	GUICtrlSetState(-1, BitOR($GUI_UNCHECKED, $GUI_ENABLE))
@@ -128,8 +128,8 @@ Func CreateDropOrderGUI()
 	GUICtrlSetOnEvent(-1, "BtnDropOrderSet")
 	$g_ahImgDropOrderSet = _GUICtrlCreateIcon($g_sLibIconPath, $eIcnSilverStar, $x + 104, $y + 4, 18, 18)
 
-	$x += 150
-	$g_hBtnRemoveDropOrder = GUICtrlCreateButton(GetTranslatedFileIni("MBR GUI Design Child Attack - Attack", "BtnRemoveDropOrder", "Empty Drop List"), $x, $y, 118, 25)
+	$x = 253
+	$g_hBtnRemoveDropOrder = GUICtrlCreateButton(GetTranslatedFileIni("MBR GUI Design Child Attack - Attack", "BtnRemoveDropOrder", "Empty Drop List"), $x, $y, 100, 25)
 	GUICtrlSetState(-1, BitOR($GUI_UNCHECKED, $GUI_DISABLE))
 	_GUICtrlSetTip(-1, GetTranslatedFileIni("MBR GUI Design Child Attack - Attack", "BtnRemoveDropOrder_Info_01", "Push button to remove all troops from list and start over"))
 	GUICtrlSetOnEvent(-1, "BtnRemoveDropOrder")
@@ -137,7 +137,7 @@ Func CreateDropOrderGUI()
 
 	$y += 35
 	; Create a button control.
-	Local $g_hBtnClose = GUICtrlCreateButton(GetTranslatedFileIni("MBR GUI Design Child Attack - Attack", "BtnClose", "Close"), $x + 33, $y, 85, 25)
+	Local $g_hBtnClose = GUICtrlCreateButton(GetTranslatedFileIni("MBR GUI Design Child Attack - Attack", "BtnClose", "Close"), 178, $y, 85, 25)
 	GUICtrlSetOnEvent(-1, "CloseCustomDropOrder")
 
 EndFunc   ;==>CreateDropOrderGUI

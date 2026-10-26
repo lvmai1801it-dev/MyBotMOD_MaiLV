@@ -1,4 +1,4 @@
-; #FUNCTION# ====================================================================================================================
+﻿; #FUNCTION# ====================================================================================================================
 ; Name ..........: BuilderBaseReport()
 ; Description ...: Make Resources report of Builders Base
 ; Syntax ........: BuilderBaseReport()
@@ -17,6 +17,13 @@ Func BuilderBaseReport($bBypass = False, $bSetLog = True)
 	ClearScreen("Defaut", False)
 	If _Sleep($DELAYVILLAGEREPORT1) Then Return
 
+	; Close the event bar when its gray arrow is visible over the Builder Base.
+	If _ColorCheck(_GetPixelColor(396, 695, True), Hex(0xFDFDFD, 6), 20) And _
+			_ColorCheck(_GetPixelColor(400, 685, True), Hex(0xE2E2E2, 6), 20) Then
+		Click(396, 695)
+		If _Sleep($DELAYRESPOND) Then Return
+	EndIf
+
 	Switch $bBypass
 		Case False
 			If $bSetLog Then SetLog("Builder Base Report", $COLOR_INFO)
@@ -26,24 +33,74 @@ Func BuilderBaseReport($bBypass = False, $bSetLog = True)
 			If $bSetLog Then SetLog("Builder Base Village Report Error, You have been a BAD programmer!", $COLOR_ERROR)
 	EndSwitch
 
-	If Not $bSetLog Then SetLog("Builder Base Village Report", $COLOR_INFO)
-
-	getBuilderCount($bSetLog, True) ; update builder data
+	If Not IsMainPageBuilderBase(1) Then
+		SetLog("Unable to read builders info at this time", $COLOR_ERROR)
+		Return
+	EndIf
 	If _Sleep($DELAYRESPOND) Then Return
 
-	$g_aiCurrentLootBB[$eLootTrophyBB] = getTrophyMainScreen(67, 84)
-	$g_aiCurrentLootBB[$eLootGoldBB] = getResourcesMainScreen(705, 23)
-	$g_aiCurrentLootBB[$eLootElixirBB] = getResourcesMainScreen(705, 72)
-	If $bSetLog Then SetLog(" [G]: " & _NumberFormat($g_aiCurrentLootBB[$eLootGoldBB]) & " [E]: " & _NumberFormat($g_aiCurrentLootBB[$eLootElixirBB]) & " [T]: " & _NumberFormat($g_aiCurrentLootBB[$eLootTrophyBB]), $COLOR_SUCCESS)
+	$g_aiCurrentLootBB[$eLootTrophyBB] = getTrophyBuilderBase($aTrophiesBuilderBase[0], $aTrophiesBuilderBase[1])
+	$g_aiCurrentLootBB[$eLootGoldBB] = getResourcesMainScreen(690, 22)
+	$g_aiCurrentLootBB[$eLootElixirBB] = getResourcesMainScreen(690, 59)
+	If Not getBuilderCount(Not $bSetLog, True) And Not IsMainPageBuilderBase(1) Then Return ; update builder data
+	If $bSetLog Then SetLog("[G]: " & _NumberFormat($g_aiCurrentLootBB[$eLootGoldBB]) & " [E]: " & _NumberFormat($g_aiCurrentLootBB[$eLootElixirBB]) & " [T]: " & _NumberFormat($g_aiCurrentLootBB[$eLootTrophyBB]), $COLOR_SUCCESS)
 
 	PicBBTrophies()
 
-	If Not $bBypass Then ; update stats
-		UpdateStats()
+	UpdateStats()
+
+	; Auto-disable drop trophies if elixir storage is full, like halt attack
+	If $g_bChkDropTrophyBB And CheckBBElixirStorageFull(False) Then
+		$g_bChkDropTrophyBB = False
+		GUICtrlSetState($g_hChkDropTrophyBB, $GUI_UNCHECKED)
+		If $bSetLog Then SetLog("Elixir storage full, disabling Drop Trophies", $COLOR_INFO)
 	EndIf
 
 	If ProfileSwitchAccountEnabled() Then SwitchAccountVariablesReload("Save")
 EndFunc   ;==>BuilderBaseReport
+
+; #FUNCTION# ===========================================================================================================
+; Name ..........: TestBBOCR
+; Description ...: Tests the Master Builder free/total OCR using the Builder Base report coordinates.
+; Remarks .......: Logs raw and normalized results without changing builder state or restarting the game.
+; ======================================================================================================================
+
+Func TestBBOCR()
+	If Not IsMainPageBuilderBase(1) Then
+		SetLog("TestBBOCR: Builder Base screen not detected", $COLOR_ERROR)
+		Return False
+	EndIf
+	Local $iGold = Number(getResourcesMainScreen(690, 22))
+	Local $iElixir = Number(getResourcesMainScreen(690, 59))
+	Local $iTrophies = getTrophyBuilderBase($aTrophiesBuilderBase[0], $aTrophiesBuilderBase[1])
+	Local $bGoldFull = CheckBBGoldStorageFull(False)
+	Local $bElixirFull = CheckBBElixirStorageFull(False)
+	Local $sBuilderInfo = "", $sBuilderRaw = ""
+	Local $aBuilderOcrOffset[5] = [0, -3, 3, -6, 6]
+	For $i = 0 To UBound($aBuilderOcrOffset) - 1
+		$sBuilderRaw = getBuilders($aBuildersDigitsBuilderBase[0], $aBuildersDigitsBuilderBase[1] + $aBuilderOcrOffset[$i], True, True)
+		$sBuilderInfo = _NormalizeBuilderCount($sBuilderRaw)
+		If $sBuilderInfo <> "" Then ExitLoop
+	Next
+	Local $sStars = _ReadBBStarsOCR()
+	Local $aStars = StringSplit($sStars, "#", $STR_NOCOUNT)
+	Local $bStarsValid = IsArray($aStars) And UBound($aStars) = 2 And StringIsDigit($aStars[0]) And StringIsDigit($aStars[1]) And Number($aStars[1]) > 0
+	Local $sStarLabInfo = getLabBuilderCount()
+	Local $bStarLabValid = StringRegExp($sStarLabInfo, "^[01]#1$")
+
+	SetLog("[Gold]: " & _NumberFormat($iGold), $COLOR_INFO)
+	SetLog("[Elixir]: " & _NumberFormat($iElixir), $COLOR_INFO)
+	Local $sStoragesFull = ""
+	If $bGoldFull Then $sStoragesFull &= "Gold "
+	If $bElixirFull Then $sStoragesFull &= "Elixir "
+	If $sStoragesFull = "" Then $sStoragesFull = "None"
+	SetLog("[Storages Full]: " & StringStripWS($sStoragesFull, $STR_STRIPLEADING + $STR_STRIPTRAILING), $COLOR_INFO)
+	SetLog("[Trophies]: " & ($iTrophies > 0 ? _NumberFormat($iTrophies) : "OCR failed"), $COLOR_INFO)
+	SetLog("[Builders]: " & ($sBuilderInfo <> "" ? StringReplace($sBuilderInfo, "#", "/") : "OCR failed"), $COLOR_INFO)
+	SetLog("[Star Laboratory]: " & ($bStarLabValid ? StringReplace($sStarLabInfo, "#", "/") : "OCR failed"), $COLOR_INFO)
+	SetLog("[Stars]: " & ($bStarsValid ? $aStars[0] & "/" & $aStars[1] : "OCR failed"), $COLOR_INFO)
+	Return $iGold > 0 And $iElixir > 0 And $iTrophies > 0 And $sBuilderInfo <> "" And $bStarLabValid And $bStarsValid
+EndFunc   ;==>TestBBOCR
 
 Func PicBBTrophies()
 	_GUI_Value_STATE("HIDE", $g_aGroupBBLeague)

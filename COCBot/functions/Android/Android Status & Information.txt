@@ -23,36 +23,23 @@ MyBot Command Line Key: MEmu
 Default Instance Key: MEmu
 Second Instance Key:  MEmu_1
 
-Known issues/bugs: Runs spam advertisements that cause errors during game. 
-If you see errors like this "BigNoxVMMgr.exe: error: Code REGDB_E_CLASSNOTREG (0x80040154) - Class not registered (extended info not available)"
-your Nox installation is corrupt. Then open cmd.exe and register all dlls:
-FOR %1 IN ("C:\Program Files\Bignox\BigNoxVM\RT\*.DLL") DO REGSVR32 /S "%1"
-
-Nox
-===
-http://en.bignox.com/
-Version: CoC patched v7.0.5.9065-9.0901231213 or newer
-MyBot Command Line Key: Nox
-Default Instance Key: nox
-Second Instance Key:  Nox_1
-
 MyBot Feature & Functions Matrix (not complete yet!)
 ================================
 
-Feature/Function          | MEmu          | BlueStacks3/4   | Nox           | 
---------------------------|---------------|-----------------|---------------|
-DPI Support*              | Yes           | Yes             | Yes (limited) | 
-Dock Mode                 | Yes           | Yes             | Yes           | 
-Configure Android Screen  | Yes           | Yes             | Yes           | 
-Configure Android Window  | Yes           | Yes             | Yes           | 
-WinAPI/DirectX background | Yes, DirectX  | Yes, DirectX    | Yes, DirectX  | 
-AndroidScreencap          | Yes           | Yes             | Yes           | 
-AndroidZoomOut            | Yes           | Yes             | Yes           | 
-AndroidClick*             | Yes           | Yes             | Yes           | 
-_ControlClick             | Yes**         | Yes             | Yes           | 
-AndroidClickDrag          | Yes           | Yes             | Yes           | 
-_PostMessage_ClickDrag    | No            | Yes, not used   | No            | 
-AndroidSendText*          | Yes           | Yes             | Yes           | 
+Feature/Function          | MEmu          | BlueStacks5     |
+--------------------------|---------------|-----------------|
+DPI Support*              | Yes           | Yes             |
+Dock Mode                 | Yes           | Yes             |
+Configure Android Screen  | Yes           | Yes             |
+Configure Android Window  | Yes           | Yes             |
+WinAPI/DirectX background | Yes, DirectX  | Yes, DirectX    |
+AndroidScreencap          | Yes           | Yes             |
+AndroidZoomOut            | Yes           | Yes             |
+AndroidClick*             | Yes           | Yes             |
+_ControlClick             | Yes**         | Yes             |
+AndroidClickDrag          | Yes           | Yes             |
+_PostMessage_ClickDrag    | No            | Yes, not used   |
+AndroidSendText*          | Yes           | Yes             |
 
 Feature & Functions Notes
 -------------------------

@@ -1,4 +1,4 @@
-; #FUNCTION# ====================================================================================================================
+﻿; #FUNCTION# ====================================================================================================================
 ; Name ..........: HelperHut.au3
 ; Description ...: This file controls Helper Hut and Assignments
 ; Syntax ........:
@@ -14,7 +14,6 @@
 ; ===============================================================================================================================
 
 Func HelperHut()
-
 	Select
 		Case $g_bChkAppBuilder = 0 And $g_bChkLabAssistant = 0
 			Return
@@ -28,6 +27,164 @@ Func HelperHut()
 
 EndFunc   ;==>HelperHut
 
+; #FUNCTION# ===========================================================================================================
+; Name ..........: TestHelperHut
+; Description ...: Opens the specified assistant card and reads both assistant levels in screen order.
+; Remarks .......: Accepts "Lab" or "Builder"; does not assign either assistant.
+; ======================================================================================================================
+
+Func TestHelperHut($sAssistant)
+	Local $sFirstTab = "", $sSecondTab = ""
+	Switch StringLower($sAssistant)
+		Case "lab"
+			$sFirstTab = "LabAssist"
+			$sSecondTab = "BuildersApp"
+		Case "builder"
+			$sFirstTab = "BuildersApp"
+			$sSecondTab = "LabAssist"
+		Case Else
+			SetLog('Use TestHelperHut("Lab") or TestHelperHut("Builder")', $COLOR_ERROR)
+			Return False
+	EndSwitch
+
+	If Not _OpenHelperHut() Then Return False
+	Local $aButton = FindButton($sFirstTab)
+	If Not IsArray($aButton) Or UBound($aButton) <> 2 Then
+		SetLog($sAssistant & " assistant button not detected", $COLOR_WARNING)
+		ClearScreen()
+		Return False
+	EndIf
+
+	Click($aButton[0], 545 + $g_iBottomOffsetY)
+	If _Sleep(Random(1500, 2000, 1)) Then Return False
+	WaitForClanMessage("BuildersApprenticeTop")
+	If Not QuickMIS("BC1", $g_sImgGeneralCloseButton, 770, 100, 845, 130 + $g_iMidOffsetY) Then
+		SetLog("Assistant window not detected", $COLOR_WARNING)
+		ClearScreen()
+		Return False
+	EndIf
+
+	Local $sLabAssistantLevel = "", $sBuilderApprenticeLevel = ""
+	For $i = 0 To 1
+		Local $sCurrentTab = $i = 0 ? $sFirstTab : $sSecondTab
+		If $i = 1 Then
+			If Not _SelectHelperHutTab($sCurrentTab) Then
+				CloseWindow()
+				Return False
+			EndIf
+		EndIf
+
+		Local $iMaxLevel = $sCurrentTab = "BuildersApp" ? 8 : 12
+		Local $sLevel = StringRegExpReplace(_ReadHelperHutLevelOCR(), "[^0-9]", "")
+		If Not StringIsDigit($sLevel) Or Number($sLevel) < 1 Or Number($sLevel) > $iMaxLevel Then $sLevel = ""
+		If $sCurrentTab = "LabAssist" Then
+			$sLabAssistantLevel = $sLevel
+			SetLog("[Lab Assistant Level]: " & ($sLevel <> "" ? $sLevel : "OCR failed"), $sLevel <> "" ? $COLOR_INFO : $COLOR_ERROR)
+		Else
+			$sBuilderApprenticeLevel = $sLevel
+			SetLog("[Builder's Apprentice Level]: " & ($sLevel <> "" ? $sLevel : "OCR failed"), $sLevel <> "" ? $COLOR_INFO : $COLOR_ERROR)
+		EndIf
+	Next
+
+	CloseWindow()
+	Return $sLabAssistantLevel <> "" And $sBuilderApprenticeLevel <> ""
+EndFunc   ;==>TestHelperHut
+
+Func _ReadHelperHutLevelOCR()
+	Local $iTop = 173 + $g_iMidOffsetY
+	Local $aOcrAttempts[4][4] = [["coc-uptime", 650, 169, 74], ["coc-uptime2", 650, 169, 74], ["coc-uptime", 654, 169, 66], ["coc-uptime2", 654, 169, 66]]
+	For $i = 0 To UBound($aOcrAttempts) - 1
+		Local $sLevel = StringRegExpReplace(getOcrAndCapture($aOcrAttempts[$i][0], $aOcrAttempts[$i][1], $iTop, $aOcrAttempts[$i][3], 30, True), "[^0-9]", "")
+		If StringRegExp($sLevel, "^([1-8]|[1-9][0-9])$") And Number($sLevel) <= 12 Then Return $sLevel
+	Next
+	Return ""
+EndFunc   ;==>_ReadHelperHutLevelOCR
+
+; #FUNCTION# ===========================================================================================================
+; Name ..........: _LogHelperHutCooldown
+; Description ...: Logs assistant cooldown state, remaining time, and absolute availability.
+; Remarks .......: Used by Lab Assistant and Builder's Apprentice routines.
+; ======================================================================================================================
+
+Func _LogHelperHutCooldown($sWaitTime, $sAvailableAt)
+	SetLog("Cooldown Time", $COLOR_SUCCESS)
+	SetLog("Will be available in " & $sWaitTime)
+	SetLog("Available at " & $sAvailableAt)
+EndFunc   ;==>_LogHelperHutCooldown
+
+Func _SelectHelperHutTab($sTab)
+	Local $sTabImage
+	Switch $sTab
+		Case "LabAssist"
+			$sTabImage = $g_sImgMiniLabAssistHead
+		Case "BuildersApp"
+			$sTabImage = $g_sImgMiniBuilderAppHead
+		Case Else
+			Return False
+	EndSwitch
+
+	For $iAttempt = 1 To 2
+		Local $aTab = decodeSingleCoord(FindImageInPlace2("HelperHutTab", $sTabImage, 45, 510 + $g_iMidOffsetY, 390, 610 + $g_iMidOffsetY, True))
+		If IsArray($aTab) And UBound($aTab) = 2 Then
+			ClickP($aTab, 1, 120, "HelperHutTab")
+			If _Sleep(800) Then Return False
+			WaitForClanMessage("BuildersApprenticeMid")
+			Return True
+		EndIf
+		If $iAttempt < 2 And _Sleep(200) Then Return False
+	Next
+
+	SetLog("Helper Hut tab button not found: " & $sTab, $COLOR_WARNING)
+	Return False
+EndFunc   ;==>_SelectHelperHutTab
+
+Func _OpenHelperHut()
+	Local $aiSavedHelperHutPos = $g_aiHelperHutPos
+	If ImgLocateHelperHut(True, True) Then Return True
+	$g_aiHelperHutPos = $aiSavedHelperHutPos
+	If $g_aiHelperHutPos[0] <= 0 Or $g_aiHelperHutPos[1] <= 0 Then Return False
+	SetLog("Helper Hut Position: (" & $g_aiHelperHutPos[0] & "," & $g_aiHelperHutPos[1] & ")", $COLOR_SUCCESS)
+
+	BuildingClick($g_aiHelperHutPos[0], $g_aiHelperHutPos[1])
+	If _Sleep($DELAYBUILDINGINFO1) Then Return False
+	Local $BuildingInfo = BuildingInfo(242, 475 + $g_iBottomOffsetY)
+	Return StringInStr($BuildingInfo[1], "Helper", $STR_NOCASESENSEBASIC) > 0
+EndFunc   ;==>_OpenHelperHut
+
+; #FUNCTION# ===========================================================================================================
+; Name ..........: _OpenHelperHutAssistant
+; Description ...: Opens either available assistant card and reports the tab initially displayed.
+; Remarks .......: Optionally selects the requested tab after opening the assistant window.
+; ======================================================================================================================
+
+Func _OpenHelperHutAssistant($sTab, ByRef $sOpenedTab, $bSelectRequested = True)
+	If Not _OpenHelperHut() Then Return False
+
+	Local $aButton = FindButton($sTab)
+	Local $bOtherCard = Not (IsArray($aButton) And UBound($aButton) = 2)
+	$sOpenedTab = $sTab
+	If $bOtherCard Then
+		$sOpenedTab = $sTab = "LabAssist" ? "BuildersApp" : "LabAssist"
+		$aButton = FindButton($sOpenedTab)
+		If Not IsArray($aButton) Or UBound($aButton) <> 2 Then
+			ClearScreen()
+			Return False
+		EndIf
+	EndIf
+
+	Click($aButton[0], 545 + $g_iBottomOffsetY)
+	If _Sleep(Random(1500, 2000, 1)) Then Return False
+	WaitForClanMessage("BuildersApprenticeTop")
+	If Not QuickMIS("BC1", $g_sImgGeneralCloseButton, 770, 100, 845, 130 + $g_iMidOffsetY) Then
+		CloseWindow2()
+		ClearScreen()
+		Return False
+	EndIf
+
+	If $bOtherCard And $bSelectRequested Then Return _SelectHelperHutTab($sTab)
+	Return True
+EndFunc   ;==>_OpenHelperHutAssistant
+
 Func AppBuilder()
 
 	If $g_iTownHallLevel < 10 Then
@@ -36,8 +193,8 @@ Func AppBuilder()
 
 	If Not $g_bRunState Then Return
 
-	Local Static $iLastTimeChecked[8]
-	Local Static $bUnderTime[8]
+	Local Static $iLastTimeChecked[$g_iSwitchAccMaxAccounts]
+	Local Static $bUnderTime[$g_iSwitchAccMaxAccounts]
 	If $g_bFirstStart Then
 		$iLastTimeChecked[$g_iCurAccount] = ""
 		$bUnderTime[$g_iCurAccount] = False
@@ -62,11 +219,10 @@ Func AppBuilder()
 			If $iMin > 0 Then $sWaitTime &= $iMin & " minutes "
 
 			If $bUnderTime[$g_iCurAccount] = True Then
-				SetLog("Current Updgrade Time Too Small", $COLOR_DEBUG1)
-				SetLog("Next Check in " & $sWaitTime, $COLOR_ACTION)
+				SetLog("Current upgrade time too small", $COLOR_DEBUG1)
+				SetLog("Next check in " & $sWaitTime, $COLOR_ACTION)
 			Else
-				SetLog("Builder's Apprentice Unavailable", $COLOR_DEBUG1)
-				SetLog("Will Be Available in " & $sWaitTime, $COLOR_ACTION)
+				_LogHelperHutCooldown($sWaitTime, $g_sAvailableAppBuilder)
 			EndIf
 			Return
 		EndIf
@@ -80,27 +236,7 @@ Func AppBuilder()
 		EndIf
 	EndIf
 
-	Local $bLocateHelperHut = False
-	BuildingClick($g_aiHelperHutPos[0], $g_aiHelperHutPos[1])
-	If _Sleep($DELAYBUILDINGINFO1) Then Return
-
-	Local $BuildingInfo = BuildingInfo(242, 475 + $g_iBottomOffsetY)
-
-	If Not StringInStr($BuildingInfo[1], "Helper", $STR_NOCASESENSEBASIC) Then $bLocateHelperHut = True
-	If $bLocateHelperHut Then
-		SetLog("Helper Hut not Found", $COLOR_DEBUG1)
-		SetLog("New Try...", $COLOR_DEBUG1)
-		ClearScreen()
-		If _Sleep(Random(1000, 1500, 1)) Then Return
-		BuildingClick($g_aiHelperHutPos[0], $g_aiHelperHutPos[1])
-		If _Sleep($DELAYBUILDINGINFO1) Then Return
-		Local $BuildingInfo = BuildingInfo(242, 475 + $g_iBottomOffsetY)
-		If Not StringInStr($BuildingInfo[1], "Helper", $STR_NOCASESENSEBASIC) Then
-			SetLog("Helper Hut not Found", $COLOR_DEBUG1)
-			ClearScreen()
-			Return
-		EndIf
-	EndIf
+	If Not _OpenHelperHut() Then Return
 
 	Local $BuildersApp = FindButton("BuildersApp")
 	If IsArray($BuildersApp) And UBound($BuildersApp) = 2 Then
@@ -120,8 +256,6 @@ Func AppBuilder()
 		Return
 	EndIf
 
-	$iLastTimeChecked[$g_iCurAccount] = _NowCalc()
-
 	WaitForClanMessage("BuildersApprenticeMid")
 	Local $aiLocked = decodeSingleCoord(FindImageInPlace2("Locked", $ImgLocked, 730, 520 + $g_iMidOffsetY, 815, 560 + $g_iMidOffsetY, True))
 	If IsArray($aiLocked) And UBound($aiLocked) = 2 Then
@@ -130,13 +264,18 @@ Func AppBuilder()
 		Return
 	EndIf
 
-	Local $bXMultiplier = Number(getOcrAndCapture("coc-uptime", 663, 176 + $g_iMidOffsetY, 37, 17, True))
-	If $bXMultiplier = "" Or $bXMultiplier < 1 Or $bXMultiplier > 8 Then $bXMultiplier = 1 ; In Case
-	SetLog("Builder's Apprentice is Level " & $bXMultiplier, $COLOR_INFO)
+	Local $sLevelOCR = _ReadHelperHutLevelOCR()
+	Local $bXMultiplier = Number(StringRegExpReplace($sLevelOCR, "[^0-9]", ""))
+	If $bXMultiplier < 1 Or $bXMultiplier > 8 Then
+		SetLog("Builder's Apprentice level OCR failed; using conservative level 1", $COLOR_WARNING)
+		$bXMultiplier = 1
+	Else
+		SetLog("Builder's Apprentice Level: " & $bXMultiplier, $COLOR_INFO)
+	EndIf
 
 	WaitForClanMessage("BuildersApprenticeMid")
 
-	Local $MiniHead = decodeSingleCoord(FindImageInPlace2("MiniBuilderApp", $g_sImgMiniBuilderAppHead, 690, 230 + $g_iMidOffsetY, 840, 500 + $g_iMidOffsetY, True)) ; Recurrence
+	Local $MiniHead = decodeSingleCoord(FindImageInPlace2("MiniBuilderApp", $g_sImgMiniBuilderAppHead, 45, 510 + $g_iMidOffsetY, 390, 610 + $g_iMidOffsetY, True))
 	If IsArray($MiniHead) And UBound($MiniHead) = 2 Then
 		ClickP($MiniHead)
 		If _Sleep(1000) Then Return
@@ -152,7 +291,7 @@ Func AppBuilder()
 
 	WaitForClanMessage("BuildersApprenticeMid")
 
-	Local $MiniHead = decodeSingleCoord(FindImageInPlace2("MiniBuilderApp", $g_sImgMiniBuilderAppHead, 690, 230 + $g_iMidOffsetY, 840, 500 + $g_iMidOffsetY, True)) ; Recurrence
+	Local $MiniHead = decodeSingleCoord(FindImageInPlace2("MiniBuilderApp", $g_sImgMiniBuilderAppHead, 45, 510 + $g_iMidOffsetY, 390, 610 + $g_iMidOffsetY, True))
 	If IsArray($MiniHead) And UBound($MiniHead) = 2 Then
 		ClickP($MiniHead)
 		If _Sleep(1000) Then Return
@@ -204,6 +343,16 @@ Func AppBuilder()
 					$sWaitTime = ""
 
 					$iWaitSec = Round($iWaitTime / 1000)
+					$iDay = Floor($iRemainingTime / 1440)
+					$iHour = Floor(Mod($iRemainingTime, 1440) / 60)
+					$iMin = Mod($iRemainingTime, 60)
+					If $iDay > 0 Then $sWaitTime &= $iDay & "d"
+					If $iHour > 0 Then $sWaitTime &= $iHour & "h"
+					If $iMin > 0 Then $sWaitTime &= $iMin & "m"
+
+					SetLog("Current upgrade will finish in " & $bRemainingUpTimeOCR)
+
+					$sWaitTime = ""
 					$iDay = Floor(Mod(Floor($iWaitSec / 60 / 60 / 24), 24))
 					If $iDay > 0 Then
 						$iHour = Floor(Floor(($iWaitSec / 60) - ($iDay * 1440)) / 60)
@@ -215,8 +364,6 @@ Func AppBuilder()
 					If $iDay > 1 Then $sWaitTime &= $iDay & " days "
 					If $iHour > 0 Then $sWaitTime &= $iHour & " hours "
 					If $iMin > 0 Then $sWaitTime &= $iMin & " minutes "
-
-					SetLog("Current Upgrade Will Finish in " & $sWaitTime, $COLOR_SUCCESS1)
 
 				EndIf
 
@@ -237,22 +384,22 @@ Func AppBuilder()
 
 					Switch $bXMultiplier
 						Case 1 To 3
-							SetLog("Current Upgrade Will Finish in " & $sWaitTime & " (Less Than " & $bXMultiplier & " Hour" & ($bXMultiplier > 1 ? "s)" : ")"), $COLOR_WARNING)
+							SetLog("Current upgrade will finish in " & $sWaitTime & " (Less Than " & $bXMultiplier & " Hour" & ($bXMultiplier > 1 ? "s)" : ")"), $COLOR_WARNING)
 						Case 4
-							SetLog("Current Upgrade Will Finish in " & $sWaitTime & " (Less Than " & ($bXMultiplier - 1) & " Hours)", $COLOR_WARNING)
+							SetLog("Current upgrade will finish in " & $sWaitTime & " (Less Than " & ($bXMultiplier - 1) & " Hours)", $COLOR_WARNING)
 						Case 5, 6
-							SetLog("Current Upgrade Will Finish in " & $sWaitTime & " (Less Than " & ($bXMultiplier - 2) & " Hours)", $COLOR_WARNING)
+							SetLog("Current upgrade will finish in " & $sWaitTime & " (Less Than " & ($bXMultiplier - 2) & " Hours)", $COLOR_WARNING)
 						Case 7, 8
-							SetLog("Current Upgrade Will Finish in " & $sWaitTime & " (Less Than " & ($bXMultiplier - 3) & " Hours)", $COLOR_WARNING)
+							SetLog("Current upgrade will finish in " & $sWaitTime & " (Less Than " & ($bXMultiplier - 3) & " Hours)", $COLOR_WARNING)
 					EndSwitch
 
 					If $g_bChkAppBuilder = 1 Or ($g_bChkAppBuilder = 2 And $i = UBound($GreenAssignButtons) - 1) Then
 						Local $StartTime = _NowCalc() ; what is date:time now
 						$g_sAvailableAppBuilder = _DateAdd('n', Ceiling($iRemainingTime), $StartTime)
-						SetLog("Buider's App Next Check @ " & $g_sAvailableAppBuilder, $COLOR_DEBUG1)
+						SetLog("Builder's Apprentice next check @ " & $g_sAvailableAppBuilder, $COLOR_DEBUG1)
 						$bUnderTime[$g_iCurAccount] = True
 					Else
-						SetLog("Check Next Upgrade...", $COLOR_INFO)
+						SetLog("Check next upgrade...", $COLOR_INFO)
 						If _Sleep(1000) Then Return
 						ContinueLoop
 					EndIf
@@ -283,7 +430,6 @@ Func AppBuilder()
 			Local $Result = getBldgUpgradeTime(715, 545 + $g_iMidOffsetY)
 			If $g_bDebugImageSave Then SaveDebugImage($Result & "_", Default, False)
 			Local $iAppBuilderAvailTime = ConvertOCRTime("BuildersApp Time", $Result, False)
-			If $iAppBuilderAvailTime > 0 And $iAppBuilderAvailTime < 1380 Then SetLog("CoolDown Time", $COLOR_SUCCESS)
 			If $iAppBuilderAvailTime > 1380 Then
 				$g_sAvailableAppBuilder = 0
 				$iLastTimeChecked[$g_iCurAccount] = "" ; Check Again Next Loop
@@ -298,7 +444,6 @@ Func AppBuilder()
 		If $iAppBuilderAvailTime > 0 Then
 			Local $StartTime = _NowCalc() ; what is date:time now
 			$g_sAvailableAppBuilder = _DateAdd('n', Ceiling($iAppBuilderAvailTime), $StartTime)
-			SetLog("Buider's App Available @ " & $g_sAvailableAppBuilder, $COLOR_DEBUG1)
 			$TimeDiffAppBuilder = _DateDiff('n', _NowCalc(), $g_sAvailableAppBuilder) ; what is difference between end time and now in minutes?
 			If ProfileSwitchAccountEnabled() Then SwitchAccountVariablesReload("Save")
 			If $TimeDiffAppBuilder > 0 Then
@@ -312,8 +457,7 @@ Func AppBuilder()
 				If $iHour > 0 Then $sWaitTime &= $iHour & " hours "
 				If $iMin > 0 Then $sWaitTime &= $iMin & " minutes "
 
-				SetLog("Builder's Apprentice Unavailable", $COLOR_DEBUG1)
-				SetLog("Will Be Available in " & $sWaitTime, $COLOR_ACTION)
+				_LogHelperHutCooldown($sWaitTime, $g_sAvailableAppBuilder)
 
 			EndIf
 		Else
@@ -331,7 +475,7 @@ Func AppBuilder()
 		Local $ButtonClickX = Random($CoordsX[0], $CoordsX[1], 1)
 		Local $ButtonClickY = Random($CoordsY[0], $CoordsY[1], 1)
 		Click($ButtonClickX, $ButtonClickY, 1, 180, "ConfirmButton") ;Click Confirm
-		SetLog("Builder's Apprentice Assigned", $COLOR_SUCCESS)
+		SetLog("Builder's Apprentice Assigned", $COLOR_ACTION)
 		If _Sleep(Random(2000, 2500, 1)) Then Return
 		WaitForClanMessage("BuildersApprenticeMid")
 		Local $aiJobinProgress = decodeSingleCoord(FindImageInPlace2("JobInProgress", $ImgJobInProgress, 390, 220 + $g_iMidOffsetY, 490, 280 + $g_iMidOffsetY, True))
@@ -354,7 +498,6 @@ Func AppBuilder()
 		If $iAppBuilderAvailTime > 0 Then
 			Local $StartTime = _NowCalc() ; what is date:time now
 			$g_sAvailableAppBuilder = _DateAdd('n', Ceiling($iAppBuilderAvailTime), $StartTime)
-			SetLog("Buider's App Available @ " & $g_sAvailableAppBuilder, $COLOR_DEBUG1)
 			$TimeDiffAppBuilder = _DateDiff('n', _NowCalc(), $g_sAvailableAppBuilder) ; what is difference between end time and now in minutes?
 			If ProfileSwitchAccountEnabled() Then SwitchAccountVariablesReload("Save")
 			If $TimeDiffAppBuilder > 0 Then
@@ -368,7 +511,7 @@ Func AppBuilder()
 				If $iHour > 0 Then $sWaitTime &= $iHour & " hours "
 				If $iMin > 0 Then $sWaitTime &= $iMin & " minutes "
 
-				SetLog("Builder's Apprentice Available in " & $sWaitTime, $COLOR_ACTION)
+				_LogHelperHutCooldown($sWaitTime, $g_sAvailableAppBuilder)
 
 			EndIf
 		Else
@@ -392,17 +535,15 @@ Func LabAssistant()
 		Return
 	EndIf
 
-	If Not _DateIsValid($g_sLabUpgradeTime) Then
-		Return
-	Else
+	If _DateIsValid($g_sLabUpgradeTime) Then
 		Local $iLabTime = _DateDiff('n', _NowCalc(), $g_sLabUpgradeTime)
 		If $iLabTime <= 20 Then Return     ; Less than 20 min -> Return
 	EndIf
 
 	If Not $g_bRunState Then Return
 
-	Local Static $iLastTimeChecked[8]
-	Local Static $bUnderTime[8]
+	Local Static $iLastTimeChecked[$g_iSwitchAccMaxAccounts]
+	Local Static $bUnderTime[$g_iSwitchAccMaxAccounts]
 	If $g_bFirstStart Then
 		$iLastTimeChecked[$g_iCurAccount] = ""
 		$bUnderTime[$g_iCurAccount] = False
@@ -427,11 +568,10 @@ Func LabAssistant()
 			If $iMin > 0 Then $sWaitTime &= $iMin & " minutes "
 
 			If $bUnderTime[$g_iCurAccount] = True Then
-				SetLog("Current Updgrade Time Too Small", $COLOR_DEBUG1)
-				SetLog("Next Check in " & $sWaitTime, $COLOR_ACTION)
+				SetLog("Current upgrade time too small", $COLOR_DEBUG1)
+				SetLog("Next check in " & $sWaitTime, $COLOR_ACTION)
 			Else
-				SetLog("Lab Assistant Unavailable", $COLOR_DEBUG1)
-				SetLog("Will Be Available in " & $sWaitTime, $COLOR_ACTION)
+				_LogHelperHutCooldown($sWaitTime, $g_sAvailableLabAssistant)
 			EndIf
 			Return
 		EndIf
@@ -445,27 +585,7 @@ Func LabAssistant()
 		EndIf
 	EndIf
 
-	Local $bLocateHelperHut = False
-	BuildingClick($g_aiHelperHutPos[0], $g_aiHelperHutPos[1])
-	If _Sleep($DELAYBUILDINGINFO1) Then Return
-
-	Local $BuildingInfo = BuildingInfo(242, 475 + $g_iBottomOffsetY)
-
-	If Not StringInStr($BuildingInfo[1], "Helper", $STR_NOCASESENSEBASIC) Then $bLocateHelperHut = True
-	If $bLocateHelperHut Then
-		SetLog("Helper Hut not Found", $COLOR_DEBUG1)
-		SetLog("New Try...", $COLOR_DEBUG1)
-		ClearScreen()
-		If _Sleep(Random(1000, 1500, 1)) Then Return
-		BuildingClick($g_aiHelperHutPos[0], $g_aiHelperHutPos[1])
-		If _Sleep($DELAYBUILDINGINFO1) Then Return
-		Local $BuildingInfo = BuildingInfo(242, 475 + $g_iBottomOffsetY)
-		If Not StringInStr($BuildingInfo[1], "Helper", $STR_NOCASESENSEBASIC) Then
-			SetLog("Helper Hut not Found", $COLOR_DEBUG1)
-			ClearScreen()
-			Return
-		EndIf
-	EndIf
+	If Not _OpenHelperHut() Then Return
 
 	Local $LabAssist = FindButton("LabAssist")
 	If IsArray($LabAssist) And UBound($LabAssist) = 2 Then
@@ -478,7 +598,7 @@ Func LabAssistant()
 
 	WaitForClanMessage("BuildersApprenticeTop")
 	If Not QuickMIS("BC1", $g_sImgGeneralCloseButton, 770, 100, 845, 130 + $g_iMidOffsetY) Then
-		SetLog("Lab Assistant Window Didn't Open", $COLOR_DEBUG1)
+		SetLog("Lab Assistant window didn't open", $COLOR_DEBUG1)
 		CloseWindow2()
 		If _Sleep(Random(1500, 2000, 1)) Then Return
 		ClearScreen()
@@ -495,9 +615,10 @@ Func LabAssistant()
 		Return
 	EndIf
 
-	Local $bXMultiplier = Number(getOcrAndCapture("coc-uptime", 663, 176 + $g_iMidOffsetY, 37, 17, True))
+	Local $sLevelOCR = _ReadHelperHutLevelOCR()
+	Local $bXMultiplier = Number(StringRegExpReplace($sLevelOCR, "[^0-9]", ""))
 	If $bXMultiplier = "" Or $bXMultiplier < 1 Or $bXMultiplier > 12 Then $bXMultiplier = 1 ; In Case
-	SetLog("Lab Assistant is Level " & $bXMultiplier, $COLOR_INFO)
+	SetLog("Lab Assistant Level: " & $bXMultiplier, $COLOR_INFO)
 
 	WaitForClanMessage("BuildersApprenticeMid")
 
@@ -515,7 +636,7 @@ Func LabAssistant()
 		EndIf
 	EndIf
 
-	Local $GreenAssignButtons = QuickMIS("CNX", $g_sImgGreenAssignButton, 690, 230 + $g_iMidOffsetY, 840, 500 + $g_iMidOffsetY)
+	Local $GreenAssignButtons = _FindLabAssistantAssignButtons()
 	If IsArray($GreenAssignButtons) And UBound($GreenAssignButtons) > 0 And UBound($GreenAssignButtons, $UBOUND_COLUMNS) > 1 Then
 		If $g_bChkLabAssistant = 1 Then
 			_ArraySort($GreenAssignButtons, 0, 0, 0, 2)
@@ -563,7 +684,7 @@ Func LabAssistant()
 					If $iHour > 0 Then $sWaitTime &= $iHour & " hours "
 					If $iMin > 0 Then $sWaitTime &= $iMin & " minutes "
 
-					SetLog("Current Upgrade Will Finish in " & $sWaitTime, $COLOR_SUCCESS1)
+					SetLog("Current upgrade will finish in " & $bRemainingUpTimeOCR)
 					$bLabAssistantUsedTime = _NowCalc()
 				EndIf
 
@@ -584,24 +705,24 @@ Func LabAssistant()
 
 					Switch $bXMultiplier
 						Case 1 To 3
-							SetLog("Current Upgrade Will Finish in " & $sWaitTime & " (Less Than " & $bXMultiplier & " Hour" & ($bXMultiplier > 1 ? "s)" : ")"), $COLOR_WARNING)
+							SetLog("Current upgrade will finish in " & $sWaitTime & " (Less Than " & $bXMultiplier & " Hour" & ($bXMultiplier > 1 ? "s)" : ")"), $COLOR_WARNING)
 						Case 4
-							SetLog("Current Upgrade Will Finish in " & $sWaitTime & " (Less Than " & ($bXMultiplier - 1) & " Hours)", $COLOR_WARNING)
+							SetLog("Current upgrade will finish in " & $sWaitTime & " (Less Than " & ($bXMultiplier - 1) & " Hours)", $COLOR_WARNING)
 						Case 5, 6
-							SetLog("Current Upgrade Will Finish in " & $sWaitTime & " (Less Than " & ($bXMultiplier - 2) & " Hours)", $COLOR_WARNING)
+							SetLog("Current upgrade will finish in " & $sWaitTime & " (Less Than " & ($bXMultiplier - 2) & " Hours)", $COLOR_WARNING)
 						Case 7 To 10
-							SetLog("Current Upgrade Will Finish in " & $sWaitTime & " (Less Than " & ($bXMultiplier - 3) & " Hours)", $COLOR_WARNING)
+							SetLog("Current upgrade will finish in " & $sWaitTime & " (Less Than " & ($bXMultiplier - 3) & " Hours)", $COLOR_WARNING)
 						Case 11, 12
-							SetLog("Current Upgrade Will Finish in " & $sWaitTime & " (Less Than " & ($bXMultiplier - 4) & " Hours)", $COLOR_WARNING)
+							SetLog("Current upgrade will finish in " & $sWaitTime & " (Less Than " & ($bXMultiplier - 4) & " Hours)", $COLOR_WARNING)
 					EndSwitch
 
 					If $g_bChkLabAssistant = 1 Or ($g_bChkLabAssistant = 2 And $i = UBound($GreenAssignButtons) - 1) Then
 						Local $StartTime = _NowCalc() ; what is date:time now
 						$g_sAvailableLabAssistant = _DateAdd('n', Ceiling($iRemainingTime), $StartTime)
-						SetLog("Assistant Next Check @ " & $g_sAvailableLabAssistant, $COLOR_DEBUG1)
+						SetLog("Assistant next check @ " & $g_sAvailableLabAssistant, $COLOR_DEBUG1)
 						$bUnderTime[$g_iCurAccount] = True
 					Else
-						SetLog("Check Next Upgrade...", $COLOR_INFO)
+						SetLog("Check next upgrade...", $COLOR_INFO)
 						If _Sleep(1000) Then Return
 						ContinueLoop
 					EndIf
@@ -632,7 +753,6 @@ Func LabAssistant()
 			Local $Result = getBldgUpgradeTime(715, 545 + $g_iMidOffsetY)
 			If $g_bDebugImageSave Then SaveDebugImage($Result & "_", Default, False)
 			Local $iLabAssistantAvailTime = ConvertOCRTime("LabAssist Time", $Result, False)
-			If $iLabAssistantAvailTime > 0 And $iLabAssistantAvailTime < 1380 Then SetLog("CoolDown Time", $COLOR_SUCCESS)
 			If $iLabAssistantAvailTime > 1380 Then
 				$g_sAvailableLabAssistant = 0
 				$iLastTimeChecked[$g_iCurAccount] = "" ; Check Again Next Loop
@@ -647,7 +767,6 @@ Func LabAssistant()
 		If $iLabAssistantAvailTime > 0 Then
 			Local $StartTime = _NowCalc() ; what is date:time now
 			$g_sAvailableLabAssistant = _DateAdd('n', Ceiling($iLabAssistantAvailTime), $StartTime)
-			SetLog("Assistant Available @ " & $g_sAvailableLabAssistant, $COLOR_DEBUG1)
 			$TimeDiffLabAssistant = _DateDiff('n', _NowCalc(), $g_sAvailableLabAssistant) ; what is difference between end time and now in minutes?
 			If ProfileSwitchAccountEnabled() Then SwitchAccountVariablesReload("Save")
 			If $TimeDiffLabAssistant > 0 Then
@@ -661,8 +780,7 @@ Func LabAssistant()
 				If $iHour > 0 Then $sWaitTime &= $iHour & " hours "
 				If $iMin > 0 Then $sWaitTime &= $iMin & " minutes "
 
-				SetLog("Lab Assistant Unavailable", $COLOR_DEBUG1)
-				SetLog("Will Be Available in " & $sWaitTime, $COLOR_ACTION)
+				_LogHelperHutCooldown($sWaitTime, $g_sAvailableLabAssistant)
 
 			EndIf
 		Else
@@ -680,7 +798,7 @@ Func LabAssistant()
 		Local $ButtonClickX = Random($CoordsX[0], $CoordsX[1], 1)
 		Local $ButtonClickY = Random($CoordsY[0], $CoordsY[1], 1)
 		Click($ButtonClickX, $ButtonClickY, 1, 180, "ConfirmButton") ;Click Confirm
-		SetLog("Lab Assistant Assigned", $COLOR_SUCCESS)
+		SetLog("Lab Assistant Assigned", $COLOR_ACTION)
 		If _Sleep(Random(2000, 2500, 1)) Then Return
 		WaitForClanMessage("BuildersApprenticeMid")
 		Local $aiJobinProgress = decodeSingleCoord(FindImageInPlace2("JobInProgress", $ImgJobInProgress, 390, 220 + $g_iMidOffsetY, 490, 280 + $g_iMidOffsetY, True))
@@ -703,7 +821,6 @@ Func LabAssistant()
 		If $iLabAssistantAvailTime > 0 Then
 			Local $StartTime = _NowCalc() ; what is date:time now
 			$g_sAvailableLabAssistant = _DateAdd('n', Ceiling($iLabAssistantAvailTime), $StartTime)
-			SetLog("Assistant Available @ " & $g_sAvailableLabAssistant, $COLOR_DEBUG1)
 			$TimeDiffLabAssistant = _DateDiff('n', _NowCalc(), $g_sAvailableLabAssistant) ; what is difference between end time and now in minutes?
 			If ProfileSwitchAccountEnabled() Then SwitchAccountVariablesReload("Save")
 			If $TimeDiffLabAssistant > 0 Then
@@ -717,7 +834,7 @@ Func LabAssistant()
 				If $iHour > 0 Then $sWaitTime &= $iHour & " hours "
 				If $iMin > 0 Then $sWaitTime &= $iMin & " minutes "
 
-				SetLog("Lab Assistant Available in " & $sWaitTime, $COLOR_ACTION)
+				_LogHelperHutCooldown($sWaitTime, $g_sAvailableLabAssistant)
 
 			EndIf
 		Else
@@ -741,29 +858,61 @@ Func _HelperHutBoth()
 		Return
 	EndIf
 
-	Local $bToOpen = False
-	If HelperHutLab() Then $bToOpen = True
+	Local $iLabCooldown = _DateIsValid($g_sAvailableLabAssistant) ? _DateDiff('n', _NowCalc(), $g_sAvailableLabAssistant) : 0
+	Local $iBuilderCooldown = _DateIsValid($g_sAvailableAppBuilder) ? _DateDiff('n', _NowCalc(), $g_sAvailableAppBuilder) : 0
+	If $iLabCooldown > 0 And $iBuilderCooldown > 0 Then
+		Local $aiCooldown[2] = [$iLabCooldown, $iBuilderCooldown]
+		Local $sWaitTime, $iWaitSec, $iHour, $iMin
+		For $iAssistant = 0 To 1
+			$iWaitSec = $aiCooldown[$iAssistant] * 60
+			$iHour = Floor(Floor($iWaitSec / 60) / 60)
+			$iMin = Floor(Mod(Floor($iWaitSec / 60), 60))
+			$sWaitTime = ""
+			If $iHour > 0 Then $sWaitTime &= $iHour & " hours "
+			If $iMin > 0 Then $sWaitTime &= $iMin & " minutes "
+			If $iAssistant = 0 Then
+				SetLog("Lab Assistant Unavailable", $COLOR_DEBUG)
+				SetLog("Will be available in " & $sWaitTime)
+				SetLog("Available at " & $g_sAvailableLabAssistant)
+			Else
+				SetLog("Builder's Apprentice Unavailable", $COLOR_DEBUG)
+				SetLog("Will be available in " & $sWaitTime)
+				SetLog("Available at " & $g_sAvailableAppBuilder)
+			EndIf
+		Next
+		Return
+	EndIf
+
+	Local $sOpenedTab = ""
+	If Not _OpenHelperHutAssistant("LabAssist", $sOpenedTab, False) Then Return
 
 	If _Sleep(500) Then Return
 	If Not $g_bRunState Then Return
 
-	HelperHutApp($bToOpen)
+	If $sOpenedTab = "LabAssist" Then
+		HelperHutLab(True)
+		If Not $g_bRunState Then Return
+		HelperHutApp()
+	Else
+		HelperHutApp(True, True, True)
+		If Not $g_bRunState Then Return
+		HelperHutLab()
+		If QuickMIS("BC1", $g_sImgGeneralCloseButton, 770, 100, 845, 130 + $g_iMidOffsetY) Then CloseWindow()
+	EndIf
 
 EndFunc   ;==>_HelperHutBoth
 
-Func HelperHutLab()
+Func HelperHutLab($bCurrentTab = False)
 
-	If Not _DateIsValid($g_sLabUpgradeTime) Then
-		Return True
-	Else
+	If _DateIsValid($g_sLabUpgradeTime) Then
 		Local $iLabTime = _DateDiff('n', _NowCalc(), $g_sLabUpgradeTime)
 		If $iLabTime <= 20 Then Return True ; Less than 20 min -> Return
 	EndIf
 
 	If Not $g_bRunState Then Return
 
-	Local Static $iLastTimeChecked[8]
-	Local Static $bUnderTime[8]
+	Local Static $iLastTimeChecked[$g_iSwitchAccMaxAccounts]
+	Local Static $bUnderTime[$g_iSwitchAccMaxAccounts]
 	If $g_bFirstStart Then
 		$iLastTimeChecked[$g_iCurAccount] = ""
 		$bUnderTime[$g_iCurAccount] = False
@@ -788,11 +937,11 @@ Func HelperHutLab()
 			If $iMin > 0 Then $sWaitTime &= $iMin & " minutes "
 
 			If $bUnderTime[$g_iCurAccount] = True Then
-				SetLog("Current Updgrade Time Too Small", $COLOR_DEBUG1)
-				SetLog("Next Check in " & $sWaitTime, $COLOR_ACTION)
+				SetLog("Current upgrade time too small", $COLOR_DEBUG1)
+				SetLog("Next check in " & $sWaitTime, $COLOR_ACTION)
 			Else
-				SetLog("Lab Assistant Unavailable", $COLOR_DEBUG1)
-				SetLog("Will Be Available in " & $sWaitTime, $COLOR_ACTION)
+				SetLog("Lab Assistant Unavailable", $COLOR_INFO)
+				_LogHelperHutCooldown($sWaitTime, $g_sAvailableLabAssistant)
 			EndIf
 			Return True
 		EndIf
@@ -806,44 +955,17 @@ Func HelperHutLab()
 		EndIf
 	EndIf
 
-	Local $bLocateHelperHut = False
-	BuildingClick($g_aiHelperHutPos[0], $g_aiHelperHutPos[1])
-	If _Sleep($DELAYBUILDINGINFO1) Then Return
-
-	Local $BuildingInfo = BuildingInfo(242, 475 + $g_iBottomOffsetY)
-
-	If Not StringInStr($BuildingInfo[1], "Helper", $STR_NOCASESENSEBASIC) Then $bLocateHelperHut = True
-	If $bLocateHelperHut Then
-		SetLog("Helper Hut not Found", $COLOR_DEBUG1)
-		SetLog("New Try...", $COLOR_DEBUG1)
-		ClearScreen()
-		If _Sleep(Random(1000, 1500, 1)) Then Return
-		BuildingClick($g_aiHelperHutPos[0], $g_aiHelperHutPos[1])
-		If _Sleep($DELAYBUILDINGINFO1) Then Return
-		Local $BuildingInfo = BuildingInfo(242, 475 + $g_iBottomOffsetY)
-		If Not StringInStr($BuildingInfo[1], "Helper", $STR_NOCASESENSEBASIC) Then
-			SetLog("Helper Hut not Found", $COLOR_DEBUG1)
-			ClearScreen()
+	Local $bHelperHutWindowOpen = QuickMIS("BC1", $g_sImgGeneralCloseButton, 770, 100, 845, 130 + $g_iMidOffsetY)
+	If $bHelperHutWindowOpen Then
+		If Not $bCurrentTab Then
+			If Not _SelectHelperHutTab("LabAssist") Then Return True
+		EndIf
+	Else
+		Local $sOpenedTab = ""
+		If Not _OpenHelperHutAssistant("LabAssist", $sOpenedTab) Then
+			SetLog("Lab Assistant window didn't open", $COLOR_DEBUG1)
 			Return True
 		EndIf
-	EndIf
-
-	Local $LabAssist = FindButton("LabAssist")
-	If IsArray($LabAssist) And UBound($LabAssist) = 2 Then
-		Click($LabAssist[0], 545 + $g_iBottomOffsetY)
-		If _Sleep(Random(1500, 2000, 1)) Then Return
-	Else
-		ClearScreen()
-		Return True
-	EndIf
-
-	WaitForClanMessage("BuildersApprenticeTop")
-	If Not QuickMIS("BC1", $g_sImgGeneralCloseButton, 770, 100, 845, 130 + $g_iMidOffsetY) Then
-		SetLog("Lab Assistant Window Didn't Open", $COLOR_DEBUG1)
-		CloseWindow2()
-		If _Sleep(Random(1500, 2000, 1)) Then Return
-		ClearScreen()
-		Return True
 	EndIf
 
 	$iLastTimeChecked[$g_iCurAccount] = _NowCalc()
@@ -855,9 +977,10 @@ Func HelperHutLab()
 		Return False
 	EndIf
 
-	Local $bXMultiplier = Number(getOcrAndCapture("coc-uptime", 663, 176 + $g_iMidOffsetY, 37, 17, True))
+	Local $sLevelOCR = _ReadHelperHutLevelOCR()
+	Local $bXMultiplier = Number(StringRegExpReplace($sLevelOCR, "[^0-9]", ""))
 	If $bXMultiplier = "" Or $bXMultiplier < 1 Or $bXMultiplier > 12 Then $bXMultiplier = 1 ; In Case
-	SetLog("Lab Assistant is Level " & $bXMultiplier, $COLOR_INFO)
+	SetLog("Lab Assistant Level: " & $bXMultiplier, $COLOR_INFO)
 
 	WaitForClanMessage("BuildersApprenticeMid")
 
@@ -875,7 +998,7 @@ Func HelperHutLab()
 		EndIf
 	EndIf
 
-	Local $GreenAssignButtons = QuickMIS("CNX", $g_sImgGreenAssignButton, 690, 230 + $g_iMidOffsetY, 840, 500 + $g_iMidOffsetY)
+	Local $GreenAssignButtons = _FindLabAssistantAssignButtons()
 	If IsArray($GreenAssignButtons) And UBound($GreenAssignButtons) > 0 And UBound($GreenAssignButtons, $UBOUND_COLUMNS) > 1 Then
 		If $g_bChkLabAssistant = 1 Then
 			_ArraySort($GreenAssignButtons, 0, 0, 0, 2)
@@ -923,7 +1046,7 @@ Func HelperHutLab()
 					If $iHour > 0 Then $sWaitTime &= $iHour & " hours "
 					If $iMin > 0 Then $sWaitTime &= $iMin & " minutes "
 
-					SetLog("Current Upgrade Will Finish in " & $sWaitTime, $COLOR_SUCCESS1)
+					SetLog("Current upgrade will finish in " & $bRemainingUpTimeOCR)
 					$bLabAssistantUsedTime = _NowCalc()
 				EndIf
 
@@ -944,24 +1067,24 @@ Func HelperHutLab()
 
 					Switch $bXMultiplier
 						Case 1 To 3
-							SetLog("Current Upgrade Will Finish in " & $sWaitTime & " (Less Than " & $bXMultiplier & " Hour" & ($bXMultiplier > 1 ? "s)" : ")"), $COLOR_WARNING)
+							SetLog("Current upgrade will finish in " & $sWaitTime & " (Less Than " & $bXMultiplier & " Hour" & ($bXMultiplier > 1 ? "s)" : ")"), $COLOR_WARNING)
 						Case 4
-							SetLog("Current Upgrade Will Finish in " & $sWaitTime & " (Less Than " & ($bXMultiplier - 1) & " Hours)", $COLOR_WARNING)
+							SetLog("Current upgrade will finish in " & $sWaitTime & " (Less Than " & ($bXMultiplier - 1) & " Hours)", $COLOR_WARNING)
 						Case 5, 6
-							SetLog("Current Upgrade Will Finish in " & $sWaitTime & " (Less Than " & ($bXMultiplier - 2) & " Hours)", $COLOR_WARNING)
+							SetLog("Current upgrade will finish in " & $sWaitTime & " (Less Than " & ($bXMultiplier - 2) & " Hours)", $COLOR_WARNING)
 						Case 7 To 10
-							SetLog("Current Upgrade Will Finish in " & $sWaitTime & " (Less Than " & ($bXMultiplier - 3) & " Hours)", $COLOR_WARNING)
+							SetLog("Current upgrade will finish in " & $sWaitTime & " (Less Than " & ($bXMultiplier - 3) & " Hours)", $COLOR_WARNING)
 						Case 11, 12
-							SetLog("Current Upgrade Will Finish in " & $sWaitTime & " (Less Than " & ($bXMultiplier - 4) & " Hours)", $COLOR_WARNING)
+							SetLog("Current upgrade will finish in " & $sWaitTime & " (Less Than " & ($bXMultiplier - 4) & " Hours)", $COLOR_WARNING)
 					EndSwitch
 
 					If $g_bChkLabAssistant = 1 Or ($g_bChkLabAssistant = 2 And $i = UBound($GreenAssignButtons) - 1) Then
 						Local $StartTime = _NowCalc() ; what is date:time now
 						$g_sAvailableLabAssistant = _DateAdd('n', Ceiling($iRemainingTime), $StartTime)
-						SetLog("Assistant Next Check @ " & $g_sAvailableLabAssistant, $COLOR_DEBUG1)
+						SetLog("Assistant next check @ " & $g_sAvailableLabAssistant, $COLOR_DEBUG1)
 						$bUnderTime[$g_iCurAccount] = True
 					Else
-						SetLog("Check Next Upgrade...", $COLOR_INFO)
+						SetLog("Check next upgrade...", $COLOR_INFO)
 						If _Sleep(1000) Then Return
 						ContinueLoop
 					EndIf
@@ -990,7 +1113,6 @@ Func HelperHutLab()
 			Local $Result = getBldgUpgradeTime(715, 545 + $g_iMidOffsetY)
 			If $g_bDebugImageSave Then SaveDebugImage($Result & "_", Default, False)
 			Local $iLabAssistantAvailTime = ConvertOCRTime("LabAssist Time", $Result, False)
-			If $iLabAssistantAvailTime > 0 And $iLabAssistantAvailTime < 1380 Then SetLog("CoolDown Time", $COLOR_SUCCESS)
 			If $iLabAssistantAvailTime > 1380 Then
 				$g_sAvailableLabAssistant = 0
 				$iLastTimeChecked[$g_iCurAccount] = "" ; Check Again Next Loop
@@ -1004,7 +1126,6 @@ Func HelperHutLab()
 		If $iLabAssistantAvailTime > 0 Then
 			Local $StartTime = _NowCalc() ; what is date:time now
 			$g_sAvailableLabAssistant = _DateAdd('n', Ceiling($iLabAssistantAvailTime), $StartTime)
-			SetLog("Assistant Available @ " & $g_sAvailableLabAssistant, $COLOR_DEBUG1)
 			$TimeDiffLabAssistant = _DateDiff('n', _NowCalc(), $g_sAvailableLabAssistant) ; what is difference between end time and now in minutes?
 			If ProfileSwitchAccountEnabled() Then SwitchAccountVariablesReload("Save")
 			If $TimeDiffLabAssistant > 0 Then
@@ -1018,8 +1139,7 @@ Func HelperHutLab()
 				If $iHour > 0 Then $sWaitTime &= $iHour & " hours "
 				If $iMin > 0 Then $sWaitTime &= $iMin & " minutes "
 
-				SetLog("Lab Assistant Unavailable", $COLOR_DEBUG1)
-				SetLog("Will Be Available in " & $sWaitTime, $COLOR_ACTION)
+				_LogHelperHutCooldown($sWaitTime, $g_sAvailableLabAssistant)
 
 			EndIf
 		Else
@@ -1036,7 +1156,7 @@ Func HelperHutLab()
 		Local $ButtonClickX = Random($CoordsX[0], $CoordsX[1], 1)
 		Local $ButtonClickY = Random($CoordsY[0], $CoordsY[1], 1)
 		Click($ButtonClickX, $ButtonClickY, 1, 180, "ConfirmButton") ;Click Confirm
-		SetLog("Lab Assistant Assigned", $COLOR_SUCCESS)
+		SetLog("Lab Assistant Assigned", $COLOR_ACTION)
 		If _Sleep(Random(2000, 2500, 1)) Then Return
 		WaitForClanMessage("BuildersApprenticeMid")
 		Local $aiJobinProgress = decodeSingleCoord(FindImageInPlace2("JobInProgress", $ImgJobInProgress, 390, 220 + $g_iMidOffsetY, 490, 280 + $g_iMidOffsetY, True))
@@ -1058,7 +1178,6 @@ Func HelperHutLab()
 		If $iLabAssistantAvailTime > 0 Then
 			Local $StartTime = _NowCalc() ; what is date:time now
 			$g_sAvailableLabAssistant = _DateAdd('n', Ceiling($iLabAssistantAvailTime), $StartTime)
-			SetLog("Assistant Available @ " & $g_sAvailableLabAssistant, $COLOR_DEBUG1)
 			$TimeDiffLabAssistant = _DateDiff('n', _NowCalc(), $g_sAvailableLabAssistant) ; what is difference between end time and now in minutes?
 			If ProfileSwitchAccountEnabled() Then SwitchAccountVariablesReload("Save")
 			If $TimeDiffLabAssistant > 0 Then
@@ -1072,7 +1191,7 @@ Func HelperHutLab()
 				If $iHour > 0 Then $sWaitTime &= $iHour & " hours "
 				If $iMin > 0 Then $sWaitTime &= $iMin & " minutes "
 
-				SetLog("Lab Assistant Available in " & $sWaitTime, $COLOR_ACTION)
+				_LogHelperHutCooldown($sWaitTime, $g_sAvailableLabAssistant)
 
 			EndIf
 		Else
@@ -1083,13 +1202,14 @@ Func HelperHutLab()
 	Else
 		WaitForClanMessage("BuildersApprenticeConfirm")
 		CloseWindow2(1) ; Close If a window is open
-		If _Sleep(1000) Then Return
+		If _Sleep(1000) Then Return True
+		Return Not QuickMIS("BC1", $g_sImgGeneralCloseButton, 770, 100, 845, 130 + $g_iMidOffsetY)
 	EndIf
 
 	WaitForClanMessage("BuildersApprenticeTop")
 EndFunc   ;==>HelperHutLab
 
-Func HelperHutApp($bToOpen = False)
+Func HelperHutApp($bToOpen = False, $bCurrentTab = False, $bKeepWindowOpen = False)
 
 	If $g_iTownHallLevel < 10 Then
 		If Not $bToOpen Then CloseWindow()
@@ -1098,8 +1218,8 @@ Func HelperHutApp($bToOpen = False)
 
 	If Not $g_bRunState Then Return
 
-	Local Static $iLastTimeChecked[8]
-	Local Static $bUnderTime[8]
+	Local Static $iLastTimeChecked[$g_iSwitchAccMaxAccounts]
+	Local Static $bUnderTime[$g_iSwitchAccMaxAccounts]
 	If $g_bFirstStart Then
 		$iLastTimeChecked[$g_iCurAccount] = ""
 		$bUnderTime[$g_iCurAccount] = False
@@ -1124,11 +1244,11 @@ Func HelperHutApp($bToOpen = False)
 			If $iMin > 0 Then $sWaitTime &= $iMin & " minutes "
 
 			If $bUnderTime[$g_iCurAccount] = True Then
-				SetLog("Current Updgrade Time Too Small", $COLOR_DEBUG1)
-				SetLog("Next Check in " & $sWaitTime, $COLOR_ACTION)
+				SetLog("Current upgrade time too small", $COLOR_DEBUG1)
+				SetLog("Next check in " & $sWaitTime, $COLOR_ACTION)
 			Else
-				SetLog("Builder's Apprentice Unavailable", $COLOR_DEBUG1)
-				SetLog("Will Be Available in " & $sWaitTime, $COLOR_ACTION)
+				SetLog("Builder's Apprentice Unavailable", $COLOR_INFO)
+				_LogHelperHutCooldown($sWaitTime, $g_sAvailableAppBuilder)
 			EndIf
 			If Not $bToOpen Then CloseWindow()
 			Return
@@ -1146,49 +1266,17 @@ Func HelperHutApp($bToOpen = False)
 		EndIf
 	EndIf
 
-	If $bToOpen Then
-		Local $bLocateHelperHut = False
-		BuildingClick($g_aiHelperHutPos[0], $g_aiHelperHutPos[1])
-		If _Sleep($DELAYBUILDINGINFO1) Then Return
-
-		Local $BuildingInfo = BuildingInfo(242, 475 + $g_iBottomOffsetY)
-
-		If Not StringInStr($BuildingInfo[1], "Helper", $STR_NOCASESENSEBASIC) Then $bLocateHelperHut = True
-		If $bLocateHelperHut Then
-			SetLog("Helper Hut not Found", $COLOR_DEBUG1)
-			SetLog("New Try...", $COLOR_DEBUG1)
-			ClearScreen()
-			If _Sleep(Random(1000, 1500, 1)) Then Return
-			BuildingClick($g_aiHelperHutPos[0], $g_aiHelperHutPos[1])
-			If _Sleep($DELAYBUILDINGINFO1) Then Return
-			Local $BuildingInfo = BuildingInfo(242, 475 + $g_iBottomOffsetY)
-			If Not StringInStr($BuildingInfo[1], "Helper", $STR_NOCASESENSEBASIC) Then
-				SetLog("Helper Hut not Found", $COLOR_DEBUG1)
-				ClearScreen()
-				Return
-			EndIf
-		EndIf
-
-		Local $BuildersApp = FindButton("BuildersApp")
-		If IsArray($BuildersApp) And UBound($BuildersApp) = 2 Then
-			Click($BuildersApp[0], 545 + $g_iBottomOffsetY)
-			If _Sleep(Random(1500, 2000, 1)) Then Return
-		Else
-			ClearScreen()
-			Return
-		EndIf
-
-		WaitForClanMessage("BuildersApprenticeTop")
-		If Not QuickMIS("BC1", $g_sImgGeneralCloseButton, 770, 100, 845, 130 + $g_iMidOffsetY) Then
+	Local $bHelperHutWindowOpen = QuickMIS("BC1", $g_sImgGeneralCloseButton, 770, 100, 845, 130 + $g_iMidOffsetY)
+	If Not $bHelperHutWindowOpen Then
+		Local $sOpenedTab = ""
+		If Not _OpenHelperHutAssistant("BuildersApp", $sOpenedTab) Then
 			SetLog("Builder's Apprentice Window Didn't Open", $COLOR_DEBUG1)
-			CloseWindow2()
-			If _Sleep(Random(1500, 2000, 1)) Then Return
-			ClearScreen()
 			Return
 		EndIf
 	Else
-		Click(210, 530 + $g_iMidOffsetY)
-		If _Sleep(1000) Then Return
+		If Not $bCurrentTab Then
+			If Not _SelectHelperHutTab("BuildersApp") Then Return
+		EndIf
 	EndIf
 
 	$iLastTimeChecked[$g_iCurAccount] = _NowCalc()
@@ -1201,13 +1289,19 @@ Func HelperHutApp($bToOpen = False)
 		Return
 	EndIf
 
-	Local $bXMultiplier = Number(getOcrAndCapture("coc-uptime", 663, 176 + $g_iMidOffsetY, 37, 17, True))
-	If $bXMultiplier = "" Or $bXMultiplier < 1 Or $bXMultiplier > 8 Then $bXMultiplier = 1 ; In Case
-	SetLog("Builder's Apprentice is Level " & $bXMultiplier, $COLOR_INFO)
+	Local $sLevelOCR = _ReadHelperHutLevelOCR()
+	Local $bXMultiplier = Number(StringRegExpReplace($sLevelOCR, "[^0-9]", ""))
+	If $bXMultiplier < 1 Or $bXMultiplier > 8 Then
+		SetLog("Builder's Apprentice level OCR failed; using conservative level 1", $COLOR_WARNING)
+		$bXMultiplier = 1
+	Else
+		SetLog("Builder's Apprentice Level: " & $bXMultiplier, $COLOR_INFO)
+	EndIf
+	$iLastTimeChecked[$g_iCurAccount] = _NowCalc()
 
 	WaitForClanMessage("BuildersApprenticeMid")
 
-	Local $MiniHead = decodeSingleCoord(FindImageInPlace2("MiniBuilderApp", $g_sImgMiniBuilderAppHead, 690, 230 + $g_iMidOffsetY, 840, 500 + $g_iMidOffsetY, True)) ; Recurrence
+	Local $MiniHead = decodeSingleCoord(FindImageInPlace2("MiniBuilderApp", $g_sImgMiniBuilderAppHead, 45, 510 + $g_iMidOffsetY, 390, 610 + $g_iMidOffsetY, True))
 	If IsArray($MiniHead) And UBound($MiniHead) = 2 Then
 		ClickP($MiniHead)
 		If _Sleep(1000) Then Return
@@ -1271,7 +1365,7 @@ Func HelperHutApp($bToOpen = False)
 					If $iHour > 0 Then $sWaitTime &= $iHour & " hours "
 					If $iMin > 0 Then $sWaitTime &= $iMin & " minutes "
 
-					SetLog("Current Upgrade Will Finish in " & $sWaitTime, $COLOR_SUCCESS1)
+					SetLog("Current upgrade will finish in " & $bRemainingUpTimeOCR)
 
 				EndIf
 
@@ -1292,22 +1386,22 @@ Func HelperHutApp($bToOpen = False)
 
 					Switch $bXMultiplier
 						Case 1 To 3
-							SetLog("Current Upgrade Will Finish in " & $sWaitTime & " (Less Than " & $bXMultiplier & " Hour" & ($bXMultiplier > 1 ? "s)" : ")"), $COLOR_WARNING)
+							SetLog("Current upgrade will finish in " & $sWaitTime & " (Less Than " & $bXMultiplier & " Hour" & ($bXMultiplier > 1 ? "s)" : ")"), $COLOR_WARNING)
 						Case 4
-							SetLog("Current Upgrade Will Finish in " & $sWaitTime & " (Less Than " & ($bXMultiplier - 1) & " Hours)", $COLOR_WARNING)
+							SetLog("Current upgrade will finish in " & $sWaitTime & " (Less Than " & ($bXMultiplier - 1) & " Hours)", $COLOR_WARNING)
 						Case 5, 6
-							SetLog("Current Upgrade Will Finish in " & $sWaitTime & " (Less Than " & ($bXMultiplier - 2) & " Hours)", $COLOR_WARNING)
+							SetLog("Current upgrade will finish in " & $sWaitTime & " (Less Than " & ($bXMultiplier - 2) & " Hours)", $COLOR_WARNING)
 						Case 7, 8
-							SetLog("Current Upgrade Will Finish in " & $sWaitTime & " (Less Than " & ($bXMultiplier - 3) & " Hours)", $COLOR_WARNING)
+							SetLog("Current upgrade will finish in " & $sWaitTime & " (Less Than " & ($bXMultiplier - 3) & " Hours)", $COLOR_WARNING)
 					EndSwitch
 
 					If $g_bChkAppBuilder = 1 Or ($g_bChkAppBuilder = 2 And $i = UBound($GreenAssignButtons) - 1) Then
 						Local $StartTime = _NowCalc() ; what is date:time now
 						$g_sAvailableAppBuilder = _DateAdd('n', Ceiling($iRemainingTime), $StartTime)
-						SetLog("Buider's App Next Check @ " & $g_sAvailableAppBuilder, $COLOR_DEBUG1)
+						SetLog("Builder's Apprentice next check @ " & $g_sAvailableAppBuilder, $COLOR_DEBUG1)
 						$bUnderTime[$g_iCurAccount] = True
 					Else
-						SetLog("Check Next Upgrade...", $COLOR_INFO)
+						SetLog("Check next upgrade...", $COLOR_INFO)
 						If _Sleep(1000) Then Return
 						ContinueLoop
 					EndIf
@@ -1338,7 +1432,6 @@ Func HelperHutApp($bToOpen = False)
 			Local $Result = getBldgUpgradeTime(715, 545 + $g_iMidOffsetY)
 			If $g_bDebugImageSave Then SaveDebugImage($Result & "_", Default, False)
 			Local $iAppBuilderAvailTime = ConvertOCRTime("BuildersApp Time", $Result, False)
-			If $iAppBuilderAvailTime > 0 And $iAppBuilderAvailTime < 1380 Then SetLog("CoolDown Time", $COLOR_SUCCESS)
 			If $iAppBuilderAvailTime > 1380 Then
 				$g_sAvailableAppBuilder = 0
 				$iLastTimeChecked[$g_iCurAccount] = "" ; Check Again Next Loop
@@ -1353,7 +1446,6 @@ Func HelperHutApp($bToOpen = False)
 		If $iAppBuilderAvailTime > 0 Then
 			Local $StartTime = _NowCalc() ; what is date:time now
 			$g_sAvailableAppBuilder = _DateAdd('n', Ceiling($iAppBuilderAvailTime), $StartTime)
-			SetLog("Buider's App Available @ " & $g_sAvailableAppBuilder, $COLOR_DEBUG1)
 			$TimeDiffAppBuilder = _DateDiff('n', _NowCalc(), $g_sAvailableAppBuilder) ; what is difference between end time and now in minutes?
 			If ProfileSwitchAccountEnabled() Then SwitchAccountVariablesReload("Save")
 			If $TimeDiffAppBuilder > 0 Then
@@ -1367,8 +1459,7 @@ Func HelperHutApp($bToOpen = False)
 				If $iHour > 0 Then $sWaitTime &= $iHour & " hours "
 				If $iMin > 0 Then $sWaitTime &= $iMin & " minutes "
 
-				SetLog("Builder's Apprentice Unavailable", $COLOR_DEBUG1)
-				SetLog("Will Be Available in " & $sWaitTime, $COLOR_ACTION)
+				_LogHelperHutCooldown($sWaitTime, $g_sAvailableAppBuilder)
 
 			EndIf
 		Else
@@ -1386,7 +1477,7 @@ Func HelperHutApp($bToOpen = False)
 		Local $ButtonClickX = Random($CoordsX[0], $CoordsX[1], 1)
 		Local $ButtonClickY = Random($CoordsY[0], $CoordsY[1], 1)
 		Click($ButtonClickX, $ButtonClickY, 1, 180, "ConfirmButton") ;Click Confirm
-		SetLog("Builder's Apprentice Assigned", $COLOR_SUCCESS)
+		SetLog("Builder's Apprentice Assigned", $COLOR_ACTION)
 		If _Sleep(Random(2000, 2500, 1)) Then Return
 		WaitForClanMessage("BuildersApprenticeMid")
 		Local $aiJobinProgress = decodeSingleCoord(FindImageInPlace2("JobInProgress", $ImgJobInProgress, 390, 220 + $g_iMidOffsetY, 490, 280 + $g_iMidOffsetY, True))
@@ -1409,7 +1500,6 @@ Func HelperHutApp($bToOpen = False)
 		If $iAppBuilderAvailTime > 0 Then
 			Local $StartTime = _NowCalc() ; what is date:time now
 			$g_sAvailableAppBuilder = _DateAdd('n', Ceiling($iAppBuilderAvailTime), $StartTime)
-			SetLog("Buider's App Available @ " & $g_sAvailableAppBuilder, $COLOR_DEBUG1)
 			$TimeDiffAppBuilder = _DateDiff('n', _NowCalc(), $g_sAvailableAppBuilder) ; what is difference between end time and now in minutes?
 			If ProfileSwitchAccountEnabled() Then SwitchAccountVariablesReload("Save")
 			If $TimeDiffAppBuilder > 0 Then
@@ -1423,7 +1513,7 @@ Func HelperHutApp($bToOpen = False)
 				If $iHour > 0 Then $sWaitTime &= $iHour & " hours "
 				If $iMin > 0 Then $sWaitTime &= $iMin & " minutes "
 
-				SetLog("Builder's Apprentice Available in " & $sWaitTime, $COLOR_ACTION)
+				_LogHelperHutCooldown($sWaitTime, $g_sAvailableAppBuilder)
 
 			EndIf
 		Else
@@ -1438,8 +1528,21 @@ Func HelperHutApp($bToOpen = False)
 	EndIf
 
 	WaitForClanMessage("BuildersApprenticeTop")
-	CloseWindow()
+	If Not $bKeepWindowOpen Then CloseWindow()
 EndFunc   ;==>HelperHutApp
+
+Func _FindLabAssistantAssignButtons()
+	Local $GreenAssignButtons = QuickMIS("CNX", $g_sImgGreenAssignButton, 690, 230 + $g_iMidOffsetY, 840, 500 + $g_iMidOffsetY)
+	If IsArray($GreenAssignButtons) And UBound($GreenAssignButtons) > 0 And UBound($GreenAssignButtons, $UBOUND_COLUMNS) > 1 Then Return $GreenAssignButtons
+
+	Local $aGreenPixel = _PixelSearch(720, 290 + $g_iMidOffsetY, 815, 500 + $g_iMidOffsetY, Hex(0x8DDF2F, 6), 45, True)
+	If Not IsArray($aGreenPixel) Or UBound($aGreenPixel) < 2 Then Return $GreenAssignButtons
+
+	Local $aFallbackButtons[0][4]
+	_ArrayAdd($aFallbackButtons, "Assign|" & $aGreenPixel[0] & "|" & $aGreenPixel[1] & "|0")
+	SetDebugLog("Lab Assistant Assign fallback found at " & $aGreenPixel[0] & "," & $aGreenPixel[1], $COLOR_DEBUG1)
+	Return $aFallbackButtons
+EndFunc   ;==>_FindLabAssistantAssignButtons
 
 Func MoveToBottom()
 
@@ -1495,7 +1598,7 @@ Func MoveToBottom()
 				ClickDrag(Random(500, 680, 1), Random(460, 480, 1), Random(500, 680, 1), Random(350, 370, 1), 200)
 				If _Sleep(Random(2000, 2500, 1)) Then Return
 
-				Local $MiniHead = decodeSingleCoord(FindImageInPlace2("MiniBuilderApp", $g_sImgMiniBuilderAppHead, 690, 230 + $g_iMidOffsetY, 840, 500 + $g_iMidOffsetY, True)) ; Recurrence
+				Local $MiniHead = decodeSingleCoord(FindImageInPlace2("MiniBuilderApp", $g_sImgMiniBuilderAppHead, 45, 510 + $g_iMidOffsetY, 390, 610 + $g_iMidOffsetY, True))
 				If IsArray($MiniHead) And UBound($MiniHead) = 2 Then
 					ClickP($MiniHead)
 					If _Sleep(1000) Then Return

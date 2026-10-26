@@ -1,4 +1,4 @@
-
+﻿
 ; #FUNCTION# ====================================================================================================================
 ; Name ..........: LocateTownHall
 ; Description ...: Locates TownHall
@@ -18,11 +18,46 @@ Func LocateTownHall($bLocationOnly = False, $bCollect = True)
 	Local $sMsgBoxText, $MsgBox, $bGotTHLevel, $sLocMsg
 	Local $iStupid = 0, $iSilly = 0, $sErrorText = ""
 
-	SetLog("Locating Town Hall", $COLOR_INFO)
-
 	WinGetAndroidHandle()
-	checkMainScreen()
-	If $bCollect Then Collect(False)
+	checkMainScreen(False)
+
+	Local $aPreviousTownHallPos[2] = [$g_aiTownHallPos[0], $g_aiTownHallPos[1]]
+	Local $iPreviousTownHallLevel = $g_iTownHallLevel
+	$g_aiTownHallPos[0] = -1
+	$g_aiTownHallPos[1] = -1
+
+	Local $bLocalTHSearch = False
+	If $aPreviousTownHallPos[0] > 0 And $aPreviousTownHallPos[1] > 0 Then
+		Local $iLeft = $aPreviousTownHallPos[0] - 90
+		Local $iTop = $aPreviousTownHallPos[1] - 90
+		Local $iRight = $aPreviousTownHallPos[0] + 90
+		Local $iBottom = $aPreviousTownHallPos[1] + 90
+		If $iLeft < 0 Then $iLeft = 0
+		If $iTop < 0 Then $iTop = 0
+		If $iRight > $g_iGAME_WIDTH Then $iRight = $g_iGAME_WIDTH
+		If $iBottom > $g_iGAME_HEIGHT Then $iBottom = $g_iGAME_HEIGHT
+		Local $sLocalArea = GetDiamondFromRect2($iLeft, $iTop, $iRight, $iBottom)
+		imglocTHSearch(True, True, True, $sLocalArea, True)
+		$bLocalTHSearch = True
+	EndIf
+	If Not isInsideDiamond($g_aiTownHallPos) Then imglocTHSearch(True, True, Not $bLocalTHSearch)
+	If isInsideDiamond($g_aiTownHallPos) Then
+		If $bLocationOnly Then
+			SetLog("Town Hall Detected: (" & $g_aiTownHallPos[0] & "," & $g_aiTownHallPos[1] & "), Level: " & $g_iTownHallLevel, $COLOR_SUCCESS)
+			ClearScreen()
+			Return True
+		EndIf
+		BuildingClickP($g_aiTownHallPos, "#0349")
+		If _Sleep($DELAYIMGLOCATE1) Then Return False
+		$bGotTHLevel = GetTownHallLevel()
+		If Not IsArray($bGotTHLevel) And $bGotTHLevel Then Return True
+		ClearScreen()
+	EndIf
+
+	$g_aiTownHallPos[0] = $aPreviousTownHallPos[0]
+	$g_aiTownHallPos[1] = $aPreviousTownHallPos[1]
+	$g_iTownHallLevel = $iPreviousTownHallLevel
+	If Not isInsideDiamond($aPreviousTownHallPos) Then LogUnknownBuildingPosition("Town Hall")
 
 	While 1
 		_ExtMsgBoxSet(1 + 64, 1, 0x004080, 0xFFFF00, 12, "Comic Sans MS", 600)
@@ -35,13 +70,13 @@ Func LocateTownHall($bLocationOnly = False, $bCollect = True)
 			Local $aPos = FindPos()
 			$g_aiTownHallPos[0] = $aPos[0]
 			$g_aiTownHallPos[1] = $aPos[1]
-			If _Sleep($DELAYLOCATETH1) Then Return
+			If _Sleep($DELAYLOCATETH1) Then Return False
 			If Not isInsideDiamond($g_aiTownHallPos) Then
 				$iStupid += 1
 				Select
 					Case $iStupid = 1
 						$sErrorText = "TownHall Location not valid!" & @CRLF
-						SetLog("Location not valid, try again", $COLOR_ERROR)
+						SetDebugLog("Location not valid, try again", $COLOR_DEBUG)
 						ContinueLoop
 					Case $iStupid = 2
 						$sErrorText = "Please try to click inside the grass field!" & @CRLF
@@ -50,21 +85,21 @@ Func LocateTownHall($bLocationOnly = False, $bCollect = True)
 						$sErrorText = "This is not funny, why did you click @ (" & $g_aiTownHallPos[0] & "," & $g_aiTownHallPos[1] & ")?" & @CRLF & "Please stop!" & @CRLF
 						ContinueLoop
 					Case $iStupid = 4
-						$sErrorText = "Last Chance, DO NOT MAKE ME ANGRY, or" & @CRLF & "I will give ALL of your gold to Barbarian King," & @CRLF & "And ALL of your Gems to the Archer Queen!" & @CRLF
+						$sErrorText = "Last chance, DO NOT MAKE ME ANGRY, or" & @CRLF & "I will give ALL of your gold to Barbarian King," & @CRLF & "And ALL of your Gems to the Archer Queen!" & @CRLF
 						ContinueLoop
 					Case $iStupid > 4
-						SetLog(" Operator Error - Bad Townhall Location: " & "(" & $g_aiTownHallPos[0] & "," & $g_aiTownHallPos[1] & ")", $COLOR_ERROR)
+						SetDebugLog(" Operator Error - Bad TownHall Location: " & "(" & $g_aiTownHallPos[0] & "," & $g_aiTownHallPos[1] & ")", $COLOR_DEBUG)
 						$g_aiTownHallPos[0] = -1
 						$g_aiTownHallPos[1] = -1
 						ClearScreen()
 						Return False
 				EndSelect
 			EndIf
-			SetLog("Townhall: " & "(" & $g_aiTownHallPos[0] & "," & $g_aiTownHallPos[1] & ")", $COLOR_SUCCESS)
+
 		Else
 			SetLog("Locate TownHall Cancelled", $COLOR_INFO)
 			ClearScreen()
-			Return
+			Return False
 		EndIf
 		If Not $bLocationOnly Then
 			$bGotTHLevel = GetTownHallLevel() ; Get/Save the users updated TH level
@@ -89,19 +124,18 @@ Func LocateTownHall($bLocationOnly = False, $bCollect = True)
 						$sErrorText = $sLocMsg & " ?!?!?!" & @CRLF & @CRLF & "Last Chance, DO NOT MAKE ME ANGRY, or" & @CRLF & "I will give ALL of your gold to Barbarian King," & @CRLF & "And ALL of your Gems to the Archer Queen!" & @CRLF
 						ContinueLoop
 					Case $iSilly > 4
-						SetLog("Quit joking, Click on the TH, or restart bot and try again", $COLOR_ERROR)
+						SetDebugLog("Quit joking, Click on the TH, or restart bot and try again", $COLOR_DEBUG)
 						$g_aiTownHallPos[0] = -1
 						$g_aiTownHallPos[1] = -1
 						ClearScreen()
 						Return False
 				EndSelect
-			Else
-				SetLog("Locate TH Success!", $COLOR_SUCCESS)
 			EndIf
 		EndIf
 		ExitLoop
 	WEnd
 
 	ClearScreen()
+	Return True
 
 EndFunc   ;==>LocateTownHall

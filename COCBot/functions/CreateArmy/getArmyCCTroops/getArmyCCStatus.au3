@@ -20,13 +20,13 @@ Func getArmyCCStatus($bOpenArmyWindow = False, $bCloseArmyWindow = False, $Check
 	If $CheckWindow Then
 		If Not $bOpenArmyWindow And Not IsTrainPage() Then ; check for train page
 			SetError(1)
-			Return ; not open, not requested to be open - error.
+			Return "Error" ; not open, not requested to be open - error.
 		ElseIf $bOpenArmyWindow Then
 			If Not OpenArmyOverview(True, "getArmyCCStatus()") Then
 				SetError(2)
-				Return ; not open, requested to be open - error.
+				Return "Error" ; not open, requested to be open - error.
 			EndIf
-			If _Sleep($DELAYCHECKARMYCAMP5) Then Return
+			If _Sleep($DELAYCHECKARMYCAMP5) Then Return "Error"
 		EndIf
 	EndIf
 
@@ -34,18 +34,23 @@ Func getArmyCCStatus($bOpenArmyWindow = False, $bCloseArmyWindow = False, $Check
 	$g_bCanRequestCC = _ColorCheck(_GetPixelColor($aRequestTroopsAO[0], $aRequestTroopsAO[1], $bNeedCapture), Hex($aRequestTroopsAO[3], 6), $aRequestTroopsAO[5]) And _ColorCheck(_GetPixelColor($aRequestTroopsAO[0], $aRequestTroopsAO[1] + 30, $bNeedCapture), Hex($aRequestTroopsAO[4], 6), $aRequestTroopsAO[5])
 	If $g_bDebugSetLogTrain Then SetLog("Can Request CC: " & $g_bCanRequestCC, $COLOR_DEBUG)
 
+	Local $sStatus = "Available"
 	If Not $g_bCanRequestCC Then
 		If Not _ColorCheck(_GetPixelColor($aRequestTroopsAO[0], $aRequestTroopsAO[1], $bNeedCapture), Hex($aRequestTroopsAO[3], 6), $aRequestTroopsAO[5]) And  _ColorCheck(_GetPixelColor($aRequestTroopsAO[0], $aRequestTroopsAO[1] + 48, $bNeedCapture), Hex($aRequestTroopsAO[3], 6), $aRequestTroopsAO[5]) Then
 			If $bSetLog Then SetLog(" - Clan Castle request already made.", $COLOR_INFO)
+			$sStatus = "AlreadyMade"
 		EndIf
 		If _ColorCheck(_GetPixelColor($aRequestTroopsAO[0], $aRequestTroopsAO[1], $bNeedCapture), Hex($aRequestTroopsAO[2], 6), $aRequestTroopsAO[5]) Then
-			If $bSetLog Then SetLog("Clan Castle Full/No Clan.", $COLOR_INFO)
+			If $bSetLog Then SetLog("Clan Castle Full/No Clan", $COLOR_INFO)
+			$sStatus = "Full"
 		EndIf
 	EndIf
 
 	If $bCloseArmyWindow Then
 		CloseWindow()
-		If _Sleep($DELAYCHECKARMYCAMP4) Then Return
+		If _Sleep($DELAYCHECKARMYCAMP4) Then Return $sStatus
 	EndIf
+
+	Return $sStatus
 
 EndFunc   ;==>getArmyCCStatus

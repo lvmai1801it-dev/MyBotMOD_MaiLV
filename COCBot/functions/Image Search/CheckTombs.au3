@@ -1,4 +1,4 @@
-; #FUNCTION# ====================================================================================================================
+﻿; #FUNCTION# ====================================================================================================================
 ; Name ..........: CheckTombs.au3
 ; Description ...: This file Includes function to perform defense farming.
 ; Syntax ........:
@@ -102,25 +102,34 @@ Func CheckTombs()
 		EndIf
 
 		If BitOR($bRemoved1, $bRemoved2) Then
-			SetLog("Tombs removed!", $COLOR_DEBUG1)
+			SetLog("Tombs Removed", $COLOR_SUCCESS)
 			$g_abNotNeedAllTime[1] = False
 			If _Sleep(300) Then Return
 			ClearScreen()
 		Else
-			SetLog("Tombs not removed, please do manually!", $COLOR_WARNING)
+			SetLog("Tombs not removed, please remove them manually", $COLOR_WARNING)
 		EndIf
 	Else
-		SetLog("No Tombs Found!", $COLOR_SUCCESS)
+		SetLog("No Tombstone Found", $COLOR_SUCCESS)
 		$g_abNotNeedAllTime[1] = False
 	EndIf
 
 	checkMainScreen(False) ; check for screen errors while function was running
 EndFunc   ;==>CheckTombs
 
-Func CleanYard()
+Func CleanYard($iSearchDepth = 0)
+	Static $iRemovedCount = 0
 
 	; Early exist if noting to do
 	If Not $g_bChkCleanYard And Not $g_bChkGemsBox And Not TestCapture() Then Return
+	If $iSearchDepth = 0 Then
+		$iRemovedCount = 0
+		SetLog("Cleaning Yard", $COLOR_INFO)
+	EndIf
+	If _IsWarMapVisible() Then
+		_ReturnFromWarMap()
+		Return
+	EndIf
 
 	; Timer
 	Local $hObstaclesTimer = __TimerInit()
@@ -131,12 +140,11 @@ Func CleanYard()
 	Local $iElixir = 50000
 	Local $iGemElixir = 1200
 	Local $aTempArray, $aTempName, $aTempCoords, $aTempMultiCoords
-	Local $aObstacles[0][3], $bFoundObstacles = False
+	Local $aObstacles[0][3], $bFoundObstacles = False, $bRemovedObstacle = False
 
 	If $g_bChkCleanYard And Number($g_aiCurrentLoot[$eLootElixir]) > $iElixir Then
 		Local $aResult = findMultiple($g_sImgCleanYard, $sCocDiamond, $sRedLines, 0, 1000, 0, "objectname,objectpoints", True)
 		If $aResult <> "" And IsArray($aResult) Then
-			SetLog("Yard Cleaning Process", $COLOR_OLIVE)
 			;Add found results into our Arrays
 			For $i = 0 To UBound($aResult, 1) - 1
 				$aTempArray = $aResult[$i]
@@ -155,21 +163,33 @@ Func CleanYard()
 				Next
 				RemoveDupXYObs($aObstacles)
 				For $i = 0 To UBound($aObstacles, 1) - 1
-					If IsCoordSafe($aObstacles[$i][1], $aObstacles[$i][2]) Then     ; secure x because of clan chat tab
+					If _IsCleanYardCoordSafe($aObstacles[$i][1], $aObstacles[$i][2]) Then     ; protect chat and right-side controls
 						If $g_bDebugSetLog Then SetDebugLog($aObstacles[$i][0] & " found (" & $aObstacles[$i][1] & "," & $aObstacles[$i][2] & ")", $COLOR_SUCCESS)
 						If IsMainPage() Then Click($aObstacles[$i][1], $aObstacles[$i][2], 1, 120, "#0430")
 						If _Sleep($DELAYCOLLECT3) Then Return
+						If _IsWarMapVisible() Then
+							_ReturnFromWarMap()
+							Return
+						EndIf
 						If Not ClickRemoveObstacle() Then ContinueLoop
-						If _Sleep($DELAYCHECKTOMBS2) Then Return
+						SetLog("Obstacle Removed: (" & $aObstacles[$i][1] & "," & $aObstacles[$i][2] & ")", $COLOR_SUCCESS)
+						$iRemovedCount += 1
+						$bRemovedObstacle = True
+						If _Sleep(1000) Then Return
 						ClearScreen()
 						If _Sleep($DELAYCHECKTOMBS1) Then Return
 					EndIf
 				Next
-			Else
-				SetLog("No Obstacles found, Yard is clean!", $COLOR_SUCCESS)
+				If $bRemovedObstacle Then
+					If $iSearchDepth < 30 Then
+						CleanYard($iSearchDepth + 1)
+					EndIf
+					Return
+				EndIf
 			EndIf
 		EndIf
 	EndIf
+	If $iRemovedCount = 0 Then SetLog("No obstacles found, yard is clean")
 
 	; Setup arrays, including default return values for $return
 	Local $return[7] = ["None", "None", 0, 0, 0, "", ""]
@@ -177,7 +197,7 @@ Func CleanYard()
 
 	; Perform a parallel search with all images inside the directory
 	If $g_bChkGemsBox Then
-		$g_aiCurrentLoot[$eLootElixir] = getResourcesMainScreen(696, 74)
+		$g_aiCurrentLoot[$eLootElixir] = getResourcesMainScreen(690, 59)
 		If _Sleep($DELAYRESPOND) Then Return
 		UpdateStats()
 		If _Sleep(300) Then Return
@@ -205,28 +225,47 @@ Func CleanYard()
 					; Loop through all found points for the item and click them to remove it, there should only be one
 					For $j = 0 To UBound($GemBoxXY) - 1
 						If $g_bDebugSetLog Then SetDebugLog("Coords :" & $GemBoxXY[$j][0] & "," & $GemBoxXY[$j][1])
-						If IsCoordSafe($GemBoxXY[$j][0], $GemBoxXY[$j][1]) Then
+						If _IsCleanYardCoordSafe($GemBoxXY[$j][0], $GemBoxXY[$j][1]) Then
 							If IsMainPage() Then Click($GemBoxXY[$j][0], $GemBoxXY[$j][1], 1, 120, "#0430")
 							If _Sleep($DELAYCHECKTOMBS2) Then Return
 							If _Sleep($DELAYCOLLECT3) Then Return
+							If _IsWarMapVisible() Then
+								_ReturnFromWarMap()
+								Return
+							EndIf
 							If Not ClickRemoveObstacle() Then ContinueLoop
+							SetLog("Obstacle Removed: (" & $GemBoxXY[$j][0] & "," & $GemBoxXY[$j][1] & ")", $COLOR_SUCCESS)
+							$iRemovedCount += 1
 							If _Sleep($DELAYCHECKTOMBS2) Then Return
-							SetLog("GemBox removed!", $COLOR_DEBUG1)
+							SetLog("GemBox Removed", $COLOR_DEBUG)
 							ClearScreen()
 							If _Sleep($DELAYCHECKTOMBS1) Then Return
 						EndIf
 					Next
 				EndIf
 			Else
-				SetLog("No GemBox Found!", $COLOR_SUCCESS)
+				SetLog("No GemBox Found", $COLOR_SUCCESS)
 			EndIf
 		EndIf
 	EndIf
-
 	If $g_bDebugSetLog Then SetDebugLog("Time: " & Round(__TimerDiff($hObstaclesTimer) / 1000, 2) & "'s", $COLOR_SUCCESS)
 	UpdateStats()
 	ClearScreen()
 EndFunc   ;==>CleanYard
+
+; #FUNCTION# ===========================================================================================================
+; Name ..........: _IsCleanYardCoordSafe
+; Description ...: Rejects cleanup clicks that could hit protected village controls.
+; Remarks .......: Excludes the right-edge area below the Shop button during yard cleanup.
+; ======================================================================================================================
+
+Func _IsCleanYardCoordSafe($x, $y)
+	If $x >= 775 And $y > 410 Then
+		If $g_bDebugSetLog Then SetDebugLog("Skipping unsafe Clean Yard coordinate: " & $x & "," & $y, $COLOR_DEBUG)
+		Return False
+	EndIf
+	Return IsCoordSafe($x, $y)
+EndFunc   ;==>_IsCleanYardCoordSafe
 
 Func ClickRemoveObstacle()
 	If _ColorCheck(_GetPixelColor(400, 285 + $g_iMidOffsetY, True), Hex(0xF3AA28, 6), 20) Then  ; close chat
