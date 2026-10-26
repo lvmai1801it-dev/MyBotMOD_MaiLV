@@ -1,4 +1,4 @@
-; #FUNCTION# ====================================================================================================================
+﻿; #FUNCTION# ====================================================================================================================
 ; Name ..........: CheckHeroesHealth
 ; Description ...:
 ; Syntax ........: CheckHeroesHealth()
@@ -13,18 +13,12 @@
 ; Example .......: No
 ; ===============================================================================================================================
 Func CheckHeroesHealth()
+	If Not ($g_bIsHeroesDropped Or $g_bDropKing Or $g_bDropQueen Or $g_bDropPrince Or $g_bDropWarden Or $g_bDropChampion Or $g_bDropDuke) Then Return
 
-	If $g_bCheckKingPower Or $g_bCheckQueenPower Or $g_bCheckPrincePower Or $g_bCheckWardenPower Or $g_bCheckChampionPower Then
+	If $g_bCheckKingPower Or $g_bCheckQueenPower Or $g_bCheckPrincePower Or $g_bCheckWardenPower Or $g_bCheckChampionPower Or $g_bCheckDukePower Then
 		ForceCaptureRegion() ; ensure no screenshot caching kicks in
 
-		Local $aDisplayTime[$eHeroCount] = [0, 0, 0, 0, 0] ; array to hold converted timerdiff into seconds
-
-		If $g_iKingSlot >= 11 Or $g_iQueenSlot >= 11 Or $g_iPrinceSlot >= 11 Or $g_iWardenSlot >= 11 Or $g_iChampionSlot >= 11 Then
-			If Not $g_bDraggedAttackBar Then DragAttackBar($g_iTotalAttackSlot, False)         ; drag forward
-		ElseIf $g_iKingSlot >= 0 And $g_iQueenSlot >= 0 And $g_iPrinceSlot >= 0 And $g_iWardenSlot >= 0 And $g_iChampionSlot >= 0 And ($g_iKingSlot < $g_iTotalAttackSlot - 10 Or $g_iQueenSlot < $g_iTotalAttackSlot - 10 Or _
-				$g_iPrinceSlot < $g_iTotalAttackSlot - 10 Or $g_iWardenSlot < $g_iTotalAttackSlot - 10 Or $g_iChampionSlot < $g_iTotalAttackSlot - 10) Then
-			If $g_bDraggedAttackBar Then DragAttackBar($g_iTotalAttackSlot, True)         ; return drag
-		EndIf
+		Local $aDisplayTime[$eHeroCount] = [0, 0, 0, 0, 0, 0] ; array to hold converted timerdiff into seconds
 
 		If $g_bDebugSetLog Then
 			SetDebugLog("CheckHeroesHealth() for Queen started ")
@@ -40,7 +34,7 @@ Func CheckHeroesHealth()
 					Local $QueenPixelColor = _GetPixelColor($aQueenHealthCopy[0], $aQueenHealthCopy[1], $g_bCapturePixel)
 					If $g_bDebugSetLog Then SetDebugLog(" Queen _GetPixelColor(" & $aQueenHealthCopy[0] & "," & $aQueenHealthCopy[1] & "): " & $QueenPixelColor, $COLOR_DEBUG)
 					If Not _CheckPixel2($aQueenHealthCopy, $QueenPixelColor, "Red+Blue") Then
-						SetLog("Queen is getting weak, Activating Queen's ability", $COLOR_INFO)
+						SetLog("Queen is getting weak, activating ability")
 						ClickP($asQueenResult, 2)
 						$g_iCSVLastTroopPositionDropTroopFromINI = $g_iQueenSlot
 						$g_bCheckQueenPower = False
@@ -50,13 +44,10 @@ Func CheckHeroesHealth()
 		EndIf
 		If $g_iActivateQueen = 1 Or $g_iActivateQueen = 2 Then
 			If $g_bCheckQueenPower Then
-				If $g_aHeroesTimerActivation[$eHeroArcherQueen] <> 0 Then
-					$aDisplayTime[$eHeroArcherQueen] = Ceiling(__TimerDiff($g_aHeroesTimerActivation[$eHeroArcherQueen]) / 1000) ; seconds
-				EndIf
-				If (Int($g_iDelayActivateQueen) / 1000) <= $aDisplayTime[$eHeroArcherQueen] Then
+				If IsHeroAbilityDelayElapsed($eHeroArcherQueen, $g_iDelayActivateQueen, $aDisplayTime) Then
 					Local $asQueenResult = decodeSingleCoord(FindImageInPlace2("Queen", $g_sImgQueenBar, 0, 570 + $g_iBottomOffsetY, 858, 638 + $g_iBottomOffsetY, True)) ; Looking for Queen
 					If IsArray($asQueenResult) And UBound($asQueenResult) = 2 Then
-						SetLog("Activating Queen's ability after " & $aDisplayTime[$eHeroArcherQueen] & "'s", $COLOR_INFO)
+						SetLog("Activating Queen's ability after " & $aDisplayTime[$eHeroArcherQueen] & "'s")
 						ClickP($asQueenResult, 2)
 						$g_iCSVLastTroopPositionDropTroopFromINI = $g_iQueenSlot
 						$g_bCheckQueenPower = False ; Reset check power flag
@@ -80,7 +71,7 @@ Func CheckHeroesHealth()
 					Local $KingPixelColor = _GetPixelColor($aKingHealthCopy[0], $aKingHealthCopy[1], $g_bCapturePixel)
 					If $g_bDebugSetLog Then SetDebugLog("King _GetPixelColor(" & $aKingHealthCopy[0] & "," & $aKingHealthCopy[1] & "): " & $KingPixelColor, $COLOR_DEBUG)
 					If Not _CheckPixel2($aKingHealthCopy, $KingPixelColor, "Red+Blue") Then
-						SetLog("King is getting weak, Activating King's ability", $COLOR_INFO)
+						SetLog("King is getting weak, activating ability")
 						ClickP($asKingResult, 2)
 						$g_iCSVLastTroopPositionDropTroopFromINI = $g_iKingSlot
 						$g_bCheckKingPower = False
@@ -90,13 +81,10 @@ Func CheckHeroesHealth()
 		EndIf
 		If $g_iActivateKing = 1 Or $g_iActivateKing = 2 Then
 			If $g_bCheckKingPower Then
-				If $g_aHeroesTimerActivation[$eHeroBarbarianKing] <> 0 Then
-					$aDisplayTime[$eHeroBarbarianKing] = Ceiling(__TimerDiff($g_aHeroesTimerActivation[$eHeroBarbarianKing]) / 1000) ; seconds
-				EndIf
-				If (Int($g_iDelayActivateKing) / 1000) <= $aDisplayTime[$eHeroBarbarianKing] Then
+				If IsHeroAbilityDelayElapsed($eHeroBarbarianKing, $g_iDelayActivateKing, $aDisplayTime) Then
 					Local $asKingResult = decodeSingleCoord(FindImageInPlace2("King", $g_sImgKingBar, 0, 570 + $g_iBottomOffsetY, 858, 638 + $g_iBottomOffsetY, True)) ; Looking for King
 					If IsArray($asKingResult) And UBound($asKingResult) = 2 Then
-						SetLog("Activating King's ability after " & $aDisplayTime[$eHeroBarbarianKing] & "'s", $COLOR_INFO)
+						SetLog("Activating King's ability after " & $aDisplayTime[$eHeroBarbarianKing] & "'s")
 						ClickP($asKingResult, 2)
 						$g_iCSVLastTroopPositionDropTroopFromINI = $g_iKingSlot
 						$g_bCheckKingPower = False ; Reset check power flag
@@ -120,7 +108,7 @@ Func CheckHeroesHealth()
 					Local $PrincePixelColor = _GetPixelColor($aPrinceHealthCopy[0], $aPrinceHealthCopy[1], $g_bCapturePixel)
 					If $g_bDebugSetLog Then SetDebugLog(" Prince _GetPixelColor(" & $aPrinceHealthCopy[0] & "," & $aPrinceHealthCopy[1] & "): " & $PrincePixelColor, $COLOR_DEBUG)
 					If Not _CheckPixel2($aPrinceHealthCopy, $PrincePixelColor, "Red+Blue") Then
-						SetLog("Prince is getting weak, Activating Prince's ability", $COLOR_INFO)
+						SetLog("Prince is getting weak, activating ability")
 						ClickP($asPrinceResult, 2)
 						$g_iCSVLastTroopPositionDropTroopFromINI = $g_iPrinceSlot
 						$g_bCheckPrincePower = False
@@ -130,13 +118,10 @@ Func CheckHeroesHealth()
 		EndIf
 		If $g_iActivatePrince = 1 Or $g_iActivatePrince = 2 Then
 			If $g_bCheckPrincePower Then
-				If $g_aHeroesTimerActivation[$eHeroMinionPrince] <> 0 Then
-					$aDisplayTime[$eHeroMinionPrince] = Ceiling(__TimerDiff($g_aHeroesTimerActivation[$eHeroMinionPrince]) / 1000) ; seconds
-				EndIf
-				If (Int($g_iDelayActivatePrince) / 1000) <= $aDisplayTime[$eHeroMinionPrince] Then
+				If IsHeroAbilityDelayElapsed($eHeroMinionPrince, $g_iDelayActivatePrince, $aDisplayTime) Then
 					Local $asPrinceResult = decodeSingleCoord(FindImageInPlace2("Prince", $g_sImgPrinceBar, 0, 570 + $g_iBottomOffsetY, 858, 638 + $g_iBottomOffsetY, True)) ; Looking for Prince
 					If IsArray($asPrinceResult) And UBound($asPrinceResult) = 2 Then
-						SetLog("Activating Prince's ability after " & $aDisplayTime[$eHeroMinionPrince] & "'s", $COLOR_INFO)
+						SetLog("Activating Prince's ability after " & $aDisplayTime[$eHeroMinionPrince] & "'s")
 						ClickP($asPrinceResult, 2)
 						$g_iCSVLastTroopPositionDropTroopFromINI = $g_iPrinceSlot
 						$g_bCheckPrincePower = False ; Reset check power flag
@@ -160,7 +145,7 @@ Func CheckHeroesHealth()
 					Local $WardenPixelColor = _GetPixelColor($aWardenHealthCopy[0], $aWardenHealthCopy[1], $g_bCapturePixel)
 					If $g_bDebugSetLog Then SetDebugLog(" Grand Warden _GetPixelColor(" & $aWardenHealthCopy[0] & "," & $aWardenHealthCopy[1] & "): " & $WardenPixelColor, $COLOR_DEBUG)
 					If Not _CheckPixel2($aWardenHealthCopy, $WardenPixelColor, "Red+Blue") Then
-						SetLog("Grand Warden is getting weak, Activating Warden's ability", $COLOR_INFO)
+						SetLog("Warden is getting weak, activating ability")
 						ClickP($asWardenResult, 2)
 						$g_iCSVLastTroopPositionDropTroopFromINI = $g_iWardenSlot
 						$g_bCheckWardenPower = False
@@ -170,13 +155,10 @@ Func CheckHeroesHealth()
 		EndIf
 		If $g_iActivateWarden = 1 Or $g_iActivateWarden = 2 Then
 			If $g_bCheckWardenPower Then
-				If $g_aHeroesTimerActivation[$eHeroGrandWarden] <> 0 Then
-					$aDisplayTime[$eHeroGrandWarden] = Ceiling(__TimerDiff($g_aHeroesTimerActivation[$eHeroGrandWarden]) / 1000) ; seconds
-				EndIf
-				If (Int($g_iDelayActivateWarden) / 1000) <= $aDisplayTime[$eHeroGrandWarden] Then
+				If IsHeroAbilityDelayElapsed($eHeroGrandWarden, $g_iDelayActivateWarden, $aDisplayTime) Then
 					Local $asWardenResult = decodeSingleCoord(FindImageInPlace2("Warden", $g_sImgWardenBar, 0, 570 + $g_iBottomOffsetY, 858, 638 + $g_iBottomOffsetY, True)) ; Looking for Warden
 					If IsArray($asWardenResult) And UBound($asWardenResult) = 2 Then
-						SetLog("Activating Warden's ability after " & $aDisplayTime[$eHeroGrandWarden] & "'s", $COLOR_INFO)
+						SetLog("Activating Warden's ability after " & $aDisplayTime[$eHeroGrandWarden] & "'s")
 						ClickP($asWardenResult, 2)
 						$g_iCSVLastTroopPositionDropTroopFromINI = $g_iWardenSlot
 						$g_bCheckWardenPower = False ; Reset check power flag
@@ -200,7 +182,7 @@ Func CheckHeroesHealth()
 					Local $ChampionPixelColor = _GetPixelColor($aChampionHealthCopy[0], $aChampionHealthCopy[1], $g_bCapturePixel)
 					If $g_bDebugSetLog Then SetDebugLog("Royal Champion _GetPixelColor(" & $aChampionHealthCopy[0] & "," & $aChampionHealthCopy[1] & "): " & $ChampionPixelColor, $COLOR_DEBUG)
 					If Not _CheckPixel2($aChampionHealthCopy, $ChampionPixelColor, "Red+Blue") Then
-						SetLog("Royal Champion is getting weak, Activating Royal Champion's ability", $COLOR_INFO)
+						SetLog("Champion is getting weak, activating ability")
 						ClickP($asChampionResult, 2)
 						$g_iCSVLastTroopPositionDropTroopFromINI = $g_iChampionSlot
 						$g_bCheckChampionPower = False
@@ -210,13 +192,10 @@ Func CheckHeroesHealth()
 		EndIf
 		If $g_iActivateChampion = 1 Or $g_iActivateChampion = 2 Then
 			If $g_bCheckChampionPower Then
-				If $g_aHeroesTimerActivation[$eHeroRoyalChampion] <> 0 Then
-					$aDisplayTime[$eHeroRoyalChampion] = Ceiling(__TimerDiff($g_aHeroesTimerActivation[$eHeroRoyalChampion]) / 1000) ; seconds
-				EndIf
-				If (Int($g_iDelayActivateChampion) / 1000) <= $aDisplayTime[$eHeroRoyalChampion] Then
+				If IsHeroAbilityDelayElapsed($eHeroRoyalChampion, $g_iDelayActivateChampion, $aDisplayTime) Then
 					Local $asChampionResult = decodeSingleCoord(FindImageInPlace2("Champion", $g_sImgChampionBar, 0, 570 + $g_iBottomOffsetY, 858, 638 + $g_iBottomOffsetY, True)) ; Looking for Champion
 					If IsArray($asChampionResult) And UBound($asChampionResult) = 2 Then
-						SetLog("Activating Royal Champion's ability after " & $aDisplayTime[$eHeroRoyalChampion] & "'s", $COLOR_INFO)
+						SetLog("Activating Champion's ability after " & $aDisplayTime[$eHeroRoyalChampion] & "'s")
 						ClickP($asChampionResult, 2)
 						$g_iCSVLastTroopPositionDropTroopFromINI = $g_iChampionSlot
 						$g_bCheckChampionPower = False ; Reset check power flag
@@ -226,6 +205,55 @@ Func CheckHeroesHealth()
 			EndIf
 		EndIf
 
-		If _Sleep($DELAYRESPOND) Then Return ; improve pause button response
+		If $g_bDebugSetLog Then
+			SetDebugLog("CheckHeroesHealth() for Dragon Duke started ")
+			If _Sleep($DELAYRESPOND) Then Return ; improve pause button response
+		EndIf
+
+		If $g_iActivateDuke = 0 Or $g_iActivateDuke = 2 And ($g_aHeroesTimerActivation[$eHeroDukeIndex] = 0 Or __TimerDiff($g_aHeroesTimerActivation[$eHeroDukeIndex]) > $DELAYCHECKHEROESHEALTH) Then
+			If $g_bCheckDukePower Then
+				Local $asDukeResult = decodeSingleCoord(FindImageInPlace2("Dragon Duke", $g_sImgDukeBar, 0, 570 + $g_iBottomOffsetY, 858, 638 + $g_iBottomOffsetY, True)) ; Looking for Dragon Duke
+				If IsArray($asDukeResult) And UBound($asDukeResult) = 2 Then
+					Local $aDukeHealthCopy = $aDukeHealth
+					$aDukeHealthCopy[0] = $asDukeResult[0] - $aDukeHealthCopy[4]
+					Local $DukePixelColor = _GetPixelColor($aDukeHealthCopy[0], $aDukeHealthCopy[1], $g_bCapturePixel)
+					If $g_bDebugSetLog Then SetDebugLog("Dragon Duke _GetPixelColor(" & $aDukeHealthCopy[0] & "," & $aDukeHealthCopy[1] & "): " & $DukePixelColor, $COLOR_DEBUG)
+					If Not _CheckPixel2($aDukeHealthCopy, $DukePixelColor, "Red+Blue") Then
+						SetLog("Duke is getting weak, activating ability")
+						ClickP($asDukeResult, 2)
+						$g_iCSVLastTroopPositionDropTroopFromINI = $g_iDukeSlot
+						$g_bCheckDukePower = False
+					EndIf
+				EndIf
+			EndIf
+		EndIf
+		If $g_iActivateDuke = 1 Or $g_iActivateDuke = 2 Then
+			If $g_bCheckDukePower Then
+				If IsHeroAbilityDelayElapsed($eHeroDukeIndex, $g_iDelayActivateDuke, $aDisplayTime) Then
+					Local $asDukeResult = decodeSingleCoord(FindImageInPlace2("Dragon Duke", $g_sImgDukeBar, 0, 570 + $g_iBottomOffsetY, 858, 638 + $g_iBottomOffsetY, True)) ; Looking for Dragon Duke
+					If IsArray($asDukeResult) And UBound($asDukeResult) = 2 Then
+						SetLog("Activating Duke's ability after " & $aDisplayTime[$eHeroDukeIndex] & "'s")
+						ClickP($asDukeResult, 2)
+						$g_iCSVLastTroopPositionDropTroopFromINI = $g_iDukeSlot
+						$g_bCheckDukePower = False ; Reset check power flag
+						$g_aHeroesTimerActivation[$eHeroDukeIndex] = 0 ; Reset Timer
+					EndIf
+				EndIf
+			EndIf
+		EndIf
 	EndIf
 EndFunc   ;==>CheckHeroesHealth
+
+Func IsHeroAbilityDelayElapsed($iHeroTimerIndex, $iConfiguredDelay, ByRef $aDisplayTime)
+	If $g_aHeroesTimerActivation[$iHeroTimerIndex] = 0 Then
+		$aDisplayTime[$iHeroTimerIndex] = 0
+		Return Int($iConfiguredDelay) <= 0
+	EndIf
+	Local $iElapsed = __TimerDiff($g_aHeroesTimerActivation[$iHeroTimerIndex])
+	If GetEffectiveAttackAlgorithm($g_iMatchMode) = 1 Then
+		$aDisplayTime[$iHeroTimerIndex] = Ceiling($iElapsed / 1000)
+		Return (Int($iConfiguredDelay) / 1000) <= $aDisplayTime[$iHeroTimerIndex]
+	EndIf
+	$aDisplayTime[$iHeroTimerIndex] = Floor($iElapsed / 1000)
+	Return $iElapsed >= Int($iConfiguredDelay)
+EndFunc   ;==>IsHeroAbilityDelayElapsed

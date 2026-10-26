@@ -23,25 +23,19 @@ Func DoubleCannonUpgrade($test = False)
 		If Not $g_bDoubleCannonUpgrade Then Return
 
 		; Master Builder is not available return
-		If $g_iFreeBuilderCountBB = 0 Then
+		If $g_iFreeBuilderCountBB <= 0 Then
 			SetLog("No Master Builder available! [" & $g_iFreeBuilderCountBB & "/" & $g_iTotalBuilderCountBB & "]", $COLOR_INFO)
 			Return False
 		EndIf
 	EndIf
 
 	ClearScreen("Defaut", False)
-	SetLog("Saved Coord :" & $g_aiDoubleCannonPos[0] & ", " & $g_aiDoubleCannonPos[1], $COLOR_INFO)
-	If $g_aiDoubleCannonPos[2] = 0 Then
-		SetLog("Double Cannon is in Main Builder Base", $COLOR_SUCCESS)
-	Else
-		SetLog("Double Cannon is in Otto Village", $COLOR_SUCCESS)
-	EndIf
 
 	If $g_aiDoubleCannonPos[2] = 1 Then
 		If Not SwitchToOttoVillage() Then Return False
 	EndIf
-
 	If _Sleep($DELAYUPGRADEHERO2) Then Return
+	
 	BuildingClickP($g_aiDoubleCannonPos) ;Click DoubleCannon Altar
 	If _Sleep($DELAYUPGRADEHERO2) Then Return
 
@@ -62,7 +56,7 @@ Func DoubleCannonUpgrade($test = False)
 	If @error Then Return SetError(0, 0, 0)
 	If $sInfo[0] > 1 Or $sInfo[0] = "" Then
 		If StringInStr($sInfo[1], "uble") = 0 Then
-			SetLog("Bad Double Cannon location", $COLOR_ACTION)
+			SetLog("Bad Double Cannon Location", $COLOR_ACTION)
 			ClearScreen("Defaut", False)
 			If _Sleep(1000) Then Return
 			SwitchToBuilderbase()
@@ -70,9 +64,9 @@ Func DoubleCannonUpgrade($test = False)
 		Else
 			If $sInfo[2] <> "" Then
 				$aDoubleCannonLevel = Number($sInfo[2]) ; grab hero level from building info array
-				SetLog("Your Double Cannon level read as: " & $aDoubleCannonLevel, $COLOR_SUCCESS)
+				SetLog("Double Cannon Level: " & $aDoubleCannonLevel, $COLOR_SUCCESS)
 				If $aDoubleCannonLevel >= 4 Then ; BOB Control Requirement
-					SetLog("Your Double Cannon is at level needed for BOB Control upgrade!", $COLOR_INFO)
+					SetLog("Double Cannon is at level needed for BOB Control upgrade!", $COLOR_INFO)
 					$g_bDoubleCannonUpgrade = False ; turn Off the Double Cannon upgrade
 					GUICtrlSetState($g_hChkDoubleCannonUpgrade, $GUI_UNCHECKED)
 					ClearScreen("Defaut", False)
@@ -81,7 +75,7 @@ Func DoubleCannonUpgrade($test = False)
 					Return
 				EndIf
 			Else
-				SetLog("Your Double Cannon Level was not found!", $COLOR_INFO)
+				SetLog("Double Cannon level was not found!", $COLOR_INFO)
 				ClearScreen("Defaut", False)
 				If _Sleep(1000) Then Return
 				SwitchToBuilderbase()
@@ -99,7 +93,7 @@ Func DoubleCannonUpgrade($test = False)
 	If _Sleep($DELAYUPGRADEHERO1) Then Return
 
 	If $g_aiCurrentLootBB[$eLootGoldBB] < ($g_afDoubleCannonUpgCost[$aDoubleCannonLevel] * 1000) * (1 - Number($g_iBuilderBoostDiscount) / 100) Then
-		SetLog("Double Cannon Upg failed, require " & ($g_afDoubleCannonUpgCost[$aDoubleCannonLevel] * 1000) * (1 - Number($g_iBuilderBoostDiscount) / 100) & " builder gold!", $COLOR_INFO)
+		SetLog("Double Cannon upgrade failed, require " & ($g_afDoubleCannonUpgCost[$aDoubleCannonLevel] * 1000) * (1 - Number($g_iBuilderBoostDiscount) / 100) & " builder gold!", $COLOR_INFO)
 		ClearScreen("Defaut", False)
 		If _Sleep(1000) Then Return
 		SwitchToBuilderbase()
@@ -124,18 +118,18 @@ Func DoubleCannonUpgrade($test = False)
 
 				; Just incase the buy Gem Window pop up!
 				If isGemOpen(True) Then
-					SetLog("Double Cannon Upgrade Fail! Gem Window popped up!", $COLOR_ERROR)
+					SetLog("Double Cannon upgrade failed! Gem window popped up!", $COLOR_ERROR)
 					CloseWindow()
 					If _Sleep(1000) Then Return
 					SwitchToBuilderbase()
 					Return False
 				EndIf
 
-				SetLog("Double Cannon Upgrade complete", $COLOR_SUCCESS)
+				SetLog("Double Cannon Upgrade Complete", $COLOR_SUCCESS)
 				$g_iFreeBuilderCountBB -= 1
 				If _Sleep($DELAYUPGRADEHERO2) Then Return ; Wait for window to close
 			Else
-				SetLog("Double Cannon Upgrade Fail!", $COLOR_ERROR)
+				SetLog("Double Cannon upgrade failed!", $COLOR_ERROR)
 				If $g_bDebugImageSave Then SaveDebugImage("UpgradeDoubleCannon2")
 				CloseWindow()
 				If _Sleep(1000) Then Return
@@ -143,7 +137,7 @@ Func DoubleCannonUpgrade($test = False)
 				Return
 			EndIf
 		Else
-			SetLog("Upgrade Double Cannon window open fail", $COLOR_ERROR)
+			SetLog("Upgrade Double Cannon window open failed", $COLOR_ERROR)
 		EndIf
 	Else
 		SetLog("Upgrade Double Cannon error finding button", $COLOR_ERROR)
@@ -164,24 +158,19 @@ Func ArcherTowerUpgrade($test = False)
 		If Not $g_bArcherTowerUpgrade Then Return
 
 		; Master Builder is not available return
-		If $g_iFreeBuilderCountBB = 0 Then
+		If $g_iFreeBuilderCountBB <= 0 Then
 			SetLog("No Master Builder available! [" & $g_iFreeBuilderCountBB & "/" & $g_iTotalBuilderCountBB & "]", $COLOR_INFO)
 			Return False
 		EndIf
 	EndIf
 
 	ClearScreen("Defaut", False)
-	SetLog("Saved Coord :" & $g_aiArcherTowerPos[0] & ", " & $g_aiArcherTowerPos[1], $COLOR_INFO)
-	If $g_aiArcherTowerPos[2] = 0 Then
-		SetLog("Archer Tower is in Main Builder Base", $COLOR_SUCCESS)
-	Else
-		SetLog("Archer Tower is in Otto Village", $COLOR_SUCCESS)
-	EndIf
 
 	If $g_aiArcherTowerPos[2] = 1 Then
 		If Not SwitchToOttoVillage() Then Return False
 	EndIf
 	If _Sleep($DELAYUPGRADEHERO2) Then Return
+
 	BuildingClickP($g_aiArcherTowerPos) ;Click ArcherTower Altar
 	If _Sleep($DELAYUPGRADEHERO2) Then Return
 
@@ -202,7 +191,7 @@ Func ArcherTowerUpgrade($test = False)
 	If @error Then Return SetError(0, 0, 0)
 	If $sInfo[0] > 1 Or $sInfo[0] = "" Then
 		If StringInStr($sInfo[1], "Archer") = 0 Then
-			SetLog("Bad Archer Tower location", $COLOR_ACTION)
+			SetLog("Bad Archer Tower Location", $COLOR_ACTION)
 			ClearScreen("Defaut", False)
 			If _Sleep(1000) Then Return
 			SwitchToBuilderbase()
@@ -210,9 +199,9 @@ Func ArcherTowerUpgrade($test = False)
 		Else
 			If $sInfo[2] <> "" Then
 				$aArcherTowerLevel = Number($sInfo[2]) ; grab hero level from building info array
-				SetLog("Archer Tower level read as: " & $aArcherTowerLevel, $COLOR_SUCCESS)
+				SetLog("Archer Tower Level: " & $aArcherTowerLevel, $COLOR_SUCCESS)
 				If $aArcherTowerLevel >= 6 Then ; BOB Control Requirement
-					SetLog("Your Archer Tower is at level needed for BOB Control upgrade!", $COLOR_INFO)
+					SetLog("Archer Tower is at level needed for BOB Control upgrade!", $COLOR_INFO)
 					$g_bArcherTowerUpgrade = False ; turn Off the Archer Tower upgrade
 					GUICtrlSetState($g_hChkArcherTowerUpgrade, $GUI_UNCHECKED)
 					ClearScreen("Defaut", False)
@@ -221,7 +210,7 @@ Func ArcherTowerUpgrade($test = False)
 					Return
 				EndIf
 			Else
-				SetLog("Archer Tower Level was not found!", $COLOR_INFO)
+				SetLog("Archer Tower level was not found!", $COLOR_INFO)
 				ClearScreen("Defaut", False)
 				If _Sleep(1000) Then Return
 				SwitchToBuilderbase()
@@ -239,7 +228,7 @@ Func ArcherTowerUpgrade($test = False)
 	If _Sleep($DELAYUPGRADEHERO1) Then Return
 
 	If $g_aiCurrentLootBB[$eLootGoldBB] < ($g_afArcherTowerUpgCost[$aArcherTowerLevel] * 1000) * (1 - Number($g_iBuilderBoostDiscount) / 100) Then
-		SetLog("Archer Tower Upg failed, require " & ($g_afArcherTowerUpgCost[$aArcherTowerLevel] * 1000) * (1 - Number($g_iBuilderBoostDiscount) / 100) & " builder gold!", $COLOR_INFO)
+		SetLog("Archer Tower upgrade failed, require " & ($g_afArcherTowerUpgCost[$aArcherTowerLevel] * 1000) * (1 - Number($g_iBuilderBoostDiscount) / 100) & " builder gold!", $COLOR_INFO)
 		ClearScreen("Defaut", False)
 		If _Sleep(1000) Then Return
 		SwitchToBuilderbase()
@@ -271,7 +260,7 @@ Func ArcherTowerUpgrade($test = False)
 					Return False
 				EndIf
 
-				SetLog("Archer Tower Upgrade complete", $COLOR_SUCCESS)
+				SetLog("Archer Tower Upgrade Complete", $COLOR_SUCCESS)
 				$g_iFreeBuilderCountBB -= 1
 				If _Sleep($DELAYUPGRADEHERO2) Then Return ; Wait for window to close
 			Else
@@ -304,25 +293,19 @@ Func MultiMortarUpgrade($test = False)
 		If Not $g_bMultiMortarUpgrade Then Return
 
 		; Master Builder is not available return
-		If $g_iFreeBuilderCountBB = 0 Then
+		If $g_iFreeBuilderCountBB <= 0 Then
 			SetLog("No Master Builder available! [" & $g_iFreeBuilderCountBB & "/" & $g_iTotalBuilderCountBB & "]", $COLOR_INFO)
 			Return False
 		EndIf
 	EndIf
 
 	ClearScreen("Defaut", False)
-	SetLog("Saved Coord :" & $g_aiMultiMortarPos[0] & ", " & $g_aiMultiMortarPos[1], $COLOR_INFO)
-	If $g_aiMultiMortarPos[2] = 0 Then
-		SetLog("Multi Mortar is in Main Builder Base", $COLOR_SUCCESS)
-	Else
-		SetLog("Multi Mortar is in Otto Village", $COLOR_SUCCESS)
-	EndIf
 
 	If $g_aiMultiMortarPos[2] = 1 Then
 		If Not SwitchToOttoVillage() Then Return False
 	EndIf
-
 	If _Sleep($DELAYUPGRADEHERO2) Then Return
+
 	BuildingClickP($g_aiMultiMortarPos) ;Click MultiMortar Altar
 	If _Sleep($DELAYUPGRADEHERO2) Then Return
 
@@ -343,7 +326,7 @@ Func MultiMortarUpgrade($test = False)
 	If @error Then Return SetError(0, 0, 0)
 	If $sInfo[0] > 1 Or $sInfo[0] = "" Then
 		If StringInStr($sInfo[1], "Multi") = 0 Then
-			SetLog("Bad Multi Mortar location", $COLOR_ACTION)
+			SetLog("Bad Multi Mortar Location", $COLOR_ACTION)
 			ClearScreen("Defaut", False)
 			If _Sleep(1000) Then Return
 			SwitchToBuilderbase()
@@ -351,9 +334,9 @@ Func MultiMortarUpgrade($test = False)
 		Else
 			If $sInfo[2] <> "" Then
 				$aMultiMortarLevel = Number($sInfo[2]) ; grab hero level from building info array
-				SetLog("Multi Mortar level read as: " & $aMultiMortarLevel, $COLOR_SUCCESS)
+				SetLog("Multi Mortar Level: " & $aMultiMortarLevel, $COLOR_SUCCESS)
 				If $aMultiMortarLevel >= 8 Then ; BOB Control Requirement
-					SetLog("Your Multi Mortar is at level needed for BOB Control upgrade!", $COLOR_INFO)
+					SetLog("Multi Mortar is at level needed for BOB Control upgrade!", $COLOR_INFO)
 					$g_bMultiMortarUpgrade = False ; turn Off the Multi Mortar upgrade
 					GUICtrlSetState($g_hChkMultiMortarUpgrade, $GUI_UNCHECKED)
 					ClearScreen("Defaut", False)
@@ -362,7 +345,7 @@ Func MultiMortarUpgrade($test = False)
 					Return
 				EndIf
 			Else
-				SetLog("Multi Mortar Level was not found!", $COLOR_INFO)
+				SetLog("Multi Mortar level was not found!", $COLOR_INFO)
 				ClearScreen("Defaut", False)
 				If _Sleep(1000) Then Return
 				SwitchToBuilderbase()
@@ -380,7 +363,7 @@ Func MultiMortarUpgrade($test = False)
 	If _Sleep($DELAYUPGRADEHERO1) Then Return
 
 	If $g_aiCurrentLootBB[$eLootGoldBB] < ($g_afMultiMortarUpgCost[$aMultiMortarLevel] * 1000) * (1 - Number($g_iBuilderBoostDiscount) / 100) Then
-		SetLog("Multi Mortar Upg failed, require " & ($g_afMultiMortarUpgCost[$aMultiMortarLevel] * 1000) * (1 - Number($g_iBuilderBoostDiscount) / 100) & " builder gold!", $COLOR_INFO)
+		SetLog("Multi Mortar upgrade failed, require " & ($g_afMultiMortarUpgCost[$aMultiMortarLevel] * 1000) * (1 - Number($g_iBuilderBoostDiscount) / 100) & " builder gold!", $COLOR_INFO)
 		ClearScreen("Defaut", False)
 		If _Sleep(1000) Then Return
 		SwitchToBuilderbase()
@@ -412,7 +395,7 @@ Func MultiMortarUpgrade($test = False)
 					Return False
 				EndIf
 
-				SetLog("Multi Mortar Upgrade complete", $COLOR_SUCCESS)
+				SetLog("Multi Mortar Upgrade Complete", $COLOR_SUCCESS)
 				$g_iFreeBuilderCountBB -= 1
 				If _Sleep($DELAYUPGRADEHERO2) Then Return ; Wait for window to close
 			Else
@@ -445,25 +428,19 @@ Func AnyDefUpgrade($test = False)
 		If Not $g_bAnyDefUpgrade Then Return
 
 		; Master Builder is not available return
-		If $g_iFreeBuilderCountBB = 0 Then
+		If $g_iFreeBuilderCountBB <= 0 Then
 			SetLog("No Master Builder available! [" & $g_iFreeBuilderCountBB & "/" & $g_iTotalBuilderCountBB & "]", $COLOR_INFO)
 			Return False
 		EndIf
 	EndIf
 
 	ClearScreen("Defaut", False)
-	SetLog("Saved Coord :" & $g_aiAnyDefPos[0] & ", " & $g_aiAnyDefPos[1], $COLOR_INFO)
-	If $g_aiAnyDefPos[2] = 0 Then
-		SetLog("Cannon is in Main Builder Base", $COLOR_SUCCESS)
-	Else
-		SetLog("Cannon is in Otto Village", $COLOR_SUCCESS)
-	EndIf
 
 	If $g_aiAnyDefPos[2] = 1 Then
 		If Not SwitchToOttoVillage() Then Return False
 	EndIf
-
 	If _Sleep($DELAYUPGRADEHERO2) Then Return
+
 	BuildingClickP($g_aiAnyDefPos) ;Click AnyDef Altar
 	If _Sleep($DELAYUPGRADEHERO2) Then Return
 
@@ -484,7 +461,7 @@ Func AnyDefUpgrade($test = False)
 	If @error Then Return SetError(0, 0, 0)
 	If $sInfo[0] > 1 Or $sInfo[0] = "" Then
 		If StringInStr($sInfo[1], "Cann") = 0 Or StringInStr($sInfo[1], "uble") <> 0 Then
-			SetLog("Bad Cannon location", $COLOR_ACTION)
+			SetLog("Bad Cannon Location", $COLOR_ACTION)
 			ClearScreen("Defaut", False)
 			If _Sleep(1000) Then Return
 			SwitchToBuilderbase()
@@ -492,9 +469,9 @@ Func AnyDefUpgrade($test = False)
 		Else
 			If $sInfo[2] <> "" Then
 				$aCannonLevel = Number($sInfo[2]) ; grab hero level from building info array
-				SetLog("Cannon level read as: " & $aCannonLevel, $COLOR_SUCCESS)
+				SetLog("Cannon Level: " & $aCannonLevel, $COLOR_SUCCESS)
 				If $aCannonLevel >= 9 Then ; BOB Control Requirement
-					SetLog("Your Cannon is at level needed for BOB Control upgrade!", $COLOR_INFO)
+					SetLog("Cannon is at level needed for BOB Control upgrade!", $COLOR_INFO)
 					$g_bAnyDefUpgrade = False ; turn Off the Cannon upgrade
 					GUICtrlSetState($g_hChkAnyDefUpgrade, $GUI_UNCHECKED)
 					ClearScreen("Defaut", False)
@@ -503,7 +480,7 @@ Func AnyDefUpgrade($test = False)
 					Return
 				EndIf
 			Else
-				SetLog("Cannon Level was not found!", $COLOR_INFO)
+				SetLog("Cannon level was not found!", $COLOR_INFO)
 				ClearScreen("Defaut", False)
 				If _Sleep(1000) Then Return
 				SwitchToBuilderbase()
@@ -521,7 +498,7 @@ Func AnyDefUpgrade($test = False)
 	If _Sleep($DELAYUPGRADEHERO1) Then Return
 
 	If $g_aiCurrentLootBB[$eLootGoldBB] < ($g_afAnyDefUpgCost[$aCannonLevel] * 1000) * (1 - Number($g_iBuilderBoostDiscount) / 100) Then
-		SetLog("Cannon Upg failed, require " & ($g_afAnyDefUpgCost[$aCannonLevel] * 1000) * (1 - Number($g_iBuilderBoostDiscount) / 100) & " builder gold!", $COLOR_INFO)
+		SetLog("Cannon upgrade failed, require " & ($g_afAnyDefUpgCost[$aCannonLevel] * 1000) * (1 - Number($g_iBuilderBoostDiscount) / 100) & " builder gold!", $COLOR_INFO)
 		ClearScreen("Defaut", False)
 		If _Sleep(1000) Then Return
 		SwitchToBuilderbase()
@@ -553,7 +530,7 @@ Func AnyDefUpgrade($test = False)
 					Return False
 				EndIf
 
-				SetLog("Cannon Upgrade complete", $COLOR_SUCCESS)
+				SetLog("Cannon Upgrade Complete", $COLOR_SUCCESS)
 				$g_iFreeBuilderCountBB -= 1
 				If _Sleep($DELAYUPGRADEHERO2) Then Return ; Wait for window to close
 			Else
@@ -582,12 +559,12 @@ Func BOBBuildingUpgrades($bTest = False)
 	If Not $g_bDoubleCannonUpgrade And Not $g_bArcherTowerUpgrade And Not $g_bMultiMortarUpgrade And Not $g_bAnyDefUpgrade And Not $g_bBattleMachineUpgrade And Not $g_bBattlecopterUpgrade Then Return False
 
 	; Master Builder is not available return
-	If $g_iFreeBuilderCountBB = 0 Then
+	If $g_iFreeBuilderCountBB <= 0 Then
 		SetLog("No Master Builder available for BOB Control upgrades !", $COLOR_INFO)
 		Return False
 	EndIf
 
-	If $g_bDoubleCannonUpgrade Then
+	If $g_bDoubleCannonUpgrade And $g_iFreeBuilderCountBB > 0 Then
 		DoubleCannonUpgrade()
 		If _Sleep($DELAYRUNBOT3) Then Return
 		If Not $bTest Then
@@ -596,7 +573,7 @@ Func BOBBuildingUpgrades($bTest = False)
 		If $g_bRestart = True Then Return
 	EndIf
 
-	If $g_bArcherTowerUpgrade Then
+	If $g_bArcherTowerUpgrade And $g_iFreeBuilderCountBB > 0 Then
 		ArcherTowerUpgrade()
 		If _Sleep($DELAYRUNBOT3) Then Return
 		If Not $bTest Then
@@ -605,7 +582,7 @@ Func BOBBuildingUpgrades($bTest = False)
 		If $g_bRestart = True Then Return
 	EndIf
 
-	If $g_bMultiMortarUpgrade Then
+	If $g_bMultiMortarUpgrade And $g_iFreeBuilderCountBB > 0 Then
 		MultiMortarUpgrade()
 		If _Sleep($DELAYRUNBOT3) Then Return
 		If Not $bTest Then
@@ -614,7 +591,7 @@ Func BOBBuildingUpgrades($bTest = False)
 		If $g_bRestart = True Then Return
 	EndIf
 
-	If $g_bAnyDefUpgrade Then
+	If $g_bAnyDefUpgrade And $g_iFreeBuilderCountBB > 0 Then
 		AnyDefUpgrade()
 		If _Sleep($DELAYRUNBOT3) Then Return
 		If Not $bTest Then
@@ -623,7 +600,7 @@ Func BOBBuildingUpgrades($bTest = False)
 		If $g_bRestart = True Then Return
 	EndIf
 
-	If $g_bBattleMachineUpgrade Then
+	If $g_bBattleMachineUpgrade And $g_iFreeBuilderCountBB > 0 Then
 		BattleMachineUpgrade($bTest)
 		If _Sleep($DELAYRUNBOT3) Then Return
 		If Not $bTest Then
@@ -632,7 +609,7 @@ Func BOBBuildingUpgrades($bTest = False)
 		If $g_bRestart = True Then Return
 	EndIf
 
-	If $g_bBattlecopterUpgrade Then
+	If $g_bBattlecopterUpgrade And $g_iFreeBuilderCountBB > 0 Then
 		BattlecopterUpgrade($bTest)
 		If _Sleep($DELAYRUNBOT3) Then Return
 		If Not $bTest Then

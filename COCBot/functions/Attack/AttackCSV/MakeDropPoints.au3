@@ -196,6 +196,8 @@ Func MakeTargetDropPoints($side, $pointsQty, $addtiles, $building)
 			$BuildingEnum = $eBldgTownHall
 		Case "EAGLE"
 			$BuildingEnum = $eBldgEagle
+		Case "FIRESPITTER"
+			$BuildingEnum = $eBldgFirespitter
 		Case "INFERNO"
 			$BuildingEnum = $eBldgInferno
 		Case "XBOW"
@@ -214,6 +216,8 @@ Func MakeTargetDropPoints($side, $pointsQty, $addtiles, $building)
 			$BuildingEnum = $eBldgScatter
 		Case "MONOLITH"
 			$BuildingEnum = $eBldgMonolith
+		Case "REVENGE"
+			$BuildingEnum = $eBldgRevengeTower
 		Case Else
 			SetLog("Defense name not understood", $COLOR_ERROR) ; impossible error as value is checked earlier
 			SetError(1, 0, "")
@@ -253,6 +257,10 @@ Func MakeTargetDropPoints($side, $pointsQty, $addtiles, $building)
 		SetLog($g_sBldgNames[$BuildingEnum] & " _LOCATION not an array", $COLOR_ERROR)
 		Return SetError(3, 0, "")
 	EndIf
+	If Not IsArray($aLocation) Or UBound($aLocation) < 2 Then
+		SetLog($g_sBldgNames[$BuildingEnum] & " location coordinates are invalid", $COLOR_ERROR)
+		Return SetError(3, 0, "")
+	EndIf
 
 	Switch Int($pointsQty) ; Create vector
 		Case 1 ; drop point here is single point on side specified
@@ -290,6 +298,10 @@ Func MakeTargetDropPoints($side, $pointsQty, $addtiles, $building)
 			SetLog("Target drop point for " & $g_sBldgNames[$BuildingEnum] & " (adding " & $addtiles & " tiles): " & $sLoc)
 			Return GetListPixel($sLoc, "-", "MakeTargetDropPoints TARGET") ; return ADDTILES modified location array
 		Case 5
+			If Not _ObjSearch($g_oBldgAttackInfo, $eBldgRedLine & "_OBJECTPOINTS") Then
+				SetLog("Red line coordinates are unavailable for target drop points", $COLOR_ERROR)
+				Return SetError(7, 0, "")
+			EndIf
 			$sLoc = $aLocation[0] & "|" & $aLocation[1] ; make string for bldg location
 			$Output = GetDeployableNextTo($sLoc, 10, $g_oBldgAttackInfo.item($eBldgRedLine & "_OBJECTPOINTS")) ; Get 5 near points, 10 pixels outisde red line for drop
 			Return GetListPixel($Output, ",", "MakeTargetDropPoints NEARPOINTS") ;imgloc DLL calls return comma separated values
@@ -300,4 +312,3 @@ Func MakeTargetDropPoints($side, $pointsQty, $addtiles, $building)
 	EndSwitch
 
 EndFunc   ;==>MakeTargetDropPoints
-

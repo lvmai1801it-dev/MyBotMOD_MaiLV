@@ -1,4 +1,4 @@
-; #Variables# ====================================================================================================================
+﻿; #Variables# ====================================================================================================================
 ; Name ..........: Screen Position Variables
 ; Description ...: Global variables for commonly used X|Y positions, screen check color, and tolerance
 ; Syntax ........: $aXXXXX[Y]  : XXXX is name of point or item being checked, Y = 2 for position only, or 4 when color/tolerance value included
@@ -13,15 +13,15 @@
 ; 	   $aiSomeVar = [StartX, StartY, EndX, EndY]
 ;Let's tighten these up to avoid clicking on shields.
 Global $aiClickAwayRegionLeft = [235, 10, 245, 30]
-Global $aiClickAwayRegionRight = [640, 10, 650, 30]
+Global $aiClickAwayRegionRight = [570, 5, 620, 15]
 
 Global $aiClickAwayRegionLeft2 = [75, 88, 145, 98]
 Global $aiClickAwayRegionRight2 = [760, 176, 835, 185]
 
 Global $aCenterEnemyVillageClickDrag = [65, 545] ; Scroll village using this location in the water
 Global $aCenterHomeVillageClickDrag = [430, 650] ; Scroll village using this location in the water
-Global $aIsMain[4] = [378, 10, 0x7ABDE3, 15] ; Main Screen, Builder Info Icon / October 2023 -37103
-Global $aIsOnBuilderBase[4] = [838, 16, 0xFFFF47, 10] ; Check the Gold Coin from resources , is a square not round
+Global $aIsMain[4] = [840, 53, 0xFF41FF, 20] ; Main Village, Elixir icon
+Global $aIsOnBuilderBase[4] = [844, 65, 0x992EFC, 15] ; Builder Base, Elixir bar
 Global $aAttackButton[2] = [60, 614 + $g_iBottomOffsetY] ; Attack Button, Main Screen
 Global $aFindMatchButton[4] = [470, 20 + $g_iBottomOffsetY, 0xD8A420, 10] ; Find Multiplayer Match Button, Attack Screen 860x780 without shield
 Global $aIsAttackShield[4] = [250, 415 + $g_iMidOffsetY, 0xE8E8E0, 10] ; Attack window, white shield verification window
@@ -36,11 +36,11 @@ Global $aSurrenderButton[4] = [70, 545 + $g_iBottomOffsetY, 0xCE0D0E, 40] ; Surr
 Global $aConfirmSurrender[4] = [535, 435 + $g_iMidOffsetY, 0x6DBC1F, 30] ; Confirm Surrender Button, Attack Screen, green color on button?
 Global $aCancelFight[4] = [822, 48, 0xD80408, 20] ; Cancel Fight Scene
 Global $aCancelFight2[4] = [830, 59, 0xD80408, 20] ; Cancel Fight Scene 2nd pixel
-Global $aEndFightSceneBtn[4] = [429, 529 + $g_iMidOffsetY, 0xE1F989, 20] ; Victory or defeat scene button = green top of button
-Global $aEndFightSceneAvl[4] = [241, 196 + $g_iMidOffsetY, 0xFFF098, 20] ; Victory or defeat scene left side ribbon = light gold
+Global $aEndFightSceneBtn[4] = [430, 535 + $g_iMidOffsetY, 0xCAF16B, 20] ; August 2026 victory or defeat scene button top
+Global $aEndFightSceneAvl[4] = [430, 180 + $g_iMidOffsetY, 0xFEF18F, 20] ; August 2026 normal victory ribbon = gold
 Global $aEndFightSceneReportGold = $aEndFightSceneAvl ; Missing... TripleM ???
-Global $aReturnHomeButton[4] = [430, 566 + $g_iMidOffsetY, 0x6CBB1F, 15] ; Return Home Button, End Battle Screen
-Global $aRewardButton[4] = [430, 573 + $g_iMidOffsetY, 0x6BBF23, 15] ; Claim Reward Button, End Battle Screen
+Global $aReturnHomeButton[4] = [430, 545 + $g_iMidOffsetY, 0xDFF883, 15] ; August 2026 Return Home Button
+Global $aReturnHomeChest[4] = [430, 565 + $g_iMidOffsetY, 0x84CD2C, 10] ; Claim Reward Button, End Battle Screen
 Global $aChatTab[4] = [392, 290 + $g_iMidOffsetY, 0xF3AB28, 20] ; Chat Window Open, Main Screen
 Global $aChatTab2[4] = [391, 310 + $g_iMidOffsetY, 0xFFFFFF, 20] ; Chat Window Open, Main Screen
 Global $aChatTab3[4] = [392, 335 + $g_iMidOffsetY, 0xEA8A3B, 20] ; Chat Window Open, Main Screen
@@ -50,18 +50,27 @@ Global $aArmySpellSize[2] = [399, 321 + $g_iMidOffsetY] ; Training Window Overvi
 Global $g_aArmyCCSpellSize[2] = [475, 436 + $g_iMidOffsetY] ; Training Window, Overview Screen, Current CC Spell number/total cc spell capacity
 Global $aArmyCCRemainTime[2] = [780, 470 + $g_iMidOffsetY] ; Training Window Overviewscreen, Minutes & Seconds remaining till can request again
 Global $aIsCampFull[4] = [82, 177 + $g_iMidOffsetY, 0xFFFFFF, 10] ; Training Window, Overview screen White pixel in check mark with camp IS full
-Global $aBuildersDigits[2] = [424, 21] ; Main Screen, Free/Total Builders
-Global $aBuildersDigitsBuilderBase[2] = [0, 21] ; Main Screen on Builders Base Free/Total Builders
-Global $aTrophies[2] = [69, 84] ; Main Screen, Trophies
+Global $aBuildersDigits[2] = [750, 530 + $g_iBottomOffsetY] ; Main Screen, Free/Total Builders above Build button
+Global $aLabBuilderDigits[2] = [800, 530 + $g_iBottomOffsetY] ; Main Screen, Laboratory availability beside builder count
+Global $aBuildersDigitsBuilderBase[2] = [750, 528 + $g_iBottomOffsetY] ; Builder Base, Free/Total Builders above Build button
+Global $aTrophies[2] = [69, 86] ; Main Screen, Trophies
+Global $aTrophiesBuilderBase[2] = [72, 133] ; Builder Base, Trophies below league badge
+Global $aBBStars[2] = [43, 530 + $g_iBottomOffsetY] ; Builder Base, available stars above Battle button
 Global $aNoCloudsAttack[4] = [25, 546 + $g_iBottomOffsetY, 0xCF0D0E, 20] ; Attack Screen: No More Clouds
 Global $aArmyTrainButton[2] = [40, 525 + $g_iBottomOffsetY] ; Main Screen, Army Train Button
-Global $aWonOneStar[4] = [714, 538 + $g_iBottomOffsetY, 0xC0C8C0, 20] ; Center of 1st Star for winning attack on enemy
-Global $aWonTwoStar[4] = [739, 538 + $g_iBottomOffsetY, 0xC0C8C0, 20] ; Center of 2nd Star for winning attack on enemy
+Global $aWonOneStar[4] = [714, 538 + $g_iBottomOffsetY, 0xCED8E4, 20] ; Center of 1st Star for winning attack on enemy
+Global $aWonTwoStar[4] = [739, 538 + $g_iBottomOffsetY, 0xC3CEDF, 20] ; Center of 2nd Star for winning attack on enemy
 Global $aWonThreeStar[4] = [763, 538 + $g_iBottomOffsetY, 0xC0C8C0, 20] ; Center of 3rd Star for winning attack on enemy
-Global $aIsAtkDarkElixirFull[4] = [743, 62 + $g_iMidOffsetY, 0x270D33, 10] ; Attack Screen DE Resource bar is full
-Global $aIsDarkElixirFull[4] = [707, 102 + $g_iMidOffsetY, 0x270D33, 10] ; Main Screen DE Resource bar is full
-Global $aIsGoldFull[4] = [657, 2 + $g_iMidOffsetY, 0xE7C00D, 10] ; Main Screen Gold Resource bar is Full
-Global $aIsElixirFull[4] = [657, 52 + $g_iMidOffsetY, 0xC027C0, 10] ; Main Screen Elixir Resource bar is Full
+Global $aIsAtkDarkElixirFull[4] = [698, 103, 0x270D33, 10] ; Attack Screen DE Resource bar is full
+Global $aIsDarkElixirFull[4] = [707, 102 + $g_iMidOffsetY, 0x270D33, 10]
+Global $aIsGoldFull[4] = [657, 2 + $g_iMidOffsetY, 0xE7C00D, 10]
+Global $aIsElixirFull[4] = [657, 52 + $g_iMidOffsetY, 0xC027C0, 10]
+Global $aMainStorageDarkFullLight[4] = [700, 97, 0x76657E, 20] ; Main Screen DE bar, upper light tone
+Global $aMainStorageDarkFull[4] = [700, 103, 0x2A1036, 20] ; Main Screen DE full-limit point, lower dark tone
+Global $aMainStorageGoldFullLight[4] = [651, 23, 0xF2D965, 15] ; Main Screen Gold bar, upper light tone
+Global $aMainStorageGoldFull[4] = [651, 29, 0xE7C00D, 10] ; Main Screen Gold full-limit point, lower dark tone
+Global $aMainStorageElixirFullLight[4] = [651, 60, 0xD976D9, 15] ; Main Screen Elixir bar, upper light tone
+Global $aMainStorageElixirFull[4] = [651, 66, 0xC027C0, 15] ; Main Screen Elixir full-limit point, lower dark tone
 Global $aPerkBtn[4] = [95, 243 + $g_iMidOffsetY, 0x7CD8E8, 10] ; Clan Info Page, Perk Button (blue); 800x780
 Global $aIsGemWindow1[4] = [608, 240 + $g_iMidOffsetY, 0xEB1617, 20] ; Main Screen, pixel left of Red X to close gem window
 Global $aIsGemWindow2[4] = [610, 246 + $g_iMidOffsetY, 0xCD161A, 20] ; Main Screen, pixel below Red X to close gem window
@@ -71,15 +80,14 @@ Global $aIsTrainPgChk1[4] = [785, 146 + $g_iMidOffsetY, 0xFF8D95, 15] ; Main Scr
 Global $aIsTrainPgChk2[4] = [785, 146 + $g_iMidOffsetY, 0x80474B, 15] ; Main Screen, Train page open with Train bars - left upper corner of x button. Updated 17.126.6
 Global $aRtnHomeCloud1[4] = [56, 592 + $g_iBottomOffsetY, 0x0A223F, 15] ; Cloud Screen, during search, blue pixel in left eye
 Global $aRtnHomeCloud2[4] = [72, 592 + $g_iBottomOffsetY, 0x103F7E, 15] ; Cloud Screen, during search, blue pixel in right eye
-Global $aDetectLang[2] = [16, 634 + $g_iBottomOffsetY] ; Detect Language, bottom left Attack button must read "Attack"
 Global $aGreenArrowTrainTroops[2] = [325, 122 + $g_iMidOffsetY]
 Global $aGreenArrowBrewSpells[2] = [461, 122 + $g_iMidOffsetY]
 Global $aGreenArrowTrainSiegeMachines[2] = [595, 122 + $g_iMidOffsetY]
 Global $g_aShopWindowOpen[4] = [804, 54, 0xC00508, 15] ; Red pixel in lower right corner of RED X to close shop window
 Global $aTreasuryWindow[4] = [695, 138 + $g_iMidOffsetY, 0xFF8D95, 20] ; Redish pixel above X to close treasury window
 Global $aAttackForTreasury[4] = [88, 619 + $g_iMidOffsetY, 0xF0EBE8, 5] ; Red pixel below X to close treasury window
-Global $aAtkHasDarkElixir[4] = [31, 121 + $g_iMidOffsetY, 0x282020, 10]  ; Attack Page, Check for DE icon ; New 23 August offset
-Global $aVillageHasDarkElixir[4] = [837, 134, 0x3D2D3D, 10] ; Main Page, Base has dark elixir storage
+Global $aAtkHasDarkElixir[4] = [33, 143, 0x2D2228, 10] ; Attack Page, Check for DE icon
+Global $aVillageHasDarkElixir[4] = [828, 96, 0x4F3C57, 15] ; Main Page, Base has dark elixir storage
 
 Global $aCheckTopProfile[4] = [130, 350 + $g_iMidOffsetY, 0x6B7899, 5]
 Global $aCheckTopProfile2[4] = [160, 455 + $g_iMidOffsetY, 0x4E4D79, 5]
@@ -108,14 +116,16 @@ Global $aPrinceHealth = [-1, 568 + $g_iBottomOffsetY, 0x00D500, 15, 8]
 Global $aWardenHealth = [-1, 567 + $g_iBottomOffsetY, 0x00D500, 15, 10]
 ; Champion Health Bar, check at the middle of the bar, index - 2 is x-offset added to middle of health bar
 Global $aChampionHealth = [-1, 566 + $g_iBottomOffsetY, 0x00D500, 15, 2]
+; Dragon Duke Health Bar, check at the middle of the bar, index - 10 is x-offset added to middle of health bar
+Global $aDukeHealth = [-1, 567 + $g_iBottomOffsetY, 0x00FF00, 15, 10]
 
 ; attack report... stars won
-Global $aWonOneStarAtkRprt[4] = [325, 180 + $g_iMidOffsetY, 0xC8CAC4, 30] ; Center of 1st Star reached attacked village
-Global $aWonTwoStarAtkRprt[4] = [398, 180 + $g_iMidOffsetY, 0xD0D6D0, 30] ; Center of 2nd Star reached attacked village
-Global $aWonThreeStarAtkRprt[4] = [534, 180 + $g_iMidOffsetY, 0xC8CAC7, 30] ; Center of 3rd Star reached attacked village
+Global $aWonOneStarAtkRprt[4] = [325, 150 + $g_iMidOffsetY, 0xD9E0EA, 25] ; August 2026 normal report 1st star
+Global $aWonTwoStarAtkRprt[4] = [398, 150 + $g_iMidOffsetY, 0xD3DCE9, 25] ; August 2026 normal report 2nd star
+Global $aWonThreeStarAtkRprt[4] = [534, 150 + $g_iMidOffsetY, 0xD9E0EA, 25] ; August 2026 normal report 3rd star
 ; pixel color: location information								BS 850MB (Reg GFX), BS 500MB (Med GFX) : location
 
-Global $NextBtn[4] = [720, 536 + $g_iBottomOffsetY, 0xE6530D, 20] ;  Next Button
+Global $NextBtn[4] = [720, 536 + $g_iBottomOffsetY, 0xF57626, 15] ; August 2026 Next Button
 Global $a12OrMoreSlots[4] = [850, 662 + $g_iBottomOffsetY, 0x3A396E, 25] ; Attackbar Check if 12+ Slots exist
 Global $aDoubRowAttackBar[4] = [68, 486, 0xFC5D64, 20]
 Global $aTroopIsDeployed[4] = [0, 0, 0x404040, 20] ; Attackbar Remain Check X and Y are Dummies
@@ -126,26 +136,27 @@ Global Const $aIsAttackPage2[4] = [50, 548 + $g_iBottomOffsetY, 0x5E0606, 20] ; 
 Global $aRequestTroopsAO[6] = [746, 463 + $g_iMidOffsetY, 0xD0D0D0, 0xBBE988, 0xFFFFFF, 25] ; Button Request Troops in Army Overview  (x,y, Gray - Full/No Castle, Green - Available And Already, White - Available or Full)
 
 ;attackreport
-Global Const $aAtkRprtDECheck[4] = [459, 372 + $g_iMidOffsetY, 0x2F1F37, 20] ; August 23 update
+Global Const $aAtkRprtDECheck[4] = [478, 396 + $g_iMidOffsetY, 0x312133, 20] ; August 2026 centered attack report
 Global Const $aAtkRprtTrophyCheck[4] = [327, 189 + $g_iMidOffsetY, 0x514224, 30] ; August 23 update
-Global Const $aAtkRprtDECheck2[4] = [686, 415 + $g_iMidOffsetY, 0x302440, 30] ; August 23 update
+Global Const $aAtkRprtDECheck2[4] = [762, 403 + $g_iMidOffsetY, 0x5C4866, 20] ; August 2026 centered attack report
 
 ;returnhome
-Global Const $aRtnHomeCheck1[4] = [363, 548 + $g_iMidOffsetY, 0x78C11C, 20]
-Global Const $aRtnHomeCheck2[4] = [497, 548 + $g_iMidOffsetY, 0x79C326, 20]
+Global Const $aRtnHomeCheck1[4] = [363, 545 + $g_iMidOffsetY, 0xBAE956, 20]
+Global Const $aRtnHomeCheck2[4] = [497, 545 + $g_iMidOffsetY, 0xBAE955, 20]
 
 Global Const $aProfileReport[4] = [594, 456 + $g_iMidOffsetY, 0x4E4D79, 20] ; Dark Purple of Profile Page when no Attacks were made
 
 Global $aArmyTrainButtonRND[4] = [20, 540 + $g_iMidOffsetY, 55, 570 + $g_iMidOffsetY] ; Main Screen, Army Train Button, RND  Screen 860x732
 Global $aAttackButtonRND[4] = [20, 610 + $g_iMidOffsetY, 100, 670 + $g_iMidOffsetY] ; Attack Button, Main Screen, RND  Screen 860x732
 Global $aFindMatchButtonRND[4] = [200, 510 + $g_iMidOffsetY, 300, 530 + $g_iMidOffsetY] ; Find Multiplayer Match Button, Both Shield or without shield Screen 860x732
-Global $NextBtnRND[4] = [710, 530 + $g_iMidOffsetY, 830, 570 + $g_iMidOffsetY] ;  Next Button
+Global $NextBtnRND[4] = [710, 530 + $g_iBottomOffsetY, 830, 570 + $g_iBottomOffsetY] ; Next Button
 
 ;Switch Account
 Global $aLoginWithSupercellID[4] = [280, 640 + $g_iMidOffsetY, 0xDCF684, 20] ; Upper green button section "Log in with Supercell ID" 0xB1E25A
 Global $aLoginWithSupercellID2[4] = [266, 653 + $g_iMidOffsetY, 0xFFFFFF, 10]  ; White Font "Log in with Supercell ID"
 Global $aButtonSetting[4] = [824, 555 + $g_iMidOffsetY, 0xFFFFFF, 10] ; Setting button, Main Screen
-Global $aIsSettingPage[4] = [778, 65 + $g_iMidOffsetY, 0xFF9095, 10] ; Main Screen, Setting page open - left upper corner of x button
+Global $aButtonProfile[2] = [48, 82] ; Main Screen, player profile shield
+Global $aIsSettingPage[4] = [785, 147, 0xF02227, 20] ; Profile window, Settings page open - red area of X button
 
 ;Google Play
 Global $aListAccount[4] = [635, 230 + $g_iMidOffsetY, 0xFFFFFF, 20] ; Accounts list google, White
@@ -162,11 +173,6 @@ Global $aButtonEditArmy[4] = [700, 495 + $g_iMidOffsetY, 0xD0F078, 25]
 Global $aButtonRemoveTroopsOK1[4] = [723, 509 + $g_iMidOffsetY, 0xDAF582, 20]
 Global $aButtonRemoveTroopsOK2[4] = [530, 435 + $g_iMidOffsetY, 0x6DBC1F, 20]
 
-;Change Language To English
-Global $aButtonLanguage[4] = [265, 381 + $g_iMidOffsetY, 0xDDF685, 20]
-Global $aListLanguage[4] = [95, 85 + $g_iMidOffsetY, 0xFFFFFF, 10]
-Global $aEnglishLanguage[4] = [420, 145 + $g_iMidOffsetY, 0xD7D5C7, 20]
-Global $aLanguageOkay[4] = [533, 435 + $g_iMidOffsetY, 0x6DBC1F, 20]
 
 ;Personal Challenges
 Global Const $aPersonalChallengeOpenButton1[4] = [149, 631 + $g_iBottomOffsetY, 0xB7D0E4, 20] ; Personal Challenge Button

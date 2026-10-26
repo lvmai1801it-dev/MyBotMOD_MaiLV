@@ -462,6 +462,11 @@ Func InitAndroid($bCheckOnly = False, $bLogChangesOnly = True)
 		If CompareAndUpdate($aPriorValues[IncrUpdate($i)], $g_bNoFocusTampering) Or $bLogChangesOnly = False Then SetDebugLog("No Focus Tampering: " & $g_bNoFocusTampering)
 		;$g_hAndroidWindow = WinGetHandle($g_sAndroidTitle) ;Handle for Android window
 		WinGetAndroidHandle() ; Set $g_hAndroidWindow and $g_sAndroidTitle for Android window
+		; Auto hide Android if option is enabled
+		If $g_bBotLaunchOption_HideAndroid Then
+			$g_bIsHidden = True
+			WinMove($g_hAndroidWindow, "", -32000, -32000)
+		EndIf
 		InitAndroidTimeLag()
 		InitAndroidPageError()
 		$g_bInitAndroid = Not $successful
@@ -608,7 +613,7 @@ Func BotCloseRequest()
 		; already requested to close, but user is impatient, so close now
 		BotClose()
 	Else
-		SetLog("Closing " & $g_sBotTitle & ", please wait ...")
+		SetLog("Closing " & $g_sBotTitle & ", please wait")
 	EndIf
 	$g_bRunState = False
 	$g_bBotPaused = False
@@ -957,9 +962,6 @@ EndFunc   ;==>btnEmbed
 Func chkBackground()
 EndFunc   ;==>chkBackground
 
-Func ButtonBoost()
-EndFunc   ;==>ButtonBoost
-
 Func tiStartStop()
 	If $g_bRunState Then
 		btnStop()
@@ -1195,15 +1197,16 @@ Func LaunchBotBackend($bNoGUI = True)
 	Local $sParam = ""
 	For $i = 1 To $CmdLine[0]
 		Switch $CmdLine[$i]
-			Case "/ng", "/mg"
+			Case "/nogui", "/ng", "-nogui", "-ng", "/minigui", "/mg", "-minigui", "-mg"
 				; skip GUI options
-			Case "/restart"
+			Case "/restart", "/r", "-restart", "-r"
 				; skip restart
 			Case Else
+				If StringLeft($CmdLine[$i], 8) = "/guipid=" Or StringLeft($CmdLine[$i], 8) = "-guipid=" Then ContinueLoop
 				If $sParam = "" Then
-					$sParam = $CmdLine[$i]
+					$sParam = QuoteCommandLineArgument($CmdLine[$i])
 				Else
-					$sParam &= " " & $CmdLine[$i]
+					$sParam &= " " & QuoteCommandLineArgument($CmdLine[$i])
 				EndIf
 		EndSwitch
 	Next
@@ -1223,12 +1226,12 @@ Func LaunchBotBackend($bNoGUI = True)
 	$g_WatchOnlyClientPID = Default
 
 	; check if backend bot is already running
-	SetLog("Check if backend My Bot process is already running...")
+	SetLog("Check if backend My Bot process is already running")
 	While __TimerDiff($hTimer) < 5 * 60 * 1000
 
 		If $g_WatchOnlyClientPID = Default And __TimerDiff($hTimer) > $g_iBotBackendFindTimeout Then
 			$bCheck = False
-			SetLog("My Bot backend process not found, launching now...")
+			SetLog("My Bot backend process not found, launching now")
 			SetDebugLog("My Bot backend process launching: " & $cmd)
 			$pid = Run($cmd, @ScriptDir)
 			If $pid = 0 Then
@@ -1272,46 +1275,57 @@ Func LaunchBotBackend($bNoGUI = True)
 
 EndFunc   ;==>LaunchBotBackend
 
-Func BotStart()
+Func QuoteCommandLineArgument($sArgument)
+	If $sArgument = "" Then Return """"""
+	If StringRegExp($sArgument, '[\s"]') = 0 Then Return $sArgument
+	Return """" & StringReplace($sArgument, """", "\""") & """"
+EndFunc   ;==>QuoteCommandLineArgument
+
+Func EnsureBackendAvailable()
 	If $g_hFrmBotBackend = 0 Or $g_WatchOnlyClientPID = 0 Or WinGetProcess($g_hFrmBotBackend) <> $g_WatchOnlyClientPID Then
 		LaunchBotBackend()
-		If Not $g_bBotLaunched Then Return
+		If Not $g_bBotLaunched Then Return False
 	EndIf
-	GUICtrlSetState($g_hBtnStart, $GUI_DISABLE)
-	_WinAPI_PostMessage($g_hFrmBotBackend, $WM_MYBOTRUN_API, 0x1000, $g_hFrmBot)
+	Return True
+EndFunc   ;==>EnsureBackendAvailable
+
+Func PostBackendCommand($iCommand)
+	If Not EnsureBackendAvailable() Then Return False
+	_WinAPI_PostMessage($g_hFrmBotBackend, $WM_MYBOTRUN_API, $iCommand, $g_hFrmBot)
+	Return True
+EndFunc   ;==>PostBackendCommand
+
+Func BotStart()
+	If PostBackendCommand(0x1000) Then GUICtrlSetState($g_hBtnStart, $GUI_DISABLE)
 EndFunc   ;==>BotStart
 
 Func BotStop()
-	If $g_hFrmBotBackend = 0 Or $g_WatchOnlyClientPID = 0 Or WinGetProcess($g_hFrmBotBackend) <> $g_WatchOnlyClientPID Then
-		LaunchBotBackend()
-		If Not $g_bBotLaunched Then Return
-	EndIf
-	GUICtrlSetState($g_hBtnStop, $GUI_DISABLE)
-	_WinAPI_PostMessage($g_hFrmBotBackend, $WM_MYBOTRUN_API, 0x1010, $g_hFrmBot)
+	If PostBackendCommand(0x1010) Then GUICtrlSetState($g_hBtnStop, $GUI_DISABLE)
 EndFunc   ;==>BotStop
 
 Func btnMakeScreenshot()
-	_WinAPI_PostMessage($g_hFrmBotBackend, $WM_MYBOTRUN_API, 0x1050, $g_hFrmBot)
+	PostBackendCommand(0x1050)
 EndFunc   ;==>btnMakeScreenshot
 
 Func TogglePauseImpl($source)
 	If $g_bBotPaused Then
-		_WinAPI_PostMessage($g_hFrmBotBackend, $WM_MYBOTRUN_API, 0x1020, $g_hFrmBot)
+		PostBackendCommand(0x1020)
 	Else
-		_WinAPI_PostMessage($g_hFrmBotBackend, $WM_MYBOTRUN_API, 0x1030, $g_hFrmBot)
+		PostBackendCommand(0x1030)
 	EndIf
 EndFunc   ;==>TogglePauseImpl
 
 Func BotClose($SaveConfig = Default, $bExit = True)
-	_WinAPI_PostMessage($g_hFrmBotBackend, $WM_MYBOTRUN_API, 0x1040, $g_hFrmBot)
+	If $g_hFrmBotBackend <> 0 And $g_WatchOnlyClientPID <> 0 And WinGetProcess($g_hFrmBotBackend) = $g_WatchOnlyClientPID Then _
+			_WinAPI_PostMessage($g_hFrmBotBackend, $WM_MYBOTRUN_API, 0x1040, $g_hFrmBot)
 
 	$g_bRunState = False
 	$g_bBotPaused = False
-	SetLog("Closing " & $g_sBotTitle & " now ...")
+	SetLog("Closing " & $g_sBotTitle)
 	LockBotSlot(False)
 
 	ReleaseMutex($hMutex_BotTitle)
-	DllClose("ntdll.dll")
+	DllClose($hNtDll)
 
 	_GDIPlus_Shutdown()
 	_Crypt_Shutdown()
@@ -1448,3 +1462,19 @@ WEnd
 
 ReferenceFunctions()
 ReferenceGlobals()
+
+Func DirectAttack()
+	PostBackendCommand(0x1070)
+EndFunc   ;==>DirectAttack
+
+Func ToggleBBSpam()
+	PostBackendCommand(0x1080)
+EndFunc   ;==>ToggleBBSpam
+
+Func ToggleCCSpam()
+	PostBackendCommand(0x1090)
+EndFunc   ;==>ToggleCCSpam
+
+Func ToggleRushAttack()
+	PostBackendCommand(0x10A0)
+EndFunc   ;==>ToggleRushAttack

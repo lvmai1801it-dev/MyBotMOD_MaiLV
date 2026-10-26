@@ -18,6 +18,8 @@ Func decodeMultipleCoords($coords, $iDedupX = Default, $iDedupY = Default, $iSor
 	If $iDedupY = Default Then $iDedupY = -1
 	If $iSorted = Default Then $iSorted = -1
 	;returns array of N coordinates [0=x, 1=y][0=x1, 1=y1]
+	Local $aEmpty[0]
+	If Not IsString($coords) Or StringStripWS($coords, $STR_STRIPALL) = "" Then Return $aEmpty
 	Local $retCoords, $c
 	Local $pOff = 0
 	;	SetDebugLog("**decodeMultipleCoords: " & $coords, $COLOR_DEBUG)
@@ -26,7 +28,10 @@ Func decodeMultipleCoords($coords, $iDedupX = Default, $iDedupY = Default, $iSor
 		Local $retCoords[UBound($aCoordsSplit)]
 	Else ;has total count in value
 		$pOff = 1
-		Local $retCoords[Number($aCoordsSplit[0])]
+		Local $iExpected = Int($aCoordsSplit[0])
+		Local $iAvailable = UBound($aCoordsSplit) - $pOff
+		If $iExpected < 1 Or $iAvailable < 1 Then Return $aEmpty
+		Local $retCoords[_Min($iExpected, $iAvailable)]
 	EndIf
 	Local $iErr = 0
 	For $p = 0 To UBound($retCoords) - 1
@@ -41,7 +46,6 @@ Func decodeMultipleCoords($coords, $iDedupX = Default, $iDedupY = Default, $iSor
 	If $iErr > 0 Then ReDim $retCoords[UBound($retCoords) - $iErr]
 
 	If UBound($retCoords) = 0 Then
-		Local $aEmpty[0]
 		Return $aEmpty
 	EndIf
 	If UBound($retCoords) = 1 Or ($iDedupX < 1 And $iDedupY < 1 And $iSorted = -1) Then Return $retCoords ; no dedup, return array
@@ -90,11 +94,11 @@ EndFunc   ;==>decodeMultipleCoords
 
 Func decodeSingleCoord($coords)
 	;returns array with 2 coordinates 0=x, 1=y
+	Local $aEmpty[0]
+	If Not IsString($coords) Or Not StringRegExp($coords, "^\s*-?\d+\s*,\s*-?\d+\s*$") Then Return $aEmpty
 	Local $aCoordsSplit = StringSplit($coords, ",", $STR_NOCOUNT)
-	If UBound($aCoordsSplit) > 1 Then
-		$aCoordsSplit[0] = Int($aCoordsSplit[0])
-		$aCoordsSplit[1] = Int($aCoordsSplit[1])
-	EndIf
+	$aCoordsSplit[0] = Int($aCoordsSplit[0])
+	$aCoordsSplit[1] = Int($aCoordsSplit[1])
 	Return $aCoordsSplit
 EndFunc   ;==>decodeSingleCoord
 
@@ -102,7 +106,7 @@ Func RetrieveImglocProperty($key, $property)
 	; Get the property
 	Local $aValue = DllCall($g_hLibMyBot, "str", "GetProperty", "str", $key, "str", $property)
 	If @error Then _logErrorDLLCall($g_sLibMyBotPath, @error) ; check for error with DLL call
-	If UBound($aValue) = 0 Then
+	If Not IsArray($aValue) Or UBound($aValue) = 0 Then
 		Return ""
 	EndIf
 	Return $aValue[0]
@@ -110,30 +114,39 @@ EndFunc   ;==>RetrieveImglocProperty
 
 Func checkImglocError(ByRef $imglocvalue, $funcName, $sTileSource = "", $sImageArea = "")
 	;Return true if there is an error in imgloc return string
-	If IsArray($imglocvalue) Then ;despite beeing a string, AutoIt receives a array[0]
-		If $imglocvalue[0] = "0" Or $imglocvalue[0] = "" Then
-			If $g_bDebugSetLog Then SetDebugLog($funcName & " imgloc search returned no results" & ($sImageArea ? " in " & $sImageArea : "") & ($sTileSource ? " for '" & $sTileSource & "' !" : "!"), $COLOR_WARNING)
-			Return True
-		ElseIf StringLeft($imglocvalue[0], 2) = "-1" Then ;error
-			If $g_bDebugSetLog Then SetDebugLog($funcName & " - Imgloc DLL Error: " & $imglocvalue[0], $COLOR_ERROR)
-			Return True
-		ElseIf StringLeft($imglocvalue[0], 2) = "-2" Then ;critical error
-			SetLog($funcName & " - Imgloc DLL Critical Error", $COLOR_RED)
-			SetLog(StringMid($imglocvalue[0], 4), $COLOR_RED)
-			;BotStop() ; stop bot on critical errors
-			; Restart Bot on critical errors
-			SetLog("Restart bot in 3 Minutes...", $COLOR_GREEN)
-			If _SleepStatus(180000) = False Then
-				RestartBot(False, True)
-			EndIf
-			Return True
-		Else
-			Return False
-		EndIf
-	Else
+	If Not IsArray($imglocvalue) Then
 		If $g_bDebugSetLog Then SetDebugLog($funcName & " - Imgloc  Error: Not an Array Result", $COLOR_ERROR)
 		Return True
 	EndIf
+
+	If UBound($imglocvalue) = 0 Then
+		If $g_bDebugSetLog Then SetDebugLog($funcName & " - Imgloc Error: Empty Array Result", $COLOR_ERROR)
+		Return True
+	EndIf
+
+	Local $sResult = String($imglocvalue[0])
+	If $sResult = "0" Or $sResult = "" Then
+		If $g_bDebugSetLog Then SetDebugLog($funcName & " imgloc search returned no results" & ($sImageArea ? " in " & $sImageArea : "") & ($sTileSource ? " for '" & $sTileSource & "' !" : "!"), $COLOR_WARNING)
+		Return True
+	ElseIf StringLeft($sResult, 2) = "-2" Then ;critical error
+		SetLog($funcName & " - Imgloc DLL Critical Error", $COLOR_RED)
+		Local $sCriticalError = StringMid($sResult, 4)
+		SetLog(($sCriticalError = "" ? $sResult : $sCriticalError), $COLOR_RED)
+		If $g_bDebugSetLog Then SetDebugLog("ImgLoc source: " & ($sTileSource = "" ? "<none>" : $sTileSource) & ", area: " & ($sImageArea = "" ? "<none>" : $sImageArea), $COLOR_ERROR)
+		SetLog("Restarting Bot Immediately", $COLOR_GREEN)
+		If $g_bRunState Then
+			If Not RestartBot(False, True, True) Then
+				SetLog("Unable to restart after Imgloc DLL critical error - Bot Stopped", $COLOR_RED)
+				BotStop()
+			EndIf
+		EndIf
+		Return True
+	ElseIf StringLeft($sResult, 2) = "-1" Then ;error
+		If $g_bDebugSetLog Then SetDebugLog($funcName & " - Imgloc DLL Error: " & $sResult, $COLOR_ERROR)
+		Return True
+	EndIf
+
+	Return False
 EndFunc   ;==>checkImglocError
 
 Func ClickB($sButtonName, $buttonTileArrayOrPatternOrFullPath = Default, $iDelay = 100)
@@ -163,8 +176,26 @@ EndFunc   ;==>ClickButton
 ; Capture = FV
 ; Test : findButton($sButtonName, Default,1,1,1,1)
 Func findButton($sButtonName, $buttonTileArrayOrPatternOrFullPath = Default, $maxReturnPoints = 1, $bForceCapture = True, $bDebuglog = $g_bDebugSetLog, $bDebugImageSave = $g_bDebugImageSave)
+	Local $sButtonDirectory = $g_sImgImgLocButtons
 
-	If $buttonTileArrayOrPatternOrFullPath = Default Then $buttonTileArrayOrPatternOrFullPath = $sButtonName & "*"
+	If $buttonTileArrayOrPatternOrFullPath = Default Then
+		Switch $sButtonName
+			Case "ClanChat"
+				$buttonTileArrayOrPatternOrFullPath = "ClanChat*"
+				$sButtonDirectory = $g_sImgDonateCC
+			Case "ChatWar"
+				$buttonTileArrayOrPatternOrFullPath = "ChatWar*"
+				$sButtonDirectory = $g_sImgDonateCC
+			Case "ChatDown"
+				$buttonTileArrayOrPatternOrFullPath = "ChatDown*"
+				$sButtonDirectory = $g_sImgDonateCC
+			Case "EditArmy"
+				$buttonTileArrayOrPatternOrFullPath = "EditArmy*"
+				$sButtonDirectory = @ScriptDir & "\imgxml\ArmyOverview"
+			Case Else
+				$buttonTileArrayOrPatternOrFullPath = $sButtonName & "*"
+		EndSwitch
+	EndIf
 
 	Local $error, $extError
 	Local $searchArea = GetButtonDiamond($sButtonName)
@@ -178,9 +209,12 @@ Func findButton($sButtonName, $buttonTileArrayOrPatternOrFullPath = Default, $ma
 	If IsString($buttonTileArrayOrPatternOrFullPath) Then
 		$sButtons = $buttonTileArrayOrPatternOrFullPath
 		If StringInStr($buttonTileArrayOrPatternOrFullPath, "*") > 0 Then
-			Local $aFiles = _FileListToArray($g_sImgImgLocButtons, $sButtons, $FLTA_FILES, True)
-			If UBound($aFiles) < 2 Or $aFiles[0] < 1 Then
-				Return SetError(1, 1, "No files in " & $g_sImgImgLocButtons) ; Set external error code = 1 for bad input values
+			Local $aFiles = _FileListToArray($sButtonDirectory, $sButtons, $FLTA_FILES, True)
+			If Not IsArray($aFiles) Or UBound($aFiles) < 2 Then
+				Return SetError(1, 1, "No files in " & $sButtonDirectory) ; Set external error code = 1 for bad input values
+			EndIf
+			If $aFiles[0] < 1 Then
+				Return SetError(1, 1, "No files in " & $sButtonDirectory) ; Set external error code = 1 for bad input values
 			EndIf
 			Local $a[0], $j
 			$j = 0
@@ -188,7 +222,7 @@ Func findButton($sButtonName, $buttonTileArrayOrPatternOrFullPath = Default, $ma
 				If StringRegExp($aFiles[$i], ".+[.](xml|png|bmp)$") Then
 					$j += 1
 					ReDim $a[$j]
-					$a[$i - 1] = $aFiles[$i]
+					$a[$j - 1] = $aFiles[$i]
 				EndIf
 			Next
 			$aButtons = $a
@@ -231,12 +265,20 @@ Func findButton($sButtonName, $buttonTileArrayOrPatternOrFullPath = Default, $ma
 			Return SetError(2, 1, $extError) ; Set external error code = 2 for DLL error
 		EndIf
 
-		If $result[0] <> "" And checkImglocError($result, "imglocFindButton", $buttonTile) = False Then
+		If checkImglocError($result, "imglocFindButton", $buttonTile) = False Then
 			If $g_bDebugSetLog Then SetDebugLog($sButtonName & " Button Image Found in: " & $result[0])
 			$aCoords = StringSplit($result[0], "|", $STR_NOCOUNT)
 			;[0] - total points found
 			;[1] -  coordinates
 			If $maxReturnPoints = 1 Then
+				If UBound($aCoords) < 2 Then
+					If $g_bDebugSetLog Then SetDebugLog("imglocFindButton : Invalid coordinate result: " & $result[0], $COLOR_ERROR)
+					ContinueLoop
+				EndIf
+				If UBound(decodeSingleCoord($aCoords[1])) < 2 Then
+					If $g_bDebugSetLog Then SetDebugLog("imglocFindButton : Invalid coordinate result: " & $result[0], $COLOR_ERROR)
+					ContinueLoop
+				EndIf
 				Return StringSplit($aCoords[1], ",", $STR_NOCOUNT) ; return just X,Y coord
 			ElseIf IsArray($aCoords) Then
 				Local $aReturnResult[0][2]
@@ -264,7 +306,13 @@ Func GetButtonDiamond($sButtonName)
 		Case "ReloadButton"
 			$btnDiamond = GetDiamondFromRect2(650, 530 + $g_iMidOffsetY, 850, 645 + $g_iMidOffsetY)
 		Case "AttackButton", "RescueATKButton" ;Main Window Screen
-			$btnDiamond = GetDiamondFromRect2(0, 540 + $g_iBottomOffsetY, 160, 660 + $g_iBottomOffsetY)
+			$btnDiamond = GetDiamondFromRect2(0, 540 + $g_iBottomOffsetY, 160, 672 + $g_iBottomOffsetY)
+		Case "Battle"
+			$btnDiamond = GetDiamondFromRect2(0, 580 + $g_iBottomOffsetY, 130, 670 + $g_iBottomOffsetY)
+		Case "EditArmy"
+			$btnDiamond = GetDiamondFromRect2(20, 610 + $g_iBottomOffsetY, 200, 670 + $g_iBottomOffsetY)
+		Case "Settings"
+			$btnDiamond = GetDiamondFromRect2(630, 90 + $g_iMidOffsetY, 760, 150 + $g_iMidOffsetY)
 		Case "TrashEvent"
 			$btnDiamond = GetDiamondFromRect2(430, 280 + $g_iMidOffsetY, 800, 380 + $g_iMidOffsetY)
 		Case "EventFailed"
@@ -276,12 +324,10 @@ Func GetButtonDiamond($sButtonName)
 			$btnDiamond = GetDiamondFromRect2(340, 370 + $g_iMidOffsetY, 525, 495 + $g_iMidOffsetY)
 		Case "EnterShop"
 			$btnDiamond = GetDiamondFromRect2(350, 380 + $g_iMidOffsetY, 515, 460 + $g_iMidOffsetY)
-		Case "ClanChat"
-			$btnDiamond = GetDiamondFromRect2(10, 280 + $g_iMidOffsetY, 420, 340 + $g_iMidOffsetY)
+		Case "ClanChat", "Chat"
+			$btnDiamond = GetDiamondFromRect2(5, 290 + $g_iMidOffsetY, 110, 390 + $g_iMidOffsetY)
 		Case "Collect"
 			$btnDiamond = "350,450|505,450|505,521|350,521"
-		Case "BoostBarrack", "BarrackBoosted"
-			$btnDiamond = GetDiamondFromRect2(675, 285 + $g_iMidOffsetY, 770, 330 + $g_iMidOffsetY)
 		Case "ArmyTab", "TrainTroopsTab", "BrewSpellsTab", "BuildSiegeMachinesTab", "QuickTrainTab"
 			$btnDiamond = GetDiamondFromRect2(75, 110 + $g_iMidOffsetY, 740, 160 + $g_iMidOffsetY)
 		Case "WeeklyDeals"
@@ -295,7 +341,9 @@ Func GetButtonDiamond($sButtonName)
 		Case "Okay", "Cancel", "Continue", "ConfirmButton"
 			$btnDiamond = GetDiamondFromRect2(240, 220 + $g_iMidOffsetY, 630, 615 + $g_iMidOffsetY)
 		Case "ChatDown"
-			$btnDiamond = GetDiamondFromRect2(13, 580 + $g_iBottomOffsetY, 50, 620 + $g_iBottomOffsetY)
+			$btnDiamond = GetDiamondFromRect2(360, 310, 420, 370)
+		Case "ChatWar"
+			$btnDiamond = GetDiamondFromRect2(450, 200 + $g_iMidOffsetY, 520, 275 + $g_iMidOffsetY)
 		Case Else
 			$btnDiamond = "FV" ; use full image to locate button
 	EndSwitch
@@ -345,14 +393,18 @@ Func findImage($sImageName, $sImageTile, $sImageArea, $maxReturnPoints = 1, $bFo
 			$pat = StringMid($sImageTile, $iLastBS + 1)
 		EndIf
 		Local $files = _FileListToArray($dir, $pat, $FLTA_FILES, True)
-		If @error Or UBound($files) < 2 Then
+		If @error Or Not IsArray($files) Or UBound($files) < 2 Then
 			If $g_bDebugSetLog Then SetDebugLog("findImage files not found : " & $sImageTile, $COLOR_ERROR)
 			SetError(1, 0, $aCoords) ; Set external error code = 1 for bad input values
 			Return
 		EndIf
 		For $i = 1 To $files[0]
-			$aCoords = findImage($sImageName, $files[$i], $sImageArea, $maxReturnPoints, $bForceCapture)
-			If UBound(decodeSingleCoord($aCoords)) > 1 Then Return $aCoords
+			$aCoords = findImage($sImageName, $files[$i], $sImageArea, $maxReturnPoints, $bForceCapture, $AndroidTag)
+			If $maxReturnPoints = 1 Then
+				If UBound(decodeSingleCoord($aCoords)) > 1 Then Return $aCoords
+			ElseIf $aCoords <> "" Then
+				Return $aCoords
+			EndIf
 		Next
 		Return $aCoords
 	EndIf
@@ -393,6 +445,14 @@ Func findImage($sImageName, $sImageTile, $sImageArea, $maxReturnPoints = 1, $bFo
 		;[0] - total points found
 		;[1] -  coordinates
 		If $maxReturnPoints = 1 Then
+			If UBound($aCoords) < 2 Then
+				If $g_bDebugSetLog Then SetDebugLog("findImage : Invalid coordinate result: " & $result[0], $COLOR_ERROR)
+				Return ""
+			EndIf
+			If UBound(decodeSingleCoord($aCoords[1])) < 2 Then
+				If $g_bDebugSetLog Then SetDebugLog("findImage : Invalid coordinate result: " & $result[0], $COLOR_ERROR)
+				Return ""
+			EndIf
 			Return $aCoords[1] ; return just X,Y coord
 		Else
 			Return $result[0] ; return full string with count and points
@@ -416,7 +476,7 @@ Func GetDeployableNextTo($sPoints, $distance = 3, $redlineoverride = "")
 		Return ""
 	EndIf
 
-	If UBound($result) = 0 Then Return ""
+	If Not IsArray($result) Or UBound($result) = 0 Then Return ""
 	If $g_bDebugSetLog Then SetDebugLog("GetDeployableNextTo : " & $sPoints & ", dist. = " & $distance & " : " & $result[0], $COLOR_OLIVE)
 	Return $result[0]
 EndFunc   ;==>GetDeployableNextTo
@@ -432,7 +492,7 @@ Func GetOffsetRedline($sArea = "TL", $distance = 3)
 		Return ""
 	EndIf
 
-	If UBound($result) = 0 Then Return ""
+	If Not IsArray($result) Or UBound($result) = 0 Then Return ""
 	If $g_bDebugSetLog Then SetDebugLog("GetOffSetRedline : " & $sArea & ", dist. = " & $distance & " : " & $result[0], $COLOR_OLIVE)
 	Return $result[0]
 EndFunc   ;==>GetOffsetRedline
@@ -523,6 +583,7 @@ EndFunc   ;==>findMultiple
 ;receives "StartX,StartY,EndX,EndY" or "StartX,StartY(Width,Height)" and returns 0 based array
 Func GetRectArray($rect, $bLogError = True)
 	Local $a = []
+	Local $i
 	Local $RectValues = StringSplit($rect, ",", $STR_NOCOUNT)
 	If UBound($RectValues) = 3 Then
 		ReDim $RectValues[4]
@@ -532,14 +593,16 @@ Func GetRectArray($rect, $bLogError = True)
 			If $bLogError Then SetDebugLog("GetRectArray : Bad Input Values : " & $rect, $COLOR_ERROR)
 			Return SetError(1, 1, $a)
 		EndIf
-		$RectValues[3] = $RectValues[1] + StringLeft($RectValues[2], $i - 1)
+		Local $iHeight = Number(StringLeft($RectValues[2], $i - 1))
 		$i = StringInStr($RectValues[1], "(")
 		If $i = 0 Then
 			If $bLogError Then SetDebugLog("GetRectArray : Bad Input Values : " & $rect, $COLOR_ERROR)
 			Return SetError(1, 2, $a)
 		EndIf
-		$RectValues[2] = $RectValues[0] + StringMid($RectValues[1], $i + 1)
-		$RectValues[1] = StringLeft($RectValues[1], $i - 1)
+		Local $iWidth = Number(StringMid($RectValues[1], $i + 1))
+		$RectValues[1] = Number(StringLeft($RectValues[1], $i - 1))
+		$RectValues[2] = Number($RectValues[0]) + $iWidth
+		$RectValues[3] = Number($RectValues[1]) + $iHeight
 	EndIf
 	If UBound($RectValues) < 4 Then
 		If $bLogError Then SetDebugLog("GetRectArray : Bad Input Values : " & $rect, $COLOR_ERROR)
@@ -612,7 +675,9 @@ Func FindImageInPlace($sImageName, $sImageTile, $place, $bForceCaptureRegion = T
 	If $g_bDebugSetLog Then SetDebugLog("FindImageInPlace : > " & $sImageName & " - " & $sImageTile & " - " & $place, $COLOR_INFO)
 	Local $returnvalue = ""
 	Local $aPlaces = GetRectArray($place)
+	If Not IsArray($aPlaces) Or UBound($aPlaces) < 4 Then Return ""
 	Local $sImageArea = GetDiamondFromRect($aPlaces)
+	If $sImageArea = "" Then Return ""
 	If $bForceCaptureRegion = True Then
 		$sImageArea = "FV"
 		_CaptureRegion2(Number($aPlaces[0]), Number($aPlaces[1]), Number($aPlaces[2]), Number($aPlaces[3]))
@@ -698,9 +763,10 @@ Func SearchRedLinesMultipleTimes($sCocDiamond = $CocDiamondECD, $iCount = 5, $iD
 	; ensure current $g_sImglocRedline has been generated
 	SearchRedLines($sCocDiamond)
 	; count # of redline points
-	Local $iRedlinePoints = [UBound(StringSplit($g_sImglocRedline, "|", $STR_NOCOUNT)), 0]
+	Local $iRedlinePoints = [($g_sImglocRedline = "" ? 0 : UBound(StringSplit($g_sImglocRedline, "|", $STR_NOCOUNT))), 0]
 
 	SetDebugLog("Initial # of redline points: " & $iRedlinePoints[0])
+	If $iCount < 1 Then Return $g_sImglocRedline
 
 	; clear $g_hHBitmap2, so it doesn't get deleted
 	$g_hHBitmap2 = 0
@@ -732,7 +798,7 @@ Func SearchRedLinesMultipleTimes($sCocDiamond = $CocDiamondECD, $iCount = 5, $iD
 		$aiTotals[1] += $iRedlineTime
 
 		; count # of redline points
-		$iRedlinePoints[1] = UBound(StringSplit($g_sImglocRedline, "|", $STR_NOCOUNT))
+		$iRedlinePoints[1] = ($g_sImglocRedline = "" ? 0 : UBound(StringSplit($g_sImglocRedline, "|", $STR_NOCOUNT)))
 
 		SetDebugLog($i & ". # of redline points: " & $iRedlinePoints[1])
 		SetLog($i & ". # of redline points: " & $iRedlinePoints[1])
@@ -824,12 +890,13 @@ EndFunc   ;==>Slot
 
 Func GetDummyRectangle($sCoords, $ndistance)
 	;creates a dummy rectangle to be used by Reduced Image Capture
-	Local $aCoords = StringSplit($sCoords, ",", $STR_NOCOUNT)
+	Local $aCoords = decodeSingleCoord($sCoords)
+	If UBound($aCoords) < 2 Then Return ""
 	Return Number($aCoords[0]) - $ndistance & "," & Number($aCoords[1]) - $ndistance & "," & Number($aCoords[0]) + $ndistance & "," & Number($aCoords[1]) + $ndistance
 EndFunc   ;==>GetDummyRectangle
 
 Func ImgLogDebugProps($result)
-	If UBound($result) < 1 Then Return False
+	If Not IsArray($result) Or UBound($result) < 1 Then Return False
 	Local $resultArr = StringSplit($result[0], "|", $STR_NOCOUNT)
 	Local $returnData = StringSplit("objectname,objectlevel,objectpoints", ",", $STR_NOCOUNT)
 	For $rs = 0 To UBound($resultArr) - 1
@@ -841,40 +908,45 @@ Func ImgLogDebugProps($result)
 EndFunc   ;==>ImgLogDebugProps
 
 Func RemoveDupXY(ByRef $arr)
+	If Not IsArray($arr) Or UBound($arr) = 0 Then Return
 	; Remove Dup X Sorted
 	Local $atmparray[0][2]
 	Local $tmpCoordX = 0
 	Local $tmpCoordY = 0
+	Local $bFirst = True
 	_ArraySort($arr, 0, 0, 0, 0) ;sort by x
 	For $i = 0 To UBound($arr) - 1
 		Local $a = $arr[$i][0] - $tmpCoordX
 		Local $b = $arr[$i][1] - $tmpCoordY
 		Local $c = Sqrt($a * $a + $b * $b)
-		If $c < 25 Then
+		If Not $bFirst And $c < 25 Then
 			SetDebugLog("Skip this dup : " & $arr[$i][0] & "," & $arr[$i][1], $COLOR_INFO)
 			ContinueLoop
 		Else
 			_ArrayAdd($atmparray, $arr[$i][0] & "|" & $arr[$i][1])
 			$tmpCoordX = $arr[$i][0]
 			$tmpCoordY = $arr[$i][1]
+			$bFirst = False
 		EndIf
 	Next
 	; Remove Dup Y Sorted
 	Local $atmparray2[0][2]
 	$tmpCoordX = 0
 	$tmpCoordY = 0
+	$bFirst = True
 	_ArraySort($atmparray, 0, 0, 0, 1) ;sort by y
 	For $i = 0 To UBound($atmparray) - 1
 		Local $a = $atmparray[$i][0] - $tmpCoordX
 		Local $b = $atmparray[$i][1] - $tmpCoordY
 		Local $c = Sqrt($a * $a + $b * $b)
-		If $c < 25 Then
+		If Not $bFirst And $c < 25 Then
 			SetDebugLog("Skip this dup : " & $atmparray[$i][0] & "," & $atmparray[$i][1], $COLOR_INFO)
 			ContinueLoop
 		Else
 			_ArrayAdd($atmparray2, $atmparray[$i][0] & "|" & $atmparray[$i][1])
 			$tmpCoordX = $atmparray[$i][0]
 			$tmpCoordY = $atmparray[$i][1]
+			$bFirst = False
 		EndIf
 	Next
 	_ArraySort($atmparray2, 0, 0, 0, 0) ;sort by x

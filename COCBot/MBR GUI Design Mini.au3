@@ -26,7 +26,6 @@ MBR GUI Design.au3; CreateMainGUI()
 	  MBR GUI Design Child Village - Misc.au3; CreateVillageMisc()
 	  MBR GUI Design Child Village - Donate.au3; CreateVillageDonate()
 	  MBR GUI Design Child Village - Upgrade.au3; CreateVillageUpgrade()
-	  MBR GUI Design Child Village - Achievements.au3; CreateVillageAchievements()
 	  MBR GUI Design Child Village - Notify.au3; CreateVillageNotify()
 
    MBR GUI Design Attack.au3; CreateAttackTab()
@@ -46,13 +45,10 @@ MBR GUI Design.au3; CreateMainGUI()
 			MBR GUI Design Child Attack - Activebase-Search.au3; CreateAttackSearchActiveBaseSearch()
 			MBR GUI Design Child Attack - Activebase-Attack.au3; CreateAttackSearchActiveBaseAttack()
 			MBR GUI Design Child Attack - Activebase-EndBattle.au3; CreateAttackSearchActiveBaseEndBattle()
-		 MBR GUI Design Child Attack - Bully.au3; CreateAttackSearchBully()
 		 MBR GUI Design Child Attack - Options.au3; CreateAttackSearchOptions()
 			MBR GUI Design Child Attack - Options-Search.au3; CreateAttackSearchOptionsSearch()
 			MBR GUI Design Child Attack - Options-Attack.au3; CreateAttackSearchOptionsAttack()
-			MBR GUI Design Child Attack - NewSmartZap.au3; CreateAttackNewSmartZap()
 			MBR GUI Design Child Attack - Options-EndBattle.au3;CreateAttackSearchOptionsEndBattle()
-			MBR GUI Design Child Attack - Options-TrophySettings.au3; CreateAttackSearchOptionsTrophySettings()
 	  MBR GUI Design Child Attack - Strategies.au3; CreateAttackStrategies()
 
    MBR GUI Design Bot.au3; CreateBotTab()
@@ -101,7 +97,7 @@ Global $hImageList = 0
 Global $g_hFrmBotButtons, $g_hFrmBotLogoUrlSmall, $g_hFrmBotEx = 0, $g_hLblBotTitle, $g_hLblBotShrink = 0, $g_hLblBotExpand = 0, $g_hLblBotMinimize = 0, $g_hLblBotClose = 0, $g_hFrmBotBottom = 0
 Global $g_hFrmBotEmbeddedShield = 0, $g_hFrmBotEmbeddedShieldInput = 0, $g_hFrmBotEmbeddedGraphics = 0
 Global $g_hFrmBot_MAIN_PIC = 0, $g_hFrmBot_URL_PIC = 0, $g_hFrmBot_URL_PIC2 = 0
-Global $g_hTabMain = 0, $g_hTabLog = 0, $g_hTabVillage = 0, $g_hTabAttack = 0, $g_hTabBot = 0, $g_hTabAbout = 0
+Global $g_hTabMain = 0, $g_hTabLog = 0, $g_hTabVillage = 0, $g_hTabAttack = 0, $g_hTabBot = 0, $g_hTabStats = 0, $g_hTabAbout = 0
 Global $g_hStatusBar = 0
 Global $g_hTiShow = 0, $g_hTiHide = 0, $g_hTiDonate = 0, $g_hTiAbout = 0, $g_hTiStartStop = 0, $g_hTiPause = 0, $g_hTiExit = 0
 Global $g_aFrmBotPosInit[8] = [0, 0, 0, 0, 0, 0, 0, 0]
@@ -169,6 +165,8 @@ Func CreateMainGUI()
 	Opt("TrayMenuMode", 3)
 	Opt("TrayOnEventMode", 1)
 	Opt("TrayIconHide", 0)
+	TraySetClick($TRAY_CLICK_SECONDARYUP)
+	TraySetOnEvent($TRAY_EVENT_PRIMARYUP, "tiShow")
 
 	; initialize bot title
 	UpdateBotTitle()
@@ -222,8 +220,10 @@ Func CreateMainGUIControls()
 	$g_hFrmBotEx = GUICreate("My Bot Controls", $_GUI_MAIN_WIDTH, $_GUI_MAIN_HEIGHT - $_GUI_BOTTOM_HEIGHT + $_GUI_MAIN_TOP, 0, 0, _
 			BitOR($WS_CHILD, $WS_TABSTOP), 0, $g_hFrmBot)
 
-	$g_hToolTip = _GUIToolTip_Create($g_hFrmBot) ; tool tips for URL links etc
-	_GUIToolTip_SetMaxTipWidth($g_hToolTip, $_GUI_MAIN_WIDTH) ; support multiple lines
+	If Not $g_bDisableBotToolTips Then
+		$g_hToolTip = _GUIToolTip_Create($g_hFrmBot) ; tool tips for URL links etc
+		_BotToolTipConfigure()
+	EndIf
 
 	If $g_bCustomTitleBarActive = False Then
 		; Window default title bar

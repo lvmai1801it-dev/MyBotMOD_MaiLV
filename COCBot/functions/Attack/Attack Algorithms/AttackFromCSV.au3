@@ -1,4 +1,4 @@
-; #FUNCTION# ====================================================================================================================
+﻿; #FUNCTION# ====================================================================================================================
 ; Name ..........:
 ; Description ...: This file contains the attack algorithm SCRIPTED
 ; Syntax ........:
@@ -216,6 +216,10 @@ Func Algorithm_AttackCSV($testattack = False, $captureredarea = True)
 	debugAttackCSV("	[" & UBound($g_aiPixelTopRight) & "] pixels TopRight")
 	debugAttackCSV("	[" & UBound($g_aiPixelBottomLeft) & "] pixels BottomLeft")
 	debugAttackCSV("	[" & UBound($g_aiPixelBottomRight) & "] pixels BottomRight")
+	If $g_iSmartZapTiming = $eSmartZapTimingStart Then
+		SmartZap()
+		If Not $g_bRunState Then Return
+	EndIf
 
 	If $g_aiAttackScrDroplineEdge[$g_iMatchMode] = $DROPLINE_DROPPOINTS_ONLY Then
 
@@ -350,8 +354,71 @@ Func Algorithm_AttackCSV($testattack = False, $captureredarea = True)
 	If StringLen($tempvectstr2) > 0 Then $tempvectstr2 = StringLeft($tempvectstr2, StringLen($tempvectstr2) - 1)
 	$g_aiPixelBottomRightDOWNDropLine = GetListPixel($tempvectstr1, ",", "BR-DOWN")
 	$g_aiPixelBottomRightUPDropLine = GetListPixel($tempvectstr2, ",", "BR-UP")
-	SetLog("> Drop Lines located in  " & Round(__timerdiff($hTimer) / 1000, 2) & " seconds", $COLOR_INFO)
+	SetLog("> Drop Lines located in " & Round(__timerdiff($hTimer) / 1000, 2) & " seconds", $COLOR_INFO)
 	If _Sleep($DELAYRESPOND) Then Return
+
+	; Validation of Drop Lines: Check if at least one drop line was created
+	If UBound($g_aiPixelTopLeftDropLine) = 0 And UBound($g_aiPixelTopRightDropLine) = 0 And UBound($g_aiPixelBottomLeftDropLine) = 0 And UBound($g_aiPixelBottomRightDropLine) = 0 Then
+		SetLog("Error: No drop lines detected, attempting to recapture red area", $COLOR_ERROR)
+		_CaptureRegion2()
+		_GetRedArea($g_aiAttackScrRedlineRoutine[$g_iMatchMode])
+		If _Sleep($DELAYRESPOND) Then Return
+		
+		; Recalculate drop lines with new pixels - full implementation for all modes
+		If $g_aiAttackScrDroplineEdge[$g_iMatchMode] = $DROPLINE_DROPPOINTS_ONLY Then
+			$g_aiPixelTopLeftDropLine = $g_aiPixelTopLeft
+			$g_aiPixelTopRightDropLine = $g_aiPixelTopRight
+			$g_aiPixelBottomLeftDropLine = $g_aiPixelBottomLeft
+			$g_aiPixelBottomRightDropLine = $g_aiPixelBottomRight
+		Else
+			; Recalculate coordinates based on external/internal area
+			Local $coordLeft = [$ExternalArea[0][0], $ExternalArea[0][1]]
+			Local $coordTop = [$ExternalArea[2][0], $ExternalArea[2][1]]
+			Local $coordRight = [$ExternalArea[1][0], $ExternalArea[1][1]]
+			Local $coordBottom = [$ExternalArea[3][0], $ExternalArea[3][1]]
+
+			Local $StartEndTopLeft = [$coordLeft, $coordTop]
+			If UBound($g_aiPixelTopLeft) > 2 Then Local $StartEndTopLeft = [$g_aiPixelTopLeft[0], $g_aiPixelTopLeft[UBound($g_aiPixelTopLeft) - 1]]
+			Local $StartEndTopRight = [$coordTop, $coordRight]
+			If UBound($g_aiPixelTopRight) > 2 Then Local $StartEndTopRight = [$g_aiPixelTopRight[0], $g_aiPixelTopRight[UBound($g_aiPixelTopRight) - 1]]
+			Local $StartEndBottomLeft = [$coordLeft, $coordBottom]
+			If UBound($g_aiPixelBottomLeft) > 2 Then Local $StartEndBottomLeft = [$g_aiPixelBottomLeft[0], $g_aiPixelBottomLeft[UBound($g_aiPixelBottomLeft) - 1]]
+			Local $StartEndBottomRight = [$coordBottom, $coordRight]
+			If UBound($g_aiPixelBottomRight) > 2 Then Local $StartEndBottomRight = [$g_aiPixelBottomRight[0], $g_aiPixelBottomRight[UBound($g_aiPixelBottomRight) - 1]]
+
+			; Apply fixed corners if using fixed mode
+			Switch $g_aiAttackScrDroplineEdge[$g_iMatchMode]
+				Case $DROPLINE_EDGE_FIXED, $DROPLINE_FULL_EDGE_FIXED
+					Local $StartEndTopLeft = [$coordLeft, $coordTop]
+					Local $StartEndTopRight = [$coordTop, $coordRight]
+					Local $StartEndBottomLeft = [$coordLeft, $coordBottom]
+					Local $StartEndBottomRight = [$coordBottom, $coordRight]
+			EndSwitch
+
+			; Recalculate drop lines based on mode
+			Switch $g_aiAttackScrDroplineEdge[$g_iMatchMode]
+				Case $DROPLINE_EDGE_FIXED, $DROPLINE_EDGE_FIRST
+					$g_aiPixelTopLeftDropLine = MakeDropLineOriginal($g_aiPixelTopLeft, $StartEndTopLeft[0], $StartEndTopLeft[1])
+					$g_aiPixelTopRightDropLine = MakeDropLineOriginal($g_aiPixelTopRight, $StartEndTopRight[0], $StartEndTopRight[1])
+					$g_aiPixelBottomLeftDropLine = MakeDropLineOriginal($g_aiPixelBottomLeft, $StartEndBottomLeft[0], $StartEndBottomLeft[1])
+					$g_aiPixelBottomRightDropLine = MakeDropLineOriginal($g_aiPixelBottomRight, $StartEndBottomRight[0], $StartEndBottomRight[1])
+				Case $DROPLINE_FULL_EDGE_FIXED, $DROPLINE_FULL_EDGE_FIRST
+					Local $iLineDistanceThreshold = 75
+					If $g_aiAttackScrRedlineRoutine[$g_iMatchMode] = $REDLINE_IMGLOC Then $iLineDistanceThreshold = 25
+					$g_aiPixelTopLeftDropLine = MakeDropLine($g_aiPixelTopLeft, $StartEndTopLeft[0], $StartEndTopLeft[1], $iLineDistanceThreshold, $g_aiAttackScrDroplineEdge[$g_iMatchMode] = $DROPLINE_FULL_EDGE_FIXED)
+					$g_aiPixelTopRightDropLine = MakeDropLine($g_aiPixelTopRight, $StartEndTopRight[0], $StartEndTopRight[1], $iLineDistanceThreshold, $g_aiAttackScrDroplineEdge[$g_iMatchMode] = $DROPLINE_FULL_EDGE_FIXED)
+					$g_aiPixelBottomLeftDropLine = MakeDropLine($g_aiPixelBottomLeft, $StartEndBottomLeft[0], $StartEndBottomLeft[1], $iLineDistanceThreshold, $g_aiAttackScrDroplineEdge[$g_iMatchMode] = $DROPLINE_FULL_EDGE_FIXED)
+					$g_aiPixelBottomRightDropLine = MakeDropLine($g_aiPixelBottomRight, $StartEndBottomRight[0], $StartEndBottomRight[1], $iLineDistanceThreshold, $g_aiAttackScrDroplineEdge[$g_iMatchMode] = $DROPLINE_FULL_EDGE_FIXED)
+			EndSwitch
+		EndIf
+		
+		; If still empty, log error and continue
+		If UBound($g_aiPixelTopLeftDropLine) = 0 And UBound($g_aiPixelTopRightDropLine) = 0 And UBound($g_aiPixelBottomLeftDropLine) = 0 And UBound($g_aiPixelBottomRightDropLine) = 0 Then
+			SetLog("Persistent Error: Drop lines still empty, attack may fail for troops", $COLOR_ERROR)
+		Else
+			SetLog("Drop lines recaptured successfully", $COLOR_INFO)
+		EndIf
+	EndIf
 
 	; 03 - TOWNHALL ------------------------------------------------------------------------
 
@@ -362,7 +429,7 @@ Func Algorithm_AttackCSV($testattack = False, $captureredarea = True)
 			SetLog("> Townhall has already been located in while searching for an image", $COLOR_INFO)
 		EndIf
 	Else
-		SetLog("> Townhall search not needed, skip")
+		SetLog("> Townhall search not needed, skip", $COLOR_INFO)
 	EndIf
 	If _Sleep($DELAYRESPOND) Then Return
 
@@ -577,16 +644,17 @@ Func Algorithm_AttackCSV($testattack = False, $captureredarea = True)
 	$g_aiCSVEagleArtilleryPos = "" ; reset pixel position to null
 
 	If $g_bCSVLocateEagle = True Then ; eagle find required?
-		If $g_iSearchTH = "-" Or $g_iSearchTH > 10 Then ; TH level where eagle exists?
+		If $g_iSearchTH >= 17 Then
+			SetLog("> TH " & $g_iSearchTH & " has no Eagle Artillery, skip detection", $COLOR_INFO)
+		ElseIf $g_iSearchTH = "-" Or $g_iSearchTH > 10 Then ; TH level where eagle exists?
 			If _ObjSearch($g_oBldgAttackInfo, $eBldgEagle & "_LOCATION") = False Then ; get data if not already exist?
 				$aResult = GetLocationBuilding($eBldgEagle, $g_iSearchTH, False)
 				If $aResult = -1 Then SetLog("Monkey ate bad banana: " & "GetLocationBuilding " & $g_sBldgNames[$eBldgEagle], $COLOR_ERROR)
 			EndIf
-			$aResult = _ObjGetValue($g_oBldgAttackInfo, $eBldgEagle & "_LOCATION")
-			If @error Then
-				_ObjErrMsg("_ObjGetValue " & $g_sBldgNames[$eBldgEagle] & " _LOCATION", @error) ; Log errors
-				SetLog("> " & $g_sBldgNames[$eBldgEagle] & " location not in dictionary", $COLOR_WARNING)
+			If Not _ObjSearch($g_oBldgAttackInfo, $eBldgEagle & "_LOCATION") Then
+				SetLog("> " & $g_sBldgNames[$eBldgEagle] & " not found", $COLOR_WARNING)
 			Else
+				$aResult = _ObjGetValue($g_oBldgAttackInfo, $eBldgEagle & "_LOCATION")
 				If IsArray($aResult[0]) Then $g_aiCSVEagleArtilleryPos = $aResult[0]
 			EndIf
 		Else
@@ -753,10 +821,69 @@ Func Algorithm_AttackCSV($testattack = False, $captureredarea = True)
 		SetDebugLog("> Monolith detection not needed, skipping", $COLOR_DEBUG)
 	EndIf
 
+	; 14 - Firespitter ------------------------------------------------------------------------
+
+	$g_aiCSVFirespitterPos = "" ; reset location array?
+
+	If $g_bCSVLocateFirespitter Then
+		If $g_iSearchTH = "-" Or $g_iSearchTH > 16 Then
+			If Not _ObjSearch($g_oBldgAttackInfo, $eBldgFirespitter & "_LOCATION") Then
+				$aResult = GetLocationBuilding($eBldgFirespitter, $g_iSearchTH, False)
+				If $aResult = -1 Then SetLog("Monkey ate bad banana: " & "GetLocationBuilding " & $g_sBldgNames[$eBldgFirespitter], $COLOR_ERROR)
+			EndIf
+			$aResult = _ObjGetValue($g_oBldgAttackInfo, $eBldgFirespitter & "_LOCATION")
+			If @error Then
+				_ObjErrMsg("_ObjGetValue " & $g_sBldgNames[$eBldgFirespitter] & " _LOCATION", @error) ; Log errors
+				SetLog("> " & $g_sBldgNames[$eBldgFirespitter] & " location not in dictionary", $COLOR_WARNING)
+			Else
+				If IsArray($aResult) Then $g_aiCSVFirespitterPos = $aResult
+			EndIf
+		Else
+			SetLog("> TH Level to low for Firespitter, skip detection", $COLOR_INFO)
+		EndIf
+	Else
+		SetDebugLog("> Firespitter detection not needed, skipping", $COLOR_DEBUG)
+	EndIf
+
+	; 15 - Revenge Tower ------------------------------------------------------------------------
+
+	$g_aiCSVRevengeTowerPos = "" ; reset location array?
+
+	If $g_bCSVLocateRevengeTower Then
+		If $g_iSearchTH = "-" Or $g_iSearchTH > 16 Then
+			If Not _ObjSearch($g_oBldgAttackInfo, $eBldgRevengeTower & "_LOCATION") Then
+				$aResult = GetLocationBuilding($eBldgRevengeTower, $g_iSearchTH, False)
+				If $aResult = -1 Then SetLog("Monkey ate bad banana: " & "GetLocationBuilding " & $g_sBldgNames[$eBldgRevengeTower], $COLOR_ERROR)
+			EndIf
+			If Not _ObjSearch($g_oBldgAttackInfo, $eBldgRevengeTower & "_LOCATION") Then
+				Local $aSmartZapRevengeTargets = SmartZapTargetSearch($eSmartZapTargetRevengeTower)
+				If IsArray($aSmartZapRevengeTargets) And UBound($aSmartZapRevengeTargets) > 0 Then
+					Local $aRevengeLoc[UBound($aSmartZapRevengeTargets)]
+					For $i = 0 To UBound($aSmartZapRevengeTargets) - 1
+						Local $aRevengePixel[2] = [Number($aSmartZapRevengeTargets[$i][0]), Number($aSmartZapRevengeTargets[$i][1])]
+						$aRevengeLoc[$i] = $aRevengePixel
+					Next
+					$g_aiCSVRevengeTowerPos = $aRevengeLoc
+					_ObjAdd($g_oBldgAttackInfo, $eBldgRevengeTower & "_LOCATION", $g_aiCSVRevengeTowerPos)
+					If @error Then
+						_ObjErrMsg("_ObjAdd " & $g_sBldgNames[$eBldgRevengeTower] & " _LOCATION", @error)
+					Else
+						SetLog("> Revenge Tower Detected", $COLOR_INFO)
+					EndIf
+				EndIf
+			Else
+				$aResult = _ObjGetValue($g_oBldgAttackInfo, $eBldgRevengeTower & "_LOCATION")
+				If IsArray($aResult) Then $g_aiCSVRevengeTowerPos = $aResult
+			EndIf
+		EndIf
+	Else
+		SetDebugLog("> Revenge Tower detection not needed, skipping", $COLOR_DEBUG)
+	EndIf
+
 	; Calculate main attack side
 	ParseAttackCSV_MainSide()
 
-	; 14 - Wall
+	; 16 - Wall
 	If $g_bCSVLocateWall Then
 		Local $aCSVExternalWall[1], $aCSVInternalWall[1]
 		If FindWallCSV($aCSVExternalWall, $aCSVInternalWall) Then
@@ -768,7 +895,7 @@ Func Algorithm_AttackCSV($testattack = False, $captureredarea = True)
 	EndIf
 
 	; Log total CSV prep time
-	SetLog(">> Total time: " & Round(__timerdiff($hTimerTOTAL) / 1000, 2) & " seconds", $COLOR_INFO)
+	SetLog(">> Total Time: " & Round(__timerdiff($hTimerTOTAL) / 1000, 2) & " seconds", $COLOR_INFO)
 
 	; 15 - DEBUGIMAGE ------------------------------------------------------------------------
 	If $g_bDebugMakeIMGCSV Then AttackCSVDEBUGIMAGE() ;make IMG debug
@@ -779,6 +906,10 @@ Func Algorithm_AttackCSV($testattack = False, $captureredarea = True)
 	If _Sleep($DELAYRESPOND) Then Return
 
 	ParseAttackCSV($testattack)
+	If $g_bRestart Then
+		ReleaseClicks()
+		Return
+	EndIf
 
 	CheckHeroesHealth()
 EndFunc   ;==>Algorithm_AttackCSV

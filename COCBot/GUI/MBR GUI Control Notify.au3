@@ -29,7 +29,7 @@ Func chkPBTGenabled()
 		GUICtrlSetState($g_hTxtNotifyOrigin, $GUI_ENABLE)
 		GUICtrlSetState($g_hChkNotifyAlertMatchFound, $GUI_ENABLE)
 		GUICtrlSetState($g_hChkNotifyAlertLastRaidIMG, $GUI_ENABLE)
-		GUICtrlSetState($g_hChkNotifyAlertUpgradeWall, $GUI_ENABLE)
+		GUICtrlSetState($g_hChkNotifyAlertClanGames, $GUI_ENABLE)
 		GUICtrlSetState($g_hChkNotifyAlertLastRaidTXT, $GUI_ENABLE)
 		GUICtrlSetState($g_hChkNotifyAlertOutOfSync, $GUI_ENABLE)
 		GUICtrlSetState($g_hChkNotifyAlertTakeBreak, $GUI_ENABLE)
@@ -42,13 +42,17 @@ Func chkPBTGenabled()
 		GUICtrlSetState($g_hChkNotifyAlertBAN, $GUI_ENABLE)
 		GUICtrlSetState($g_hChkNotifyBOTUpdate, $GUI_ENABLE)
 		GUICtrlSetState($g_hChkNotifyAlertSmartWaitTime, $GUI_ENABLE)
+		GUICtrlSetState($g_hChkNotifyAlertSwitchAccount, $GUI_ENABLE)
 		GUICtrlSetState($g_hChkNotifyAlertLaboratoryIdle, $GUI_ENABLE)
+		GUICtrlSetState($g_hChkNotifyAlertBuilderBaseSwitch, $GUI_ENABLE)
+		GUICtrlSetState($g_hBtnNotifyAll, $GUI_ENABLE)
+		GUICtrlSetState($g_hBtnNotifyReset, $GUI_ENABLE)
 	Else
 		GUICtrlSetState($g_hChkNotifyRemote, $GUI_DISABLE)
 		GUICtrlSetState($g_hTxtNotifyOrigin, $GUI_DISABLE)
 		GUICtrlSetState($g_hChkNotifyAlertMatchFound, $GUI_DISABLE)
 		GUICtrlSetState($g_hChkNotifyAlertLastRaidIMG, $GUI_DISABLE)
-		GUICtrlSetState($g_hChkNotifyAlertUpgradeWall, $GUI_DISABLE)
+		GUICtrlSetState($g_hChkNotifyAlertClanGames, $GUI_DISABLE)
 		GUICtrlSetState($g_hChkNotifyAlertLastRaidTXT, $GUI_DISABLE)
 		GUICtrlSetState($g_hChkNotifyAlertOutOfSync, $GUI_DISABLE)
 		GUICtrlSetState($g_hChkNotifyAlertTakeBreak, $GUI_DISABLE)
@@ -61,21 +65,56 @@ Func chkPBTGenabled()
 		GUICtrlSetState($g_hChkNotifyAlertBAN, $GUI_DISABLE)
 		GUICtrlSetState($g_hChkNotifyBOTUpdate, $GUI_DISABLE)
 		GUICtrlSetState($g_hChkNotifyAlertSmartWaitTime, $GUI_DISABLE)
+		GUICtrlSetState($g_hChkNotifyAlertSwitchAccount, $GUI_DISABLE)
 		GUICtrlSetState($g_hChkNotifyAlertLaboratoryIdle, $GUI_DISABLE)
+		GUICtrlSetState($g_hChkNotifyAlertBuilderBaseSwitch, $GUI_DISABLE)
+		GUICtrlSetState($g_hBtnNotifyAll, $GUI_DISABLE)
+		GUICtrlSetState($g_hBtnNotifyReset, $GUI_DISABLE)
 	EndIf
+	SetNotifyCalendarState()
 EndFunc   ;==>chkPBTGenabled
 
-Func chkNotifyHours()
-	Local $b = GUICtrlRead($g_hChkNotifyOnlyHours) = $GUI_CHECKED
-	For $i = 0 To 23
-		GUICtrlSetState($g_hChkNotifyhours[$i], $b ? $GUI_ENABLE : $GUI_DISABLE)
-	Next
-	_GUI_Value_STATE($b ? "ENABLE" : "DISABLE", $g_hChkNotifyOnlyWeekDays&"#"&$g_hChkNotifyhoursE1&"#"&$g_hChkNotifyhoursE2)
+Func SetNotifyCalendarState()
+	Local $bHoursEnabled = $g_bNotifyTGEnable And GUICtrlRead($g_hChkNotifyOnlyHours) = $GUI_CHECKED
+	Local $bWeekDaysEnabled = $bHoursEnabled And GUICtrlRead($g_hChkNotifyOnlyWeekDays) = $GUI_CHECKED
 
-	If $b = False Then
+	GUICtrlSetState($g_hChkNotifyOnlyHours, $g_bNotifyTGEnable ? $GUI_ENABLE : $GUI_DISABLE)
+	For $i = 0 To 23
+		GUICtrlSetState($g_hChkNotifyhours[$i], $bHoursEnabled ? $GUI_ENABLE : $GUI_DISABLE)
+	Next
+	GUICtrlSetState($g_hChkNotifyhoursE1, $bHoursEnabled ? $GUI_ENABLE : $GUI_DISABLE)
+	GUICtrlSetState($g_hChkNotifyhoursE2, $bHoursEnabled ? $GUI_ENABLE : $GUI_DISABLE)
+	GUICtrlSetState($g_hChkNotifyOnlyWeekDays, $bHoursEnabled ? $GUI_ENABLE : $GUI_DISABLE)
+	For $i = 0 To 6
+		GUICtrlSetState($g_hChkNotifyWeekdays[$i], $bWeekDaysEnabled ? $GUI_ENABLE : $GUI_DISABLE)
+	Next
+	GUICtrlSetState($g_ahChkNotifyWeekdaysE, $bWeekDaysEnabled ? $GUI_ENABLE : $GUI_DISABLE)
+EndFunc   ;==>SetNotifyCalendarState
+
+Func NotifySelectAll()
+	NotifySetAllOptions($GUI_CHECKED)
+EndFunc   ;==>NotifySelectAll
+
+Func NotifyResetAll()
+	NotifySetAllOptions($GUI_UNCHECKED)
+EndFunc   ;==>NotifyResetAll
+
+Func NotifySetAllOptions($iState)
+	Local $ahNotifyOptions[18] = [$g_hChkNotifyAlertLastAttack, $g_hChkNotifyAlertAnotherDevice, $g_hChkNotifyAlertCampFull, _
+			$g_hChkNotifyAlertLastRaidIMG, $g_hChkNotifyAlertLastRaidTXT, $g_hChkNotifyAlertBAN, $g_hChkNotifyBOTUpdate, _
+			$g_hChkNotifyAlertBuilderIdle, $g_hChkNotifyAlertOutOfSync, $g_hChkNotifyAlertLaboratoryIdle, $g_hChkNotifyAlertMaintenance, _
+			$g_hChkNotifyAlertMatchFound, $g_hChkNotifyAlertSmartWaitTime, $g_hChkNotifyAlertSwitchAccount, $g_hChkNotifyAlertTakeBreak, _
+			$g_hChkNotifyAlertBuilderBaseSwitch, $g_hChkNotifyAlertVillageStats, $g_hChkNotifyAlertClanGames]
+	For $hControl In $ahNotifyOptions
+		GUICtrlSetState($hControl, $iState)
+	Next
+EndFunc   ;==>NotifySetAllOptions
+
+Func chkNotifyHours()
+	If GUICtrlRead($g_hChkNotifyOnlyHours) <> $GUI_CHECKED Then
 		GUICtrlSetState($g_hChkNotifyOnlyWeekDays, $GUI_UNCHECKED)
-		chkNotifyWeekDays()
 	EndIf
+	SetNotifyCalendarState()
 EndFunc   ;==>chkNotifyHours
 
 Func chkNotifyhoursE1()
@@ -97,11 +136,7 @@ Func chkNotifyhoursE2()
 EndFunc		;==>chkNotifyhoursE2
 
 Func chkNotifyWeekDays()
-	Local $b = GUICtrlRead($g_hChkNotifyOnlyWeekDays) = $GUI_CHECKED
-	For $i = 0 To 6
-		GUICtrlSetState($g_hChkNotifyWeekdays[$i], $b ? $GUI_ENABLE : $GUI_DISABLE)
-	Next
-	GUICtrlSetState($g_ahChkNotifyWeekdaysE, $b ? $GUI_ENABLE : $GUI_DISABLE)
+	SetNotifyCalendarState()
 EndFunc	;==>chkNotifyWeekDays
 
 Func ChkNotifyWeekdaysE()

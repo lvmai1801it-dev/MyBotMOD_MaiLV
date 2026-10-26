@@ -41,24 +41,16 @@ Func StarLaboratory($bTestRun = False)
 	;Create local array to hold upgrade values
 	Local $aUpgradeValue[13] = [-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 	Local $iAvailElixir, $sElixirCount, $TimeDiff, $aArray, $Result, $aSearchForTroop
-	Local $iSelectedUpgrade = $g_iCmbStarLaboratory
+	Local $iSelectedUpgrade = 0 ; Will be determined by priority logic
 
 	If $g_sStarLabUpgradeTime <> "" Then $TimeDiff = _DateDiff("n", _NowCalc(), $g_sStarLabUpgradeTime) ; what is difference between end time and now in minutes?
 	If @error Then _logErrorDateDiff(@error)
-	If $g_bDebugSetLog Then SetDebugLog($g_avStarLabTroops[$g_iCmbStarLaboratory][3] & " Lab end time: " & $g_sStarLabUpgradeTime & ", DIFF= " & $TimeDiff, $COLOR_DEBUG)
-
+	If $g_bDebugSetLog Then SetDebugLog("Star Lab End Time: " & $g_sStarLabUpgradeTime & ", DIFF= " & $TimeDiff, $COLOR_DEBUG)
 	If Not $g_bRunState Then Return
-	If $TimeDiff <= 0 Then
-		SetLog("Checking Troop Upgrade in Star Laboratory", $COLOR_INFO)
-	Else
-		SetLog("Star Laboratory Upgrade in progress, waiting for completion", $COLOR_INFO)
-		Return False
-	EndIf
 
-	$sElixirCount = getResourcesMainScreen(705, 74)
-	SetLog("Updating village values [E]: " & $sElixirCount, $COLOR_SUCCESS)
+	SetLog("Checking Star Laboratory Status", $COLOR_INFO)
+	$sElixirCount = getResourcesMainScreen(690, 59)
 	$iAvailElixir = Number($sElixirCount)
-
 	If Not LocateStarLab() Then Return False
 
 	; Find Research Button
@@ -73,7 +65,7 @@ Func StarLaboratory($bTestRun = False)
 		Return False
 	EndIf
 
-	; Lab window coor correction
+	; Lab window coordinate correction
 	Local $aiCloseBtn = findButton("CloseWindow")
 	If Not IsArray($aiCloseBtn) Then
 		SetLog("Trouble finding lab close button, try again...", $COLOR_WARNING)
@@ -83,8 +75,9 @@ Func StarLaboratory($bTestRun = False)
 	EndIf
 
 	; check for upgrade in process - Look for light green in upper right corner of lab window.
-	If _ColorCheck(_GetPixelColor(790, 120 + $g_iMidOffsetY, True), Hex(0xA2CB6C, 6), 20) Then
-		SetLog("Laboratory Upgrade in progress, waiting for completion", $COLOR_INFO)
+	If _ColorCheck(_GetPixelColor(650, 135 + $g_iMidOffsetY, True), Hex(0xA2CB6C, 6), 20) Then
+		SetLog("Star Laboratory Status: Running", $COLOR_INFO)
+		SetLog("Star Laboratory upgrade in progress, waiting for completion")
 		If _Sleep($DELAYLABORATORY2) Then Return
 		; upgrade in process and time not recorded so update completion time!
 		Local $sLabTimeOCR = getRemainTLaboratory(220, 200 + $g_iMidOffsetY)
@@ -102,6 +95,9 @@ Func StarLaboratory($bTestRun = False)
 		EndIf
 		CloseWindow()
 		Return False
+	Else
+		SetLog("Star Laboratory Status: Stopped", $COLOR_DEBUG)
+		SetLog("Checking available troop upgrades")
 	EndIf
 
 	; reset lab troop positions to default
@@ -125,7 +121,7 @@ Func StarLaboratory($bTestRun = False)
 			EndIf
 		Next
 	Else
-		SetLog("No upgradable troop found!", $COLOR_ERROR)
+		SetLog("No upgrades available or troops are already at max level")
 		CloseWindow()
 		Return False
 	EndIf
@@ -152,13 +148,25 @@ Func StarLaboratory($bTestRun = False)
 		$aUpgradeValue[$i] = Number($aUpgradeValue[$i])
 	Next
 
-	If $aUpgradeValue[$g_iCmbStarLaboratory] = -1 Then
-		Local $iCheapestCost = 0
-		If $g_iCmbStarLaboratory = 0 Then
-			SetLog("No dedicated troop for upgrade selected.", $COLOR_INFO)
-		Else
-			SetLog("No upgrade for " & $g_avStarLabTroops[$g_iCmbStarLaboratory][3] & " available.", $COLOR_INFO)
+	; Try upgrade priorities in order
+	Local $bUpgradeFound = False
+	Local $iSelectedUpgrade = 0
+	For $iPriority = 0 To 2
+		If $g_aiStarLabUpgradePriority[$iPriority] = 0 Then ContinueLoop ; Skip if "Any" selected
+		
+		SetLog("Priority " & ($iPriority + 1) & " Upgrade: " & $g_avStarLabTroops[$g_aiStarLabUpgradePriority[$iPriority]][3])
+		If $aUpgradeValue[$g_aiStarLabUpgradePriority[$iPriority]] > 0 Then ; upgrade available
+			$iSelectedUpgrade = $g_aiStarLabUpgradePriority[$iPriority]
+			$bUpgradeFound = True
+			SetLog($g_avStarLabTroops[$iSelectedUpgrade][3] & " selected for upgrade (priority " & ($iPriority + 1) & "), upgrade cost = " & _NumberFormat($aUpgradeValue[$iSelectedUpgrade], True), $COLOR_INFO)
+			ExitLoop
 		EndIf
+	Next
+
+	If Not $bUpgradeFound Then
+		; No priorities available, find cheapest upgrade
+		SetLog("No upgrade priorities available, finding cheapest upgrade", $COLOR_INFO)
+		Local $iCheapestCost = 0
 		For $i = 1 To UBound($aUpgradeValue) - 1
 			If $aUpgradeValue[$i] > 0 Then ; is upgradeable
 				If $g_bDebugSetLog Then SetLog($g_avStarLabTroops[$i][3] & " is upgradeable, Value = " & $aUpgradeValue[$i], $COLOR_DEBUG)
@@ -168,12 +176,12 @@ Func StarLaboratory($bTestRun = False)
 				EndIf
 			EndIf
 		Next
-		If $g_iCmbStarLaboratory = $iSelectedUpgrade Then
-			SetLog("No alternate troop for upgrade found", $COLOR_WARNING)
+		If $iSelectedUpgrade > 0 Then
+			SetLog($g_avStarLabTroops[$iSelectedUpgrade][3] & " selected for upgrade, upgrade cost = " & _NumberFormat($aUpgradeValue[$iSelectedUpgrade], True), $COLOR_INFO)
+		Else
+			SetLog("No Star Lab upgrades available", $COLOR_WARNING)
 			CloseWindow()
 			Return False
-		Else
-			SetLog($g_avStarLabTroops[$iSelectedUpgrade][3] & " selected for upgrade, upgrade cost = " & _NumberFormat($aUpgradeValue[$iSelectedUpgrade], True), $COLOR_INFO)
 		EndIf
 	EndIf
 
@@ -183,7 +191,7 @@ Func StarLaboratory($bTestRun = False)
 		CloseWindow()
 		Return False
 	ElseIf StarLabUpgrade($iSelectedUpgrade, $bTestRun) = True Then
-		SetLog("Elixir used = " & _NumberFormat($aUpgradeValue[$iSelectedUpgrade], True), $COLOR_INFO)
+		SetLog("Elixir Used: " & _NumberFormat($aUpgradeValue[$iSelectedUpgrade], True), $COLOR_INFO)
 		If _Sleep(1500) Then Return
 		CloseWindow()
 		Return True
@@ -191,9 +199,8 @@ Func StarLaboratory($bTestRun = False)
 
 	ClearScreen()
 	Return False
-
 EndFunc   ;==>StarLaboratory
-;
+
 Func StarLabUpgrade($iSelectedUpgrade, $bTestRun = False)
 	Local $StartTime, $EndTime, $EndPeriod, $Result, $TimeAdd = 0
 	Select
@@ -233,7 +240,7 @@ Func StarLabUpgrade($iSelectedUpgrade, $bTestRun = False)
 			EndIf
 
 			; double check enough elixir?
-			If _PixelSearch($g_avStarLabTroops[$iSelectedUpgrade][0] + 67, $g_avStarLabTroops[$iSelectedUpgrade][1] + 98, $g_avStarLabTroops[$iSelectedUpgrade][0] + 69, $g_avStarLabTroops[$iSelectedUpgrade][0] + 103, $sStarColorNoLoot, 20) <> 0 Then ; Check for Red Zero = means not enough loot!
+			If _PixelSearch($g_avStarLabTroops[$iSelectedUpgrade][0] + 67, $g_avStarLabTroops[$iSelectedUpgrade][1] + 98, $g_avStarLabTroops[$iSelectedUpgrade][0] + 69, $g_avStarLabTroops[$iSelectedUpgrade][1] + 103, $sStarColorNoLoot, 20) <> 0 Then ; Check for Red Zero = means not enough loot!
 				SetLog("Missing Loot to upgrade " & $g_avStarLabTroops[$iSelectedUpgrade][3] & " (secondary check after Upgrade Value read failed)", $COLOR_ERROR)
 				If _Sleep($DELAYLABUPGRADE2) Then Return
 				CloseWindow()
@@ -265,22 +272,15 @@ Func StarLabUpgrade($iSelectedUpgrade, $bTestRun = False)
 
 				If Not $bTestRun Then
 					Click(695, 580 + $g_iMidOffsetY, 1, 120, "#0202") ; Everything is good - Click the upgrade button
-					If $iSelectedUpgrade = $g_iCmbStarLaboratory Then
-						;HArchH When upgraded user's choice, reset to "Any" for the next time.
-						$g_iCmbStarLaboratory = 0 ; Reset user choice to "Any".
-						_GUICtrlComboBox_SetCurSel($g_hCmbStarLaboratory, $g_iCmbStarLaboratory)
-						_GUICtrlSetImage($g_hPicStarLabUpgrade, $g_sLibIconPath, $g_avStarLabTroops[$g_iCmbStarLaboratory][4]) ; Set the corresponding image.
-						SetLog("Upgraded user's choice. Resetting to Any.", $COLOR_INFO)
-						SaveBuildingConfig() ;Preserve the "Any" value.
-						If _Sleep($DELAYLABUPGRADE1) Then Return
-					EndIf
+					SetLog("Star Lab upgrade started for " & $g_avStarLabTroops[$iSelectedUpgrade][3], $COLOR_SUCCESS)
+					If _Sleep($DELAYLABUPGRADE1) Then Return
 				EndIf
 			EndIf
 
 			If isGemOpen(True) = False Then ; check for gem window
 				; check for green button to use gems to finish upgrade, checking if upgrade actually started
 				If Not (_ColorCheck(_GetPixelColor(660, 185 + $g_iMidOffsetY, True), Hex(0x6DBC1F, 6), 15) Or _ColorCheck(_GetPixelColor(720, 185 + $g_iMidOffsetY, True), Hex(0x6DBC1F, 6), 15)) Then
-					SetLog("Something went wrong with " & $g_avStarLabTroops[$iSelectedUpgrade][3] & " Upgrade, try again.", $COLOR_ERROR)
+					SetLog("Something went wrong with " & $g_avStarLabTroops[$iSelectedUpgrade][3] & " upgrade, try again", $COLOR_ERROR)
 					CloseWindow()
 					Return False
 				EndIf
@@ -290,7 +290,7 @@ Func StarLabUpgrade($iSelectedUpgrade, $bTestRun = False)
 				If _Sleep($DELAYLABUPGRADE2) Then Return
 				Return True
 			Else
-				SetLog("Oops, Gems required for " & $g_avStarLabTroops[$iSelectedUpgrade][3] & " Upgrade, try again.", $COLOR_ERROR)
+				SetLog("Oops, Gems required for " & $g_avStarLabTroops[$iSelectedUpgrade][3] & " upgrade, try again", $COLOR_ERROR)
 			EndIf
 	EndSelect
 	CloseWindow()
@@ -341,31 +341,28 @@ Func LocateStarLab()
 		Local $aResult = BuildingInfo(242, 475 + $g_iBottomOffsetY) ; Get building name and level with OCR
 		If $aResult[0] = 2 Then ; We found a valid building name
 			If StringInStr($aResult[1], "Lab") = True Then ; we found the Star Laboratory
-				SetLog("Star Laboratory located.", $COLOR_INFO)
-				SetLog("It reads as Level " & $aResult[2] & ".", $COLOR_INFO)
+				SetLog("Star Laboratory Level: " & $aResult[2], $COLOR_INFO)
 				Return True
 			Else
 				ClearScreen()
-				SetDebugLog("Stored Star Laboratory Position is not valid.", $COLOR_ERROR)
-				SetDebugLog("Found instead: " & $aResult[1] & ", " & $aResult[2] & " !", $COLOR_DEBUG)
-				SetDebugLog("Village position: " & $g_aiStarLaboratoryPos[0] & ", " & $g_aiStarLaboratoryPos[1], $COLOR_DEBUG, True)
+				SetDebugLog("Stored Star Laboratory Position is not valid", $COLOR_ERROR)
+				SetDebugLog("Found Instead: " & $aResult[1] & ", " & $aResult[2] & " !", $COLOR_DEBUG)
+				SetDebugLog("Village Position: " & $g_aiStarLaboratoryPos[0] & ", " & $g_aiStarLaboratoryPos[1], $COLOR_DEBUG, True)
 				ConvertToVillagePos($g_aiStarLaboratoryPos[0], $g_aiStarLaboratoryPos[1])
-				SetDebugLog("Real position: " & $g_aiStarLaboratoryPos[0] & ", " & $g_aiStarLaboratoryPos[1], $COLOR_DEBUG, True)
+				SetDebugLog("Real Position: " & $g_aiStarLaboratoryPos[0] & ", " & $g_aiStarLaboratoryPos[1], $COLOR_DEBUG, True)
 				$g_aiStarLaboratoryPos[0] = -1
 				$g_aiStarLaboratoryPos[1] = -1
 			EndIf
 		Else
 			ClearScreen()
 			SetDebugLog("Stored Star Laboratory Position is not valid.", $COLOR_ERROR)
-			SetDebugLog("Village position: " & $g_aiStarLaboratoryPos[0] & ", " & $g_aiStarLaboratoryPos[1], $COLOR_DEBUG, True)
+			SetDebugLog("Village Position: " & $g_aiStarLaboratoryPos[0] & ", " & $g_aiStarLaboratoryPos[1], $COLOR_DEBUG, True)
 			ConvertToVillagePos($g_aiStarLaboratoryPos[0], $g_aiStarLaboratoryPos[1])
-			SetDebugLog("Real position: " & $g_aiStarLaboratoryPos[0] & ", " & $g_aiStarLaboratoryPos[1], $COLOR_DEBUG, True)
+			SetDebugLog("Real Position: " & $g_aiStarLaboratoryPos[0] & ", " & $g_aiStarLaboratoryPos[1], $COLOR_DEBUG, True)
 			$g_aiStarLaboratoryPos[0] = -1
 			$g_aiStarLaboratoryPos[1] = -1
 		EndIf
 	EndIf
-
-	SetLog("Looking for Star Laboratory...", $COLOR_ACTION)
 
 	Local $sCocDiamond = $CocDiamondDCD
 	Local $sRedLines = $sCocDiamond
@@ -422,37 +419,36 @@ Func LocateStarLab()
 		Local $aResult = BuildingInfo(242, 475 + $g_iBottomOffsetY) ; Get building name and level with OCR
 		If $aResult[0] = 2 Then ; We found a valid building name
 			If StringInStr($aResult[1], "Lab") = True Then ; we found the Star Laboratory
-				SetLog("Star Laboratory located.", $COLOR_INFO)
-				SetLog("It reads as Level " & $aResult[2] & ".", $COLOR_INFO)
+				SetLog("Star Laboratory Level: " & $aResult[2], $COLOR_INFO)
 				Return True
 			Else
 				ClearScreen()
-				SetDebugLog("Found Star Laboratory Position is not valid.", $COLOR_ERROR)
-				SetDebugLog("Found instead: " & $aResult[1] & ", " & $aResult[2] & " !", $COLOR_DEBUG)
-				SetDebugLog("Village position: " & $g_aiStarLaboratoryPos[0] & ", " & $g_aiStarLaboratoryPos[1], $COLOR_DEBUG, True)
+				SetDebugLog("Found Star Laboratory Position is not valid", $COLOR_ERROR)
+				SetDebugLog("Found Instead: " & $aResult[1] & ", " & $aResult[2] & " !", $COLOR_DEBUG)
+				SetDebugLog("Village Position: " & $g_aiStarLaboratoryPos[0] & ", " & $g_aiStarLaboratoryPos[1], $COLOR_DEBUG, True)
 				ConvertToVillagePos($g_aiStarLaboratoryPos[0], $g_aiStarLaboratoryPos[1])
-				SetDebugLog("Real position: " & $g_aiStarLaboratoryPos[0] & ", " & $g_aiStarLaboratoryPos[1], $COLOR_DEBUG, True)
+				SetDebugLog("Real Position: " & $g_aiStarLaboratoryPos[0] & ", " & $g_aiStarLaboratoryPos[1], $COLOR_DEBUG, True)
 				$g_aiStarLaboratoryPos[0] = -1
 				$g_aiStarLaboratoryPos[1] = -1
 			EndIf
 		Else
 			ClearScreen()
-			SetDebugLog("Found Star Laboratory Position is not valid.", $COLOR_ERROR)
-			SetDebugLog("Village position: " & $g_aiStarLaboratoryPos[0] & ", " & $g_aiStarLaboratoryPos[1], $COLOR_DEBUG, True)
+			SetDebugLog("Found Star Laboratory Position is not valid", $COLOR_ERROR)
+			SetDebugLog("Village Position: " & $g_aiStarLaboratoryPos[0] & ", " & $g_aiStarLaboratoryPos[1], $COLOR_DEBUG, True)
 			ConvertToVillagePos($g_aiStarLaboratoryPos[0], $g_aiStarLaboratoryPos[1])
-			SetDebugLog("Real position: " & $g_aiStarLaboratoryPos[0] & ", " & $g_aiStarLaboratoryPos[1], $COLOR_DEBUG, True)
+			SetDebugLog("Real Position: " & $g_aiStarLaboratoryPos[0] & ", " & $g_aiStarLaboratoryPos[1], $COLOR_DEBUG, True)
 			$g_aiStarLaboratoryPos[0] = -1
 			$g_aiStarLaboratoryPos[1] = -1
 		EndIf
 	EndIf
 
-	SetLog("Can not find Star Laboratory.", $COLOR_ERROR)
+	SetLog("Cannot find Star Laboratory", $COLOR_ERROR)
 	Return False
 EndFunc   ;==>LocateStarLab
 
 Func StarLabGuiDisplay()
 
-	Local Static $iLastTimeChecked[8]
+	Local Static $iLastTimeChecked[$g_iSwitchAccMaxAccounts]
 	If $g_bFirstStart Then $iLastTimeChecked[$g_iCurAccount] = ""
 
 	; Check if is a valid date and Calculated the number of minutes from remain time Lab and now
@@ -491,7 +487,8 @@ Func StarLabGuiDisplay()
 
 	; check for upgrade in process - Look for light green in upper right corner of lab window.
 	If _ColorCheck(_GetPixelColor(790, 120 + $g_iMidOffsetY, True), Hex(0xA2CB6C, 6), 20) Then
-		SetLog("Star Laboratory Upgrade in progress, waiting for completion", $COLOR_INFO)
+		SetLog("StarLaboratory Status: Running", $COLOR_INFO)
+		SetLog("Star Laboratory upgrade in progress, waiting for completion")
 		If _Sleep($DELAYLABORATORY2) Then Return
 		; upgrade in process and time not recorded so update completion time!
 		Local $sLabTimeOCR = getRemainTLaboratory(220, 200 + $g_iMidOffsetY)
@@ -510,7 +507,7 @@ Func StarLabGuiDisplay()
 			Return False
 		EndIf
 	Else
-		SetLog("No Star Laboratory Upgrade in progress", $COLOR_INFO)
+		SetLog("Star Laboratory Status: Stopped", $COLOR_DEBUG)
 		$g_sStarLabUpgradeTime = ""
 		StarLabStatusGUIUpdate()
 		If ProfileSwitchAccountEnabled() Then SwitchAccountVariablesReload("Save") ; saving $asStarLabUpgradeTime[$g_iCurAccount] = $g_sStarLabUpgradeTime for instantly displaying in multi-stats

@@ -14,7 +14,6 @@
 ; Example .......: No
 ; ===============================================================================================================================
 Func WaitForClouds()
-
 	SetDebugLog("Begin WaitForClouds:", $COLOR_DEBUG1)
 	$g_bCloudsActive = True
 
@@ -22,6 +21,7 @@ Func WaitForClouds()
 	Local $bigCount = 0, $iLastTime = 0
 	Local $hMinuteTimer, $iSearchTime
 	Local $bEnabledGUI = False
+	Local Const $iCloudRestartGameMinutes = 3
 
 	Local $maxSearchCount = 360 ; $maxSearchCount * 250ms ($DELAYGETRESOURCES1) = seconds wait time before reset in lower leagues: 360*250ms = 1.5 minutes
 	Local $maxLongSearchCount = 3 ; $maxLongSearchCount * $maxSearchCount = seconds total wait time in higher leagues: ; 4.5 minutes, set a value here but is never used unless error
@@ -67,7 +67,7 @@ Func WaitForClouds()
 				$bigCount += 1 ; Increment long wait time fail safe timer
 				If $bigCount > $maxLongSearchCount Then ; check maximum wait time
 					$iSearchTime = __TimerDiff($hMinuteTimer) / 60000 ;get time since minute timer start in minutes
-					SetLog("Spent " & $iSearchTime & " minutes in Clouds searching, Restarting CoC and Bot...", $COLOR_ERROR)
+					SetLog("Spent " & $iSearchTime & " minutes in clouds searching, restarting Clash of Clans and Bot...", $COLOR_ERROR)
 					$g_bIsClientSyncError = False ; disable fast OOS restart if not simple error and restarting CoC
 					$g_bRestart = True
 					CloseCoC(True)
@@ -76,18 +76,20 @@ Func WaitForClouds()
 				$iCount = 0 ; reset outer loop value
 			EndIf
 		EndIf
-		If (Mod($iCount, 10) = 0 And checkObstacles_Network(False, False)) Then
-			; network error -> restart CoC
-			$g_bIsClientSyncError = True
-			$g_bRestart = True
-			CloseCoC(True)
-			ExitLoop
+		If Mod($iCount, 10) = 0 And checkObstacles_Network(False, True) Then
+			If $g_bRestart Then ExitLoop
+			$iCount -= 1 ; Block cloud processing until reconnection clears or recovery runs.
+			ContinueLoop
 		EndIf
 		If $g_bDebugSetLog Then _GUICtrlStatusBar_SetTextEx($g_hStatusBar, " Status: Loop to clean screen without Clouds, # " & $iCount)
 		$iSearchTime = __TimerDiff($hMinuteTimer) / 60000 ;get time since minute timer start in minutes
 		If $iSearchTime >= $iLastTime + 1 Then
 			SetLog("Cloud wait time " & StringFormat("%.1f", $iSearchTime) & " minute(s)", $COLOR_INFO)
 			$iLastTime += 1
+			If $iSearchTime >= $iCloudRestartGameMinutes Then
+				RestartGameInstanceFromCloudWait()
+				ExitLoop
+			EndIf
 			; once a minute safety checks for search fail/retry msg and Personal Break events and early detection if CoC app has crashed inside emulator (Bluestacks issue mainly)
 			If chkAttackSearchFail() = 2 Or GetAndroidProcessPID() = 0 Then
 				resetAttackSearch()
@@ -95,7 +97,7 @@ Func WaitForClouds()
 			EndIf
 			; Check if CoC app restarted without notice (where android restarted app automatically with same PID), and returned to main base
 			If _CheckPixel($aIsMain, $g_bCapturePixel) Then
-				SetLog("Strange error detected! 'WaitforClouds' returned to main base unexpectedly, OOS restart initiated", $COLOR_ERROR)
+				SetLog("Detected Unexpected Return During Cloud Search!", $COLOR_ERROR)
 				$g_bRestart = True ; Set flag for OOS restart condition
 				resetAttackSearch()
 				ExitLoop
@@ -123,8 +125,20 @@ Func WaitForClouds()
 
 	; add delay as few clouds might be still on screen (better to check for remaining clouds at top right?)
 	If _Sleep($DELAYCLOUDSCLEARED) Then Return
-
 EndFunc   ;==>WaitForClouds
+
+Func RestartGameInstanceFromCloudWait()
+	$g_bIsClientSyncError = False
+	$g_bRestart = True
+
+	SetLog("Restarting Game Instance", $COLOR_ACTION)
+	CloseCoC()
+	If _Sleep(2500) Then Return
+	OpenCoC()
+	If _Sleep(5000) Then Return
+	waitMainScreen()
+	If Not $g_bRunState Then Return
+EndFunc   ;==>RestartGameInstanceFromCloudWait
 
 Func EnableLongSearch()
 	; verifies that chat tab is active on cloud window due long search time, and open/closes chat window to avoid app closing while waiting for base to attack
@@ -158,7 +172,6 @@ Func EnableLongSearch()
 		; Just in Case
 		If $iCount > 6 Then Return True ; 4500 + 5000 * 6 = 1 min
 	WEnd
-
 EndFunc   ;==>EnableLongSearch
 
 Func chkSearchText()

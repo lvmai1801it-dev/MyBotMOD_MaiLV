@@ -24,6 +24,7 @@ Func _CaptureRegion(Const $iLeft = 0, Const $iTop = 0, Const $iRight = $g_iGAME_
 	If $ReturnLocal_hHBitmap Then
 		Local $_hHBitmap
 		_CaptureGameScreen($_hHBitmap, $iLeft, $iTop, $iRight, $iBottom)
+		If @error Then Return SetError(1, 0, 0)
 		Return $_hHBitmap
 	EndIf
 
@@ -31,6 +32,7 @@ Func _CaptureRegion(Const $iLeft = 0, Const $iTop = 0, Const $iRight = $g_iGAME_
 		GdiDeleteHBitmap($g_hHBitmap)
 	EndIf
 	_CaptureGameScreen($g_hHBitmap, $iLeft, $iTop, $iRight, $iBottom)
+	If @error Or $g_hHBitmap = 0 Then Return SetError(1, 0, 0)
 
 	If $g_hBitmap <> 0 Then
 		GdiDeleteBitmap($g_hBitmap)
@@ -65,6 +67,7 @@ Func _CaptureRegion2(Const $iLeft = 0, Const $iTop = 0, Const $iRight = $g_iGAME
 		GdiDeleteHBitmap($g_hHBitmap2)
 	EndIf
 	_CaptureGameScreen($g_hHBitmap2, $iLeft, $iTop, $iRight, $iBottom)
+	If @error Or $g_hHBitmap2 = 0 Then Return SetError(1, 0, 0)
 
 EndFunc   ;==>_CaptureRegion2
 
@@ -113,9 +116,24 @@ Func _CaptureGameScreen(ByRef $_hHBitmap, Const $iLeft = 0, Const $iTop = 0, Con
 				$_hHBitmap = AndroidScreencap($iL, $iT, $iW, $iH)
 			Else
 				$SuspendMode = ResumeAndroid(False)
-				;Local $hCtrl = ControlGetHandle($g_hAndroidWindow, $g_sAppPaneName, $g_sAppClassInstance)
-				Local $hCtrl = ControlGetHandle(GetCurrentAndroidHWnD(), $g_sAppPaneName, $g_sAppClassInstance)
-				If $hCtrl = 0 Then SetLog("AndroidHandle not found, contact support", $COLOR_ERROR)
+				; Resolve the renderer handle.
+				Local $hCtrl = IsHWnd($g_sAppClassInstance) ? $g_sAppClassInstance : _
+						ControlGetHandle(GetCurrentAndroidHWnD(), $g_sAppPaneName, $g_sAppClassInstance)
+				If $hCtrl = 0 Then
+					; Refresh a recreated render handle.
+					GetAndroidControlClass(True, True)
+					$hCtrl = IsHWnd($g_sAppClassInstance) ? $g_sAppClassInstance : _
+							ControlGetHandle(GetCurrentAndroidHWnD(), $g_sAppPaneName, $g_sAppClassInstance)
+					If $hCtrl = 0 Then
+						Static $hAndroidHandleLogTimer = 0
+						If $hAndroidHandleLogTimer = 0 Or __TimerDiff($hAndroidHandleLogTimer) >= 5000 Then
+							SetLog("AndroidHandle not found, contact support", $COLOR_ERROR)
+							$hAndroidHandleLogTimer = __TimerInit()
+						EndIf
+						SuspendAndroid($SuspendMode, False)
+						Return SetError(1, 0, 0)
+					EndIf
+				EndIf
 				Local $hDC_Capture = _WinAPI_GetDC($hCtrl)
 				Local $hMemDC = _WinAPI_CreateCompatibleDC($hDC_Capture)
 				$_hHBitmap = _WinAPI_CreateCompatibleBitmap($hDC_Capture, $iW, $iH)
@@ -128,8 +146,8 @@ Func _CaptureGameScreen(ByRef $_hHBitmap, Const $iLeft = 0, Const $iTop = 0, Con
 				_WinAPI_SelectObject($hMemDC, $_hHBitmap)
 				_WinAPI_BitBlt($hMemDC, 0, 0, $iW, $iH, $hDC_Capture, $iL, $iT, $SRCCOPY)
 
-				_WinAPI_DeleteDC($hMemDC)
 				_WinAPI_SelectObject($hMemDC, $hObjectOld)
+				_WinAPI_DeleteDC($hMemDC)
 				_WinAPI_ReleaseDC($hCtrl, $hDC_Capture)
 				SuspendAndroid($SuspendMode, False)
 			EndIf
@@ -230,6 +248,7 @@ EndFunc   ;==>_CaptureRegion2Sync
 ; ===============================================================================================================================
 Func _CaptureRegions()
 	_CaptureRegion()
+	If @error Then Return SetError(1, 0, False)
 	_CaptureRegion2Sync()
 	Return True
 EndFunc   ;==>_CaptureRegions

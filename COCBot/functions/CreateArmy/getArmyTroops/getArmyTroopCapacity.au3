@@ -34,7 +34,7 @@ Func getArmyTroopCapacity($bOpenArmyWindow = False, $bCloseArmyWindow = False, $
 	Local $aGetArmyCap[3] = ["", "", ""]
 	Local $sArmyInfo = ""
 	Local $iCount = 0
-	Local $sInputbox, $iHoldCamp
+	Local $sInputbox, $sHoldCamp = ""
 	Local $tmpTotalCamp = 0
 	Local $tmpCurCamp = 0
 
@@ -53,7 +53,8 @@ Func getArmyTroopCapacity($bOpenArmyWindow = False, $bCloseArmyWindow = False, $
 		$aGetArmyCap = StringSplit($sArmyInfo, "#") ; split the trained troop number from the total troop number
 		If IsArray($aGetArmyCap) Then
 			If $aGetArmyCap[0] > 1 Then ; check if the OCR was valid and returned both values
-				If Number($aGetArmyCap[2]) < 10 Or Mod(Number($aGetArmyCap[2]), 5) <> 0 Then ; check to see if camp size is multiple of 5, or try to read again
+				Local $cap = Number($aGetArmyCap[2])
+				If $cap < 10 Or $cap > 999 Or Number($aGetArmyCap[1]) > $cap Then
 					If $g_bDebugSetLogTrain Then SetLog(" OCR value is not valid camp size", $COLOR_DEBUG)
 					ContinueLoop
 				EndIf
@@ -61,8 +62,9 @@ Func getArmyTroopCapacity($bOpenArmyWindow = False, $bCloseArmyWindow = False, $
 				If $g_bDebugSetLogTrain Then SetLog("$tmpCurCamp = " & $tmpCurCamp, $COLOR_DEBUG)
 				$tmpTotalCamp = Number($aGetArmyCap[2])
 				If $g_bDebugSetLogTrain Then SetLog("$g_iTotalCampSpace = " & $g_iTotalCampSpace & ", Camp OCR = " & $tmpTotalCamp, $COLOR_DEBUG)
-				If $iHoldCamp = $tmpTotalCamp Then ExitLoop ; check to make sure the OCR read value is same in 2 reads before exit
-				$iHoldCamp = $tmpTotalCamp ; Store last OCR read value
+				Local $sCurrentRead = $tmpCurCamp & "#" & $tmpTotalCamp
+				If $sHoldCamp = $sCurrentRead Then ExitLoop
+				$sHoldCamp = $sCurrentRead
 			EndIf
 		EndIf
 
@@ -73,7 +75,7 @@ Func getArmyTroopCapacity($bOpenArmyWindow = False, $bCloseArmyWindow = False, $
 		If $g_iTotalCampSpace = 0 Then $g_iTotalCampSpace = $tmpTotalCamp
 		If $g_bDebugSetLogTrain Then SetLog("$g_CurrentCampUtilization = " & $g_CurrentCampUtilization & ", $g_iTotalCampSpace = " & $g_iTotalCampSpace, $COLOR_DEBUG)
 	Else
-		SetLog("Army size read error, Troop numbers may not train correctly", $COLOR_ERROR) ; log if there is read error
+		SetLog("Army size read error, troop numbers may not train correctly", $COLOR_ERROR) ; log if there is read error
 		$g_CurrentCampUtilization = 0
 		CheckOverviewFullArmy()
 	EndIf
@@ -116,10 +118,10 @@ Func getArmyTroopCapacity($bOpenArmyWindow = False, $bCloseArmyWindow = False, $
 	If $g_bTotalCampForced = True Then $g_iTotalCampSpace = Number($g_iTotalCampForcedValue)
 
 	If $g_iTotalCampSpace > 0 Then
-		If $bSetLog Then SetLog("Total Army Camp Capacity: " & $g_CurrentCampUtilization & "/" & $g_iTotalCampSpace & " (" & Int($g_CurrentCampUtilization / $g_iTotalCampSpace * 100) & "%)")
+		If $bSetLog Then SetLog("Total Army Camp Capacity: " & $g_CurrentCampUtilization & "/" & $g_iTotalCampSpace & " (" & Int($g_CurrentCampUtilization / $g_iTotalCampSpace * 100) & "%)", $COLOR_INFO)
 		$g_iArmyCapacity = Int($g_CurrentCampUtilization / $g_iTotalCampSpace * 100)
 	Else
-		If $bSetLog Then SetLog("Total Army Camp Capacity: " & $g_CurrentCampUtilization & "/" & $g_iTotalCampSpace)
+		If $bSetLog Then SetLog("Total Army Camp Capacity: " & $g_CurrentCampUtilization & "/" & $g_iTotalCampSpace, $COLOR_ERROR)
 		$g_iArmyCapacity = 0
 	EndIf
 

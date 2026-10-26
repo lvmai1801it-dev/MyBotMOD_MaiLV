@@ -45,14 +45,14 @@ Func BattleMachineUpgrade($test = False)
 	If @error Then Return SetError(0, 0, 0)
 	If $sInfo[0] > 1 Or $sInfo[0] = "" Then
 		If StringInStr($sInfo[1], "Mach") = 0 Then
-			SetLog("Bad Battle Machine location", $COLOR_ACTION)
+			SetLog("Bad Battle Machine Location", $COLOR_ACTION)
 			Return
 		Else
 			If $sInfo[2] <> "" Then
 				$aHeroLevel = Number($sInfo[2]) ; grab hero level from building info array
-				SetLog("Your Battle Machine level read as: " & $aHeroLevel, $COLOR_SUCCESS)
+				SetLog("Battle Machine Level: " & $aHeroLevel, $COLOR_SUCCESS)
 				If $aHeroLevel = $g_iMaxBattleMachineLevel Then ; max hero
-					SetLog("Your Battle Machine is at max level, cannot upgrade anymore!", $COLOR_INFO)
+					SetLog("Battle Machine is at max level, cannot upgrade anymore!", $COLOR_INFO)
 					$g_bBattleMachineUpgrade = False ; turn Off the Battle Machine upgrade
 					GUICtrlSetState($g_hChkBattleMachineUpgrade, $GUI_UNCHECKED)
 					ClearScreen("Defaut", False)
@@ -60,7 +60,7 @@ Func BattleMachineUpgrade($test = False)
 				EndIf
 				$g_CombinedMachineLevel = $g_CurrentBattleMachineLevel + $g_CurrentBattleCopterLevel
 				If $g_CombinedMachineLevel >= $g_MaxCombinedMachineLevel Then ; Enough For BoB Control level 5
-					SetLog("Your combined machine level is enough !", $COLOR_INFO)
+					SetLog("Your combined machine level is enough!", $COLOR_INFO)
 					$g_bBattleMachineUpgrade = False ; turn Off the Battle Machine upgrade
 					$g_bBattleCopterUpgrade = False ; turn Off the Battle Copter upgrade
 					GUICtrlSetState($g_hChkBattleMachineUpgrade, $GUI_UNCHECKED)
@@ -70,7 +70,7 @@ Func BattleMachineUpgrade($test = False)
 					Return
 				EndIf
 			Else
-				SetLog("Your Battle Machine Level was not found!", $COLOR_INFO)
+				SetLog("Battle Machine Level was not found!", $COLOR_INFO)
 				ClearScreen("Defaut", False)
 				Return
 			EndIf
@@ -84,7 +84,7 @@ Func BattleMachineUpgrade($test = False)
 	If _Sleep($DELAYUPGRADEHERO1) Then Return
 
 	If $g_aiCurrentLootBB[$eLootElixirBB] < ($g_afBattleMachineUpgCost[$aHeroLevel] * 1000000) * (1 - Number($g_iBuilderBoostDiscount) / 100) Then
-		SetLog("Battle Machine Upg failed, require " & ($g_afBattleMachineUpgCost[$aHeroLevel] * 1000000) * (1 - Number($g_iBuilderBoostDiscount) / 100) & " elixir!", $COLOR_INFO)
+		SetLog("Battle Machine upgrade failed, require " & ($g_afBattleMachineUpgCost[$aHeroLevel] * 1000000) * (1 - Number($g_iBuilderBoostDiscount) / 100) & " elixir!", $COLOR_INFO)
 		ClearScreen("Defaut", False)
 		Return
 	EndIf
@@ -112,7 +112,7 @@ Func BattleMachineUpgrade($test = False)
 					Return False
 				EndIf
 
-				SetLog("Battle Machine Upgrade complete", $COLOR_SUCCESS)
+				SetLog("Battle Machine Upgrade Complete", $COLOR_SUCCESS)
 				$g_iFreeBuilderCountBB -= 1
 				If _Sleep($DELAYUPGRADEHERO2) Then Return ; Wait for window to close
 			Else
@@ -134,6 +134,16 @@ EndFunc   ;==>BattleMachineUpgrade
 
 ; based on LocateStarLab
 Func LocateBattleMachine()
+	Local $wasRunState = $g_bRunState
+	$g_bRunState = True
+	AndroidShield("LocateBattleMachine 1") ; Update shield status due to manual $g_bRunState
+	Local $Result = _LocateBattleMachine()
+	$g_bRunState = $wasRunState
+	AndroidShield("LocateBattleMachine 2") ; Update shield status due to manual $g_bRunState
+	Return $Result
+EndFunc   ;==>LocateBattleMachine
+
+Func _LocateBattleMachine()
 	Local $sImgDir = @ScriptDir & "\imgxml\Buildings\BattleMachine\"
 	; Zoomout before locating
 	ZoomOut()
@@ -141,7 +151,7 @@ Func LocateBattleMachine()
 	CollectBuilderBase()
 	If _Sleep($DELAYRUNBOT3) Then Return
 
-	If $g_aiBattleMachinePos[0] > 0 And $g_aiBattleMachinePos[1] > 0 Then
+	If $g_aiBattleMachinePos[0] <> -1 And $g_aiBattleMachinePos[1] <> -1 And $g_aiBattleMachinePos[2] <> -1 Then
 		BuildingClickP($g_aiBattleMachinePos, "#0197")
 		If _Sleep($DELAYLABORATORY1) Then Return ; Wait for description to popup
 
@@ -149,32 +159,30 @@ Func LocateBattleMachine()
 
 		If $aResult[0] = 2 Then ; We found a valid building name
 			If StringInStr($aResult[1], "Machine") = True Then ; we found the Battle Machine
-				SetLog("Battle Machine located.", $COLOR_INFO)
-				SetLog("It reads as Level " & $aResult[2] & ".", $COLOR_INFO)
+				SetLog("Battle Machine Located", $COLOR_INFO)
+				SetLog("Level: " & $aResult[2], $COLOR_INFO)
 				$g_CurrentBattleMachineLevel = $aResult[2]
 				Return True
 			Else
 				ClearScreen("Defaut", False)
-				SetDebugLog("Stored Battle Machine Position is not valid.", $COLOR_ERROR)
-				SetDebugLog("Found instead: " & $aResult[1] & ", " & $aResult[2] & " !", $COLOR_DEBUG)
-				SetDebugLog("Village position: " & $g_aiBattleMachinePos[0] & ", " & $g_aiBattleMachinePos[1], $COLOR_DEBUG, True)
+				SetDebugLog("Battle Machine position is not valid", $COLOR_ERROR)
+				SetDebugLog("Found Instead: " & $aResult[1] & ", " & $aResult[2] & " !", $COLOR_DEBUG)
+				SetDebugLog("Village Position: " & $g_aiBattleMachinePos[0] & ", " & $g_aiBattleMachinePos[1], $COLOR_DEBUG, True)
 				ConvertToVillagePos($g_aiBattleMachinePos[0], $g_aiBattleMachinePos[1])
-				SetDebugLog("Real position: " & $g_aiBattleMachinePos[0] & ", " & $g_aiBattleMachinePos[1], $COLOR_DEBUG, True)
+				SetDebugLog("Real Position: " & $g_aiBattleMachinePos[0] & ", " & $g_aiBattleMachinePos[1], $COLOR_DEBUG, True)
 				$g_aiBattleMachinePos[0] = -1
 				$g_aiBattleMachinePos[1] = -1
 			EndIf
 		Else
 			ClearScreen("Defaut", False)
-			SetDebugLog("Stored Battle Machine Position is not valid.", $COLOR_ERROR)
-			SetDebugLog("Village position: " & $g_aiBattleMachinePos[0] & ", " & $g_aiBattleMachinePos[1], $COLOR_DEBUG, True)
+			SetDebugLog("Battle Machine position is not valid", $COLOR_ERROR)
+			SetDebugLog("Village Position: " & $g_aiBattleMachinePos[0] & ", " & $g_aiBattleMachinePos[1], $COLOR_DEBUG, True)
 			ConvertToVillagePos($g_aiBattleMachinePos[0], $g_aiBattleMachinePos[1])
-			SetDebugLog("Real position: " & $g_aiBattleMachinePos[0] & ", " & $g_aiBattleMachinePos[1], $COLOR_DEBUG, True)
+			SetDebugLog("Real Position: " & $g_aiBattleMachinePos[0] & ", " & $g_aiBattleMachinePos[1], $COLOR_DEBUG, True)
 			$g_aiBattleMachinePos[0] = -1
 			$g_aiBattleMachinePos[1] = -1
 		EndIf
 	EndIf
-
-	SetLog("Looking for Battle Machine...", $COLOR_ACTION)
 
 	Local $sCocDiamond = "FV"
 	Local $sRedLines = $sCocDiamond
@@ -232,38 +240,38 @@ Func LocateBattleMachine()
 
 		If $aResult[0] = 2 Then ; We found a valid building name
 			If StringInStr($aResult[1], "Machine") = True Then ; we found the Battle Machine
-				SetLog("Battle Machine located.", $COLOR_INFO)
-				SetLog("It reads as Level " & $aResult[2] & ".", $COLOR_INFO)
+				SetLog("Battle Machine Located", $COLOR_INFO)
+				SetLog("Level: " & $aResult[2], $COLOR_INFO)
 				$g_CurrentBattleMachineLevel = $aResult[2]
 				Return True
 			Else
 				ClearScreen("Defaut", False)
-				SetDebugLog("Found Battle Machine Position is not valid.", $COLOR_ERROR)
-				SetDebugLog("Found instead: " & $aResult[1] & ", " & $aResult[2] & " !", $COLOR_DEBUG)
-				SetDebugLog("Village position: " & $g_aiBattleMachinePos[0] & ", " & $g_aiBattleMachinePos[1], $COLOR_DEBUG, True)
+				SetDebugLog("Battle Machine position is not valid", $COLOR_ERROR)
+				SetDebugLog("Found Instead: " & $aResult[1] & ", " & $aResult[2] & " !", $COLOR_DEBUG)
+				SetDebugLog("Village Position: " & $g_aiBattleMachinePos[0] & ", " & $g_aiBattleMachinePos[1], $COLOR_DEBUG, True)
 				ConvertToVillagePos($g_aiBattleMachinePos[0], $g_aiBattleMachinePos[1])
-				SetDebugLog("Real position: " & $g_aiBattleMachinePos[0] & ", " & $g_aiBattleMachinePos[1], $COLOR_DEBUG, True)
+				SetDebugLog("Real Position: " & $g_aiBattleMachinePos[0] & ", " & $g_aiBattleMachinePos[1], $COLOR_DEBUG, True)
 				$g_aiBattleMachinePos[0] = -1
 				$g_aiBattleMachinePos[1] = -1
 			EndIf
 		Else
 			ClearScreen("Defaut", False)
-			SetDebugLog("Found Battle Machine Position is not valid.", $COLOR_ERROR)
-			SetDebugLog("Village position: " & $g_aiBattleMachinePos[0] & ", " & $g_aiBattleMachinePos[1], $COLOR_DEBUG, True)
+			SetDebugLog("Battle Machine position is not valid", $COLOR_ERROR)
+			SetDebugLog("Village Position: " & $g_aiBattleMachinePos[0] & ", " & $g_aiBattleMachinePos[1], $COLOR_DEBUG, True)
 			ConvertToVillagePos($g_aiBattleMachinePos[0], $g_aiBattleMachinePos[1])
-			SetDebugLog("Real position: " & $g_aiBattleMachinePos[0] & ", " & $g_aiBattleMachinePos[1], $COLOR_DEBUG, True)
+			SetDebugLog("Real Position: " & $g_aiBattleMachinePos[0] & ", " & $g_aiBattleMachinePos[1], $COLOR_DEBUG, True)
 			$g_aiBattleMachinePos[0] = -1
 			$g_aiBattleMachinePos[1] = -1
 		EndIf
 	EndIf
 
-	SetLog("Can not find Battle Machine.", $COLOR_ERROR)
+	SetLog("Cannot find Battle Machine", $COLOR_ERROR)
 	ClearScreen("Defaut", False)
 	Return False
 EndFunc   ;==>LocateBattleMachine
 
 Func DeleteBattleMachineCoord()
-	SetLog("Deleting Coordinates of Battle Machine.", $COLOR_OLIVE)
+	SetLog("Deleting coordinates of Battle Machine", $COLOR_OLIVE)
 	$g_aiBattleMachinePos[0] = -1
 	$g_aiBattleMachinePos[1] = -1
 	IniWrite($g_sProfileBuildingPath, "other", "BattleMachinePosX", $g_aiBattleMachinePos[0])

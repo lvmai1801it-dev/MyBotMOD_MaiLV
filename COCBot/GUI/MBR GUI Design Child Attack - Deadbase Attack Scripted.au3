@@ -16,14 +16,14 @@
 
 Global $g_hGUI_DEADBASE_ATTACK_SCRIPTED = 0
 Global $g_hCmbScriptNameDB = 0, $g_hCmbScriptRedlineImplDB = 0, $g_hCmbScriptDroplineDB = 0
-Global $g_hLblNotesScriptDB = 0
+Global $g_hLblNotesScriptDB = 0, $g_hLblCSVHelpDB = 0
 
 Func CreateAttackSearchDeadBaseScripted()
 	$g_hGUI_DEADBASE_ATTACK_SCRIPTED = _GUICreate("", $_GUI_MAIN_WIDTH - 195, $g_iSizeHGrpTab4, 150, 25, BitOR($WS_CHILD, $WS_TABSTOP), -1, $g_hGUI_DEADBASE)
 	;GUISetBkColor($COLOR_WHITE, $g_hGUI_DEADBASE_ATTACK_SCRIPTED)
 
 	Local $x = 25, $y = 20
-	GUICtrlCreateGroup(GetTranslatedFileIni("MBR GUI Design Child Attack - Attack Scripted", "Group_01", "Deploy"), $x - 20, $y - 20, 270, $g_iSizeHGrpTab4)
+	GUICtrlCreateGroup(GetTranslatedFileIni("MBR GUI Design Child Attack - Attack Scripted", "Group_01", "Deploy"), $x - 25, $y - 20, 276, $g_iSizeHGrpTab4)
 
 	$y += 15
 		$g_hCmbScriptNameDB = GUICtrlCreateCombo("", $x, $y, 200, -1, BitOR($CBS_DROPDOWNLIST, $CBS_AUTOHSCROLL, $WS_VSCROLL))
@@ -66,6 +66,17 @@ Func CreateAttackSearchDeadBaseScripted()
 		_GUICtrlCreateIcon($g_sLibIconPath, $eIcnTrain, $x + 210, $y + 2, 16, 16)
 			_GUICtrlSetTip(-1, GetTranslatedFileIni("MBR GUI Design Child Attack - Attack Scripted", "IconApply_Info_01", "Apply Settings of troop, spell, redline, dropline, and request"))
 			GUICtrlSetOnEvent(-1, "ApplyScriptDB")
+
+		_GUICtrlCreateIcon($g_sLibIconPath, $eIcnHelp, 191, $g_iSizeHGrpTab4 - 39, 36, 36)
+			GUICtrlSetOnEvent(-1, "ShowCSVShortNamesHelp")
+			GUICtrlSetCursor(-1, 0)
+			_GUICtrlSetTip(-1, GetTranslatedFileIni("MBR GUI Design Child Attack - Attack Scripted", "LblCSVHelp_Info_01", "Show troop, spell, siege machine and hero shortnames accepted by CSV attack scripts."))
+		$g_hLblCSVHelpDB = GUICtrlCreateLabel(GetTranslatedFileIni("MBR GUI Design Child Attack - Attack Scripted", "LblCSVHelp", "Help ?"), 231, $g_iSizeHGrpTab4 - 29, 42, 24)
+			GUICtrlSetOnEvent(-1, "ShowCSVShortNamesHelp")
+			GUICtrlSetCursor(-1, 0)
+			GUICtrlSetFont(-1, 8.5, $FW_BOLD)
+			GUICtrlSetColor(-1, $COLOR_NAVY)
+			_GUICtrlSetTip(-1, GetTranslatedFileIni("MBR GUI Design Child Attack - Attack Scripted", "LblCSVHelp_Info_01", "Show troop, spell, siege machine and hero shortnames accepted by CSV attack scripts."))
 	GUICtrlCreateGroup("", -99, -99, 1, 1)
 
 	;------------------------------------------------------------------------------------------

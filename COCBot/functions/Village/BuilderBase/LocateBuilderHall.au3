@@ -12,34 +12,32 @@ Func LocateBuilderHall()
 		Local $aResult = BuildingInfo(242, 475 + $g_iBottomOffsetY) ; Get building name and level with OCR
 		If $aResult[0] = 2 Then ; We found a valid building name
 			If StringInStr($aResult[1], "Builder") = True Then ; we found the Clan Castle
-				SetLog("Builder Hall located.", $COLOR_INFO)
-				SetLog("It reads as Level " & $aResult[2] & ".", $COLOR_INFO)
+				SetLog("Builder Hall Located", $COLOR_INFO)
+				SetLog("Level: " & $aResult[2], $COLOR_INFO)
 
 				If $aResult[2] > $g_iBuilderHallLevel Then $g_iBuilderHallLevel = $aResult[2]
 				ClearScreen("Defaut", False)
 				Return True
 			Else
 				ClearScreen("Defaut", False)
-				SetLog("Village position: " & $g_aiBuilderHallPos[0] & ", " & $g_aiBuilderHallPos[1], $COLOR_DEBUG, True)
-				SetLog("Stored Builder Hall Position is not valid.", $COLOR_ERROR)
-				SetLog("Found instead: " & $aResult[1] & ", " & $aResult[2] & " !", $COLOR_DEBUG)
+				SetLog("Village Position: " & $g_aiBuilderHallPos[0] & ", " & $g_aiBuilderHallPos[1], $COLOR_DEBUG, True)
+				SetLog("Builder Hall position is not valid", $COLOR_ERROR)
+				SetLog("Found Instead: " & $aResult[1] & ", " & $aResult[2] & " !", $COLOR_DEBUG)
 				ConvertToVillagePos($g_aiBuilderHallPos[0], $g_aiBuilderHallPos[1])
-				SetLog("Real position: " & $g_aiBuilderHallPos[0] & ", " & $g_aiBuilderHallPos[1], $COLOR_DEBUG, True)
+				SetLog("Real Position: " & $g_aiBuilderHallPos[0] & ", " & $g_aiBuilderHallPos[1], $COLOR_DEBUG, True)
 				$g_aiBuilderHallPos[0] = -1
 				$g_aiBuilderHallPos[1] = -1
 			EndIf
 		Else
 			ClearScreen("Defaut", False)
-			SetDebugLog("Stored Builder Hall Position is not valid.", $COLOR_ERROR)
-			SetDebugLog("Village position: " & $g_aiBuilderHallPos[0] & ", " & $g_aiBuilderHallPos[1], $COLOR_DEBUG, True)
+			SetDebugLog("Builder Hall position is not valid", $COLOR_ERROR)
+			SetDebugLog("Village Position: " & $g_aiBuilderHallPos[0] & ", " & $g_aiBuilderHallPos[1], $COLOR_DEBUG, True)
 			ConvertToVillagePos($g_aiBuilderHallPos[0], $g_aiBuilderHallPos[1])
-			SetDebugLog("Real position: " & $g_aiBuilderHallPos[0] & ", " & $g_aiBuilderHallPos[1], $COLOR_DEBUG, True)
+			SetDebugLog("Real Position: " & $g_aiBuilderHallPos[0] & ", " & $g_aiBuilderHallPos[1], $COLOR_DEBUG, True)
 			$g_aiBuilderHallPos[0] = -1
 			$g_aiBuilderHallPos[1] = -1
 		EndIf
 	EndIf
-
-	SetLog("Looking for Builder Hall...", $COLOR_ACTION)
 
 	Local $sCocDiamond = $CocDiamondDCD
 	Local $sRedLines = $sCocDiamond
@@ -106,8 +104,8 @@ Func LocateBuilderHall()
 		Local $aResult = BuildingInfo(242, 475 + $g_iBottomOffsetY) ; Get building name and level with OCR
 		If $aResult[0] = 2 Then ; We found a valid building name
 			If StringInStr($aResult[1], "Builder") = True Then ; we found the Clan Castle
-				SetLog("Builder Hall located.", $COLOR_INFO)
-				SetLog("It reads as Level " & $aResult[2] & ".", $COLOR_INFO)
+				SetLog("Builder Hall Located", $COLOR_INFO)
+				SetLog("Level: " & $aResult[2], $COLOR_INFO)
 
 				If $aResult[2] > $g_iBuilderHallLevel Then $g_iBuilderHallLevel = $aResult[2]
 				;ChkCraftCapitalGold()
@@ -134,7 +132,7 @@ Func LocateBuilderHall()
 		EndIf
 	EndIf
 
-	SetLog("Can not find Builder Hall.", $COLOR_ERROR)
+	SetLog("Cannot find Builder Hall", $COLOR_ERROR)
 	Return False
 EndFunc   ;==>LocateBuilderHall
 
@@ -158,14 +156,12 @@ Func _LocateDoubleCannon($bCollect = False)
 
 	Local $bIsOnBuilderBase = isOnBuilderBase(True)
 	If $bIsOnBuilderBase Then
-		SetLog("You are on Builder Base!")
+		SetLog("Builder Base Detected", $COLOR_SUCCESS)
 	Else
 		SwitchBetweenBases(False, True)
 	EndIf
 
 	ZoomOut()
-
-	SetLog("Saved Coord :" & $g_aiDoubleCannonPos[0] & ", " & $g_aiDoubleCannonPos[1], $COLOR_INFO)
 
 	If $g_aiDoubleCannonPos[0] <> -1 And $g_aiDoubleCannonPos[1] <> -1 Then
 		ClearScreen("Defaut", False)
@@ -188,11 +184,11 @@ Func _LocateDoubleCannon($bCollect = False)
 			If @error Then Return SetError(0, 0, 0)
 			If $sInfo[0] > 1 Or $sInfo[0] = "" Then
 				If StringInStr($sInfo[1], "uble") = 0 Then
-					SetLog("Bad Double Cannon location", $COLOR_ACTION)
+					SetLog("Bad Double Cannon Location", $COLOR_ACTION)
 				Else
 					If $sInfo[2] <> "" Then
 						$aDoubleCannonLevel = Number($sInfo[2]) ; grab level from building info array
-						SetLog("Double Cannon level read as: " & $aDoubleCannonLevel, $COLOR_SUCCESS)
+						SetLog("Double Cannon Level: " & $aDoubleCannonLevel, $COLOR_SUCCESS)
 						If $aDoubleCannonLevel >= 4 Then ; BOB Control Requirement
 							SetLog("Double Cannon is at level needed for BOB Control upgrade!", $COLOR_INFO)
 							$g_bDoubleCannonUpgrade = False ; turn Off the Double Cannon upgrade
@@ -200,10 +196,10 @@ Func _LocateDoubleCannon($bCollect = False)
 						EndIf
 						ClearScreen("Defaut", False)
 						If _Sleep(1000) Then Return
-						SwitchToBuilderbase()
+						SwitchToBuilderBase()
 						Return True
 					Else
-						SetLog("Double Cannon Level was not found!", $COLOR_INFO)
+						SetLog("Double Cannon level was not found!", $COLOR_INFO)
 					EndIf
 				EndIf
 			Else
@@ -231,13 +227,13 @@ Func _LocateDoubleCannon($bCollect = False)
 	EndIf
 
 	If $g_aiDoubleCannonPos[2] = -1 Then
-		SetLog("Hey, Wake up !", $COLOR_ERROR)
+		SetLog("Hey, wake up!", $COLOR_ERROR)
 		$g_aiDoubleCannonPos[0] = -1
 		$g_aiDoubleCannonPos[1] = -1
 		$g_aiDoubleCannonPos[2] = -1
 		$g_bDoubleCannonUpgrade = False ; turn Off the Double Cannon upgrade
 		GUICtrlSetState($g_hChkDoubleCannonUpgrade, $GUI_UNCHECKED)
-		SwitchToBuilderbase()
+		SwitchToBuilderBase()
 		Return False
 	EndIf
 
@@ -274,7 +270,7 @@ Func _LocateDoubleCannon($bCollect = False)
 						GUICtrlSetState($g_hChkDoubleCannonUpgrade, $GUI_UNCHECKED)
 						ClearScreen("Defaut", False)
 						If _Sleep(1000) Then Return
-						SwitchToBuilderbase()
+						SwitchToBuilderBase()
 						Return False
 					Case Else
 						SetLog(" Operator Error - Bad Double Cannon Location: " & "(" & $g_aiDoubleCannonPos[0] & "," & $g_aiDoubleCannonPos[1] & ")", $COLOR_ERROR)
@@ -285,23 +281,18 @@ Func _LocateDoubleCannon($bCollect = False)
 						GUICtrlSetState($g_hChkDoubleCannonUpgrade, $GUI_UNCHECKED)
 						ClearScreen("Defaut", False)
 						If _Sleep(1000) Then Return
-						SwitchToBuilderbase()
+						SwitchToBuilderBase()
 						Return False
 				EndSelect
 			EndIf
-			SetLog("Double Cannon: " & "(" & $g_aiDoubleCannonPos[0] & "," & $g_aiDoubleCannonPos[1] & ")", $COLOR_SUCCESS)
-			If $g_aiDoubleCannonPos[2] = 0 Then
-				SetLog("Double Cannon is in Main Builder Base", $COLOR_SUCCESS)
-			Else
-				SetLog("Double Cannon is in Otto Village", $COLOR_SUCCESS)
-			EndIf
+			SetLog("Double Cannon Detected: " & "(" & $g_aiDoubleCannonPos[0] & "," & $g_aiDoubleCannonPos[1] & ")", $COLOR_SUCCESS)
 		Else
 			$g_bDoubleCannonUpgrade = False ; turn Off the Double Cannon upgrade
 			GUICtrlSetState($g_hChkDoubleCannonUpgrade, $GUI_UNCHECKED)
 			SetLog("Locate Double Cannon Cancelled", $COLOR_INFO)
 			ClearScreen("Defaut", False)
 			If _Sleep(1000) Then Return
-			SwitchToBuilderbase()
+			SwitchToBuilderBase()
 			Return
 		EndIf
 
@@ -348,7 +339,7 @@ Func _LocateDoubleCannon($bCollect = False)
 						GUICtrlSetState($g_hChkDoubleCannonUpgrade, $GUI_UNCHECKED)
 						ClearScreen("Defaut", False)
 						If _Sleep(1000) Then Return
-						SwitchToBuilderbase()
+						SwitchToBuilderBase()
 						Return False
 				EndSelect
 			EndIf
@@ -361,7 +352,7 @@ Func _LocateDoubleCannon($bCollect = False)
 			GUICtrlSetState($g_hChkDoubleCannonUpgrade, $GUI_UNCHECKED)
 			ClearScreen("Defaut", False)
 			If _Sleep(1000) Then Return
-			SwitchToBuilderbase()
+			SwitchToBuilderBase()
 			Return False
 		EndIf
 		ExitLoop
@@ -377,7 +368,7 @@ Func _LocateDoubleCannon($bCollect = False)
 	IniWrite($g_sProfileBuildingPath, "other", "DoubleCannonPosX", $g_aiDoubleCannonPos[0])
 	IniWrite($g_sProfileBuildingPath, "other", "DoubleCannonPosY", $g_aiDoubleCannonPos[1])
 	IniWrite($g_sProfileBuildingPath, "other", "DoubleCannonPosV", $g_aiDoubleCannonPos[2])
-	SwitchToBuilderbase()
+	SwitchToBuilderBase()
 EndFunc   ;==>_LocateDoubleCannon
 
 Func LocateArcherTower($bCollect = False)
@@ -395,18 +386,15 @@ Func _LocateArcherTower($bCollect = False)
 	Local $stext, $MsgBox, $iSilly = 0, $iStupid = 0, $sErrorText = "", $sInfo, $iArcherTowerLevel = 0
 
 	WinGetAndroidHandle()
-	;checkMainScreen(False)
 
 	Local $bIsOnBuilderBase = isOnBuilderBase(True)
 	If $bIsOnBuilderBase Then
-		SetLog("You are on Builder Base!")
+		SetLog("Builder Base Detected", $COLOR_SUCCESS)
 	Else
 		SwitchBetweenBases(False, True)
 	EndIf
 
 	ZoomOut()
-
-	SetLog("Saved Coord :" & $g_aiArcherTowerPos[0] & ", " & $g_aiArcherTowerPos[1], $COLOR_INFO)
 
 	If $g_aiArcherTowerPos[0] <> -1 And $g_aiArcherTowerPos[1] <> -1 Then
 		ClearScreen("Defaut", False)
@@ -429,11 +417,11 @@ Func _LocateArcherTower($bCollect = False)
 			If @error Then Return SetError(0, 0, 0)
 			If $sInfo[0] > 1 Or $sInfo[0] = "" Then
 				If StringInStr($sInfo[1], "Archer") = 0 Then
-					SetLog("Bad Archer Tower location", $COLOR_ACTION)
+					SetLog("Bad Archer Tower Location", $COLOR_ACTION)
 				Else
 					If $sInfo[2] <> "" Then
 						$iArcherTowerLevel = Number($sInfo[2]) ; grab level from building info array
-						SetLog("Archer Tower level read as: " & $iArcherTowerLevel, $COLOR_SUCCESS)
+						SetLog("Archer Tower Level: " & $iArcherTowerLevel, $COLOR_SUCCESS)
 						If $iArcherTowerLevel >= 6 Then ; BOB Control Requirement
 							SetLog("Archer Tower is at level needed for BOB Control upgrade!", $COLOR_INFO)
 							$g_bArcherTowerUpgrade = False ; turn Off the Archer Tower upgrade
@@ -441,10 +429,10 @@ Func _LocateArcherTower($bCollect = False)
 						EndIf
 						ClearScreen("Defaut", False)
 						If _Sleep(1000) Then Return
-						SwitchToBuilderbase()
+						SwitchToBuilderBase()
 						Return True
 					Else
-						SetLog("Archer Tower Level was not found!", $COLOR_INFO)
+						SetLog("Archer Tower level was not found!", $COLOR_INFO)
 					EndIf
 				EndIf
 			Else
@@ -472,13 +460,13 @@ Func _LocateArcherTower($bCollect = False)
 	EndIf
 
 	If $g_aiArcherTowerPos[2] = -1 Then
-		SetLog("Hey, Wake up !", $COLOR_ERROR)
+		SetLog("Hey, wake up!", $COLOR_ERROR)
 		$g_aiArcherTowerPos[0] = -1
 		$g_aiArcherTowerPos[1] = -1
 		$g_aiArcherTowerPos[2] = -1
 		$g_bArcherTowerUpgrade = False ; turn Off the Double Cannon upgrade
 		GUICtrlSetState($g_hChkArcherTowerUpgrade, $GUI_UNCHECKED)
-		SwitchToBuilderbase()
+		SwitchToBuilderBase()
 		Return False
 	EndIf
 
@@ -515,7 +503,7 @@ Func _LocateArcherTower($bCollect = False)
 						GUICtrlSetState($g_hChkArcherTowerUpgrade, $GUI_UNCHECKED)
 						ClearScreen("Defaut", False)
 						If _Sleep(1000) Then Return
-						SwitchToBuilderbase()
+						SwitchToBuilderBase()
 						Return False
 					Case Else
 						SetLog(" Operator Error - Bad  Archer Tower Location: " & "(" & $g_aiArcherTowerPos[0] & "," & $g_aiArcherTowerPos[1] & ")", $COLOR_ERROR)
@@ -526,23 +514,18 @@ Func _LocateArcherTower($bCollect = False)
 						GUICtrlSetState($g_hChkArcherTowerUpgrade, $GUI_UNCHECKED)
 						ClearScreen("Defaut", False)
 						If _Sleep(1000) Then Return
-						SwitchToBuilderbase()
+						SwitchToBuilderBase()
 						Return False
 				EndSelect
 			EndIf
-			SetLog("Archer Tower: " & "(" & $g_aiArcherTowerPos[0] & "," & $g_aiArcherTowerPos[1] & ")", $COLOR_SUCCESS)
-			If $g_aiArcherTowerPos[2] = 0 Then
-				SetLog("Archer Tower is in Main Builder Base", $COLOR_SUCCESS)
-			Else
-				SetLog("Archer Tower is in Otto Village", $COLOR_SUCCESS)
-			EndIf
+			SetLog("Archer Tower Detected: " & "(" & $g_aiArcherTowerPos[0] & "," & $g_aiArcherTowerPos[1] & ")", $COLOR_SUCCESS)
 		Else
 			$g_bArcherTowerUpgrade = False ; turn Off the Archer Tower upgrade
 			GUICtrlSetState($g_hChkArcherTowerUpgrade, $GUI_UNCHECKED)
 			SetLog("Locate Archer Tower Cancelled", $COLOR_INFO)
 			ClearScreen("Defaut", False)
 			If _Sleep(1000) Then Return
-			SwitchToBuilderbase()
+			SwitchToBuilderBase()
 			Return
 		EndIf
 
@@ -589,7 +572,7 @@ Func _LocateArcherTower($bCollect = False)
 						GUICtrlSetState($g_hChkArcherTowerUpgrade, $GUI_UNCHECKED)
 						ClearScreen("Defaut", False)
 						If _Sleep(1000) Then Return
-						SwitchToBuilderbase()
+						SwitchToBuilderBase()
 						Return False
 				EndSelect
 			EndIf
@@ -602,7 +585,7 @@ Func _LocateArcherTower($bCollect = False)
 			GUICtrlSetState($g_hChkArcherTowerUpgrade, $GUI_UNCHECKED)
 			ClearScreen("Defaut", False)
 			If _Sleep(1000) Then Return
-			SwitchToBuilderbase()
+			SwitchToBuilderBase()
 			Return False
 		EndIf
 		ExitLoop
@@ -618,7 +601,7 @@ Func _LocateArcherTower($bCollect = False)
 	IniWrite($g_sProfileBuildingPath, "other", "ArcherTowerPosX", $g_aiArcherTowerPos[0])
 	IniWrite($g_sProfileBuildingPath, "other", "ArcherTowerPosY", $g_aiArcherTowerPos[1])
 	IniWrite($g_sProfileBuildingPath, "other", "ArcherTowerPosV", $g_aiArcherTowerPos[2])
-	SwitchToBuilderbase()
+	SwitchToBuilderBase()
 EndFunc   ;==>_LocateArcherTower
 
 
@@ -642,14 +625,12 @@ Func _LocateMultiMortar($bCollect = False)
 
 	Local $bIsOnBuilderBase = isOnBuilderBase(True)
 	If $bIsOnBuilderBase Then
-		SetLog("You are on Builder Base!")
+		SetLog("Builder Base Detected", $COLOR_SUCCESS)
 	Else
 		SwitchBetweenBases(False, True)
 	EndIf
 
 	ZoomOut()
-
-	SetLog("Saved Coord :" & $g_aiMultiMortarPos[0] & ", " & $g_aiMultiMortarPos[1], $COLOR_INFO)
 
 	If $g_aiMultiMortarPos[0] <> -1 And $g_aiMultiMortarPos[1] <> -1 Then
 		ClearScreen("Defaut", False)
@@ -672,11 +653,11 @@ Func _LocateMultiMortar($bCollect = False)
 			If @error Then Return SetError(0, 0, 0)
 			If $sInfo[0] > 1 Or $sInfo[0] = "" Then
 				If StringInStr($sInfo[1], "Multi") = 0 Then
-					SetLog("Bad Multi Mortar location", $COLOR_ACTION)
+					SetLog("Bad Multi Mortar Location", $COLOR_ACTION)
 				Else
 					If $sInfo[2] <> "" Then
 						$aMultiMortarLevel = Number($sInfo[2]) ; grab level from building info array
-						SetLog("Multi Mortar level read as: " & $aMultiMortarLevel, $COLOR_SUCCESS)
+						SetLog("Multi Mortar Level: " & $aMultiMortarLevel, $COLOR_SUCCESS)
 						If $aMultiMortarLevel >= 8 Then ; BOB Control Requirement
 							SetLog("Multi Mortar is at level needed for BOB Control upgrade!", $COLOR_INFO)
 							$g_bMultiMortarUpgrade = False ; turn Off the Multi Mortar upgrade
@@ -684,10 +665,10 @@ Func _LocateMultiMortar($bCollect = False)
 						EndIf
 						ClearScreen("Defaut", False)
 						If _Sleep(1000) Then Return
-						SwitchToBuilderbase()
+						SwitchToBuilderBase()
 						Return True
 					Else
-						SetLog("Multi Mortar Level was not found!", $COLOR_INFO)
+						SetLog("Multi Mortar level was not found!", $COLOR_INFO)
 					EndIf
 				EndIf
 			Else
@@ -715,13 +696,13 @@ Func _LocateMultiMortar($bCollect = False)
 	EndIf
 
 	If $g_aiMultiMortarPos[2] = -1 Then
-		SetLog("Hey, Wake up !", $COLOR_ERROR)
+		SetLog("Hey, wake up!", $COLOR_ERROR)
 		$g_aiMultiMortarPos[0] = -1
 		$g_aiMultiMortarPos[1] = -1
 		$g_aiMultiMortarPos[2] = -1
 		$g_bMultiMortarUpgrade = False ; turn Off the Double Cannon upgrade
 		GUICtrlSetState($g_hChkMultiMortarUpgrade, $GUI_UNCHECKED)
-		SwitchToBuilderbase()
+		SwitchToBuilderBase()
 		Return False
 	EndIf
 
@@ -758,7 +739,7 @@ Func _LocateMultiMortar($bCollect = False)
 						GUICtrlSetState($g_hChkMultiMortarUpgrade, $GUI_UNCHECKED)
 						ClearScreen("Defaut", False)
 						If _Sleep(1000) Then Return
-						SwitchToBuilderbase()
+						SwitchToBuilderBase()
 						Return False
 					Case Else
 						SetLog(" Operator Error - Bad Multi Mortar Location: " & "(" & $g_aiMultiMortarPos[0] & "," & $g_aiMultiMortarPos[1] & ")", $COLOR_ERROR)
@@ -769,23 +750,18 @@ Func _LocateMultiMortar($bCollect = False)
 						GUICtrlSetState($g_hChkMultiMortarUpgrade, $GUI_UNCHECKED)
 						ClearScreen("Defaut", False)
 						If _Sleep(1000) Then Return
-						SwitchToBuilderbase()
+						SwitchToBuilderBase()
 						Return False
 				EndSelect
 			EndIf
-			SetLog("Multi Mortar: " & "(" & $g_aiMultiMortarPos[0] & "," & $g_aiMultiMortarPos[1] & ")", $COLOR_SUCCESS)
-			If $g_aiMultiMortarPos[2] = 0 Then
-				SetLog("Multi Mortar is in Main Builder Base", $COLOR_SUCCESS)
-			Else
-				SetLog("Multi Mortar is in Otto Village", $COLOR_SUCCESS)
-			EndIf
+			SetLog("Multi Mortar Detected: " & "(" & $g_aiMultiMortarPos[0] & "," & $g_aiMultiMortarPos[1] & ")", $COLOR_SUCCESS)
 		Else
 			SetLog("Locate Multi Mortar Cancelled", $COLOR_INFO)
 			$g_bMultiMortarUpgrade = False ; turn Off the Multi Mortar upgrade
 			GUICtrlSetState($g_hChkMultiMortarUpgrade, $GUI_UNCHECKED)
 			ClearScreen("Defaut", False)
 			If _Sleep(1000) Then Return
-			SwitchToBuilderbase()
+			SwitchToBuilderBase()
 			Return
 		EndIf
 
@@ -832,7 +808,7 @@ Func _LocateMultiMortar($bCollect = False)
 						GUICtrlSetState($g_hChkMultiMortarUpgrade, $GUI_UNCHECKED)
 						ClearScreen("Defaut", False)
 						If _Sleep(1000) Then Return
-						SwitchToBuilderbase()
+						SwitchToBuilderBase()
 						Return False
 				EndSelect
 			EndIf
@@ -845,7 +821,7 @@ Func _LocateMultiMortar($bCollect = False)
 			GUICtrlSetState($g_hChkMultiMortarUpgrade, $GUI_UNCHECKED)
 			ClearScreen("Defaut", False)
 			If _Sleep(1000) Then Return
-			SwitchToBuilderbase()
+			SwitchToBuilderBase()
 			Return False
 		EndIf
 		ExitLoop
@@ -861,7 +837,7 @@ Func _LocateMultiMortar($bCollect = False)
 	IniWrite($g_sProfileBuildingPath, "other", "MultiMortarPosX", $g_aiMultiMortarPos[0])
 	IniWrite($g_sProfileBuildingPath, "other", "MultiMortarPosY", $g_aiMultiMortarPos[1])
 	IniWrite($g_sProfileBuildingPath, "other", "MultiMortarPosV", $g_aiMultiMortarPos[2])
-	SwitchToBuilderbase()
+	SwitchToBuilderBase()
 EndFunc   ;==>_LocateMultiMortar
 
 Func LocateAnyDef($bCollect = False)
@@ -884,14 +860,12 @@ Func _LocateAnyDef($bCollect = False)
 
 	Local $bIsOnBuilderBase = isOnBuilderBase(True)
 	If $bIsOnBuilderBase Then
-		SetLog("You are on Builder Base!")
+		SetLog("Builder Base Detected", $COLOR_SUCCESS)
 	Else
 		SwitchBetweenBases(False, True)
 	EndIf
 
 	ZoomOut()
-
-	SetLog("Saved Coord :" & $g_aiAnyDefPos[0] & ", " & $g_aiAnyDefPos[1], $COLOR_INFO)
 
 	If $g_aiAnyDefPos[0] <> -1 And $g_aiAnyDefPos[1] <> -1 Then
 		ClearScreen("Defaut", False)
@@ -914,11 +888,11 @@ Func _LocateAnyDef($bCollect = False)
 			If @error Then Return SetError(0, 0, 0)
 			If $sInfo[0] > 1 Or $sInfo[0] = "" Then
 				If StringInStr($sInfo[1], "Cann") = 0 Or StringInStr($sInfo[1], "uble") <> 0 Then
-					SetLog("Bad Cannon location", $COLOR_ACTION)
+					SetLog("Bad Cannon Location", $COLOR_ACTION)
 				Else
 					If $sInfo[2] <> "" Then
 						$aCannonLevel = Number($sInfo[2]) ; grab level from building info array
-						SetLog("Cannon level read as: " & $aCannonLevel, $COLOR_SUCCESS)
+						SetLog("Cannon Level: " & $aCannonLevel, $COLOR_SUCCESS)
 						If $aCannonLevel >= 9 Then ; BOB Control Requirement
 							SetLog("Cannon is at level needed for BOB Control upgrade!", $COLOR_INFO)
 							$g_bAnyDefUpgrade = False ; turn Off the Multi Mortar upgrade
@@ -926,10 +900,10 @@ Func _LocateAnyDef($bCollect = False)
 						EndIf
 						ClearScreen("Defaut", False)
 						If _Sleep(1000) Then Return
-						SwitchToBuilderbase()
+						SwitchToBuilderBase()
 						Return True
 					Else
-						SetLog("Cannon Level was not found!", $COLOR_INFO)
+						SetLog("Cannon level was not found!", $COLOR_INFO)
 					EndIf
 				EndIf
 			Else
@@ -957,13 +931,13 @@ Func _LocateAnyDef($bCollect = False)
 	EndIf
 
 	If $g_aiAnyDefPos[2] = -1 Then
-		SetLog("Hey, Wake up !", $COLOR_ERROR)
+		SetLog("Hey, wake up!", $COLOR_ERROR)
 		$g_aiAnyDefPos[0] = -1
 		$g_aiAnyDefPos[1] = -1
 		$g_aiAnyDefPos[2] = -1
 		$g_bDoubleCannonUpgrade = False ; turn Off the Double Cannon upgrade
 		GUICtrlSetState($g_hChkAnyDefUpgrade, $GUI_UNCHECKED)
-		SwitchToBuilderbase()
+		SwitchToBuilderBase()
 		Return False
 	EndIf
 
@@ -1000,7 +974,7 @@ Func _LocateAnyDef($bCollect = False)
 						GUICtrlSetState($g_hChkAnyDefUpgrade, $GUI_UNCHECKED)
 						ClearScreen("Defaut", False)
 						If _Sleep(1000) Then Return
-						SwitchToBuilderbase()
+						SwitchToBuilderBase()
 						Return False
 					Case Else
 						SetLog(" Operator Error - Bad Cannon Location: " & "(" & $g_aiAnyDefPos[0] & "," & $g_aiAnyDefPos[1] & ")", $COLOR_ERROR)
@@ -1011,18 +985,18 @@ Func _LocateAnyDef($bCollect = False)
 						GUICtrlSetState($g_hChkAnyDefUpgrade, $GUI_UNCHECKED)
 						ClearScreen("Defaut", False)
 						If _Sleep(1000) Then Return
-						SwitchToBuilderbase()
+						SwitchToBuilderBase()
 						Return False
 				EndSelect
 			EndIf
-			SetLog("Cannon: " & "(" & $g_aiAnyDefPos[0] & "," & $g_aiAnyDefPos[1] & ")", $COLOR_SUCCESS)
+			SetLog("Cannon Detected: " & "(" & $g_aiAnyDefPos[0] & "," & $g_aiAnyDefPos[1] & ")", $COLOR_SUCCESS)
 		Else
 			SetLog("Locate Cannon Cancelled", $COLOR_INFO)
 			$g_bAnyDefUpgrade = False ; turn Off the Cannon upgrade
 			GUICtrlSetState($g_hChkAnyDefUpgrade, $GUI_UNCHECKED)
 			ClearScreen("Defaut", False)
 			If _Sleep(1000) Then Return
-			SwitchToBuilderbase()
+			SwitchToBuilderBase()
 			Return
 		EndIf
 
@@ -1069,7 +1043,7 @@ Func _LocateAnyDef($bCollect = False)
 						GUICtrlSetState($g_hChkAnyDefUpgrade, $GUI_UNCHECKED)
 						ClearScreen("Defaut", False)
 						If _Sleep(1000) Then Return
-						SwitchToBuilderbase()
+						SwitchToBuilderBase()
 						Return False
 				EndSelect
 			EndIf
@@ -1082,7 +1056,7 @@ Func _LocateAnyDef($bCollect = False)
 			GUICtrlSetState($g_hChkAnyDefUpgrade, $GUI_UNCHECKED)
 			ClearScreen("Defaut", False)
 			If _Sleep(1000) Then Return
-			SwitchToBuilderbase()
+			SwitchToBuilderBase()
 			Return False
 		EndIf
 		ExitLoop
@@ -1098,5 +1072,5 @@ Func _LocateAnyDef($bCollect = False)
 	IniWrite($g_sProfileBuildingPath, "other", "AnyDefPosX", $g_aiAnyDefPos[0])
 	IniWrite($g_sProfileBuildingPath, "other", "AnyDefPosY", $g_aiAnyDefPos[1])
 	IniWrite($g_sProfileBuildingPath, "other", "AnyDefPosV", $g_aiAnyDefPos[2])
-	SwitchToBuilderbase()
+	SwitchToBuilderBase()
 EndFunc   ;==>_LocateAnyDef

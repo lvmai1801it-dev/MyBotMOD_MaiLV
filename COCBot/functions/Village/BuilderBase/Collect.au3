@@ -29,9 +29,9 @@ Func CollectBuilderBase($bSwitchToBB = False, $bSwitchToNV = False, $bSetLog = T
 
 	If $bSetLog Then
 		If $IsOttoVillage Then
-			SetLog("Collecting Resources on Otto Village", $COLOR_INFO)
+			SetLog("Collecting Resources - Otto Village", $COLOR_INFO)
 		Else
-			SetLog("Collecting Resources on Builders Base", $COLOR_INFO)
+			SetLog("Collecting Resources - Builders Base", $COLOR_INFO)
 		EndIf
 	EndIf
 	If _Sleep($DELAYCOLLECT2) Then Return
@@ -84,30 +84,72 @@ Func CollectElixirCart($bSwitchToBB = False, $bSwitchToNV = False)
 	If _Sleep($DELAYCOLLECT2) Then Return
 
 	Local $bRet, $aiElixirCart, $aiCollect
+	Local $aiElixirCartFallback[2] = [545, 155 + $g_iMidOffsetY]
 
 	$aiElixirCart = decodeSingleCoord(FindImageInPlace2("ElixirCart", $g_sImgElixirCart, 470, 90 + $g_iMidOffsetY, 620, 190 + $g_iMidOffsetY))
+
 	If IsArray($aiElixirCart) And UBound($aiElixirCart, 1) = 2 Then
-		SetLog("Found Filled Elixir Cart", $COLOR_SUCCESS)
+		SetLog("Found Elixir Cart", $COLOR_SUCCESS)
 		PureClick($aiElixirCart[0], $aiElixirCart[1] + 16)
-		If _Sleep(1000) Then Return
-		$bRet = False
-		For $i = 0 To 10
-			$aiCollect = decodeSingleCoord(FindImageInPlace2("CollectElixirCart", $g_sImgCollectElixirCart, 600, 500 + $g_iMidOffsetY, 700, 540 + $g_iMidOffsetY))
-			If IsArray($aiCollect) And UBound($aiCollect, 1) = 2 Then
-				$bRet = True
-				If _Sleep(2000) Then Return
-				ExitLoop
-			EndIf
-			If _Sleep(250) Then Return
-		Next
-		If $bRet Then
-			SetLog("Collect Elixir Cart!", $COLOR_SUCCESS1)
-			PureClickP($aiCollect)
-			If _Sleep(3000) Then Return
-		Else
-			SetLog("Collect Button Not Found", $COLOR_ERROR)
-		EndIf
-		CloseWindow(20)
+	Else
+		SetDebugLog("Elixir Cart image not found, trying fallback click", $COLOR_DEBUG)
+		PureClickP($aiElixirCartFallback)
 	EndIf
 
+	If _Sleep(1000) Then Return
+
+	$bRet = False
+	For $i = 0 To 10
+		$aiCollect = decodeSingleCoord(FindImageInPlace2("CollectElixirCart", $g_sImgCollectElixirCart, 600, 500 + $g_iMidOffsetY, 700, 540 + $g_iMidOffsetY))
+		If IsArray($aiCollect) And UBound($aiCollect, 1) = 2 Then
+			$bRet = True
+			If _Sleep(2000) Then Return
+			ExitLoop
+		EndIf
+		If _Sleep(250) Then Return
+	Next
+
+	If $bRet Then
+		SetLog("Collecting Loot Cart", $COLOR_INFO)
+		PureClickP($aiCollect)
+		If _Sleep(3000) Then Return
+	Else
+		SetLog("Collect button not found or elixir storage is full")
+	EndIf
+
+	If QuickMIS("BC1", $g_sImgGeneralCloseButton, 725, 95 + $g_iMidOffsetY, 780, 145 + $g_iMidOffsetY) Then
+		Click($g_iQuickMISX, $g_iQuickMISY)
+	EndIf
 EndFunc   ;==>CollectElixirCart
+
+; #FUNCTION# ===========================================================================================================
+; Name ..........: TestElixirCart
+; Description ...: Opens the Builder Base Elixir Cart and checks for its collect button.
+; Remarks .......: Requires the Builder Base main screen; does not click the collect button.
+; ======================================================================================================================
+
+Func TestElixirCart()
+	If Not IsMainPageBuilderBase(1) Then
+		SetLog("TestElixirCart: Builder Base screen not detected", $COLOR_ERROR)
+		Return False
+	EndIf
+
+	Local $aElixirCart = decodeSingleCoord(FindImageInPlace2("ElixirCart", $g_sImgElixirCart, 470, 90 + $g_iMidOffsetY, 620, 190 + $g_iMidOffsetY))
+	If Not IsArray($aElixirCart) Or UBound($aElixirCart) <> 2 Then
+		SetLog("[Elixir Cart]: ElixCart* not detected", $COLOR_WARNING)
+		Return False
+	EndIf
+
+	SetLog("[Elixir Cart]: ElixCart* Detected:" & $aElixirCart[0] & "," & $aElixirCart[1], $COLOR_INFO)
+	PureClick($aElixirCart[0], $aElixirCart[1] + 16)
+	If _Sleep(1000) Then Return False
+
+	Local $aCollectButton = decodeSingleCoord(FindImageInPlace2("CollectElixirCart", $g_sImgCollectElixirCart, 570, 480 + $g_iMidOffsetY, 750, 610 + $g_iMidOffsetY))
+	If IsArray($aCollectButton) And UBound($aCollectButton) = 2 Then
+		SetLog("[Collect Button]: CollectElixirCart Detected:" & $aCollectButton[0] & "," & $aCollectButton[1] & "; gray means full or unavailable", $COLOR_INFO)
+		Return True
+	EndIf
+
+	SetLog("[Collect Button]: CollectElixirCart not detected", $COLOR_WARNING)
+	Return False
+EndFunc   ;==>TestElixirCart

@@ -14,16 +14,16 @@
 ; ===============================================================================================================================
 #include-once
 
-Func Collect($bCheckTreasury = True)
-	If Not $g_bChkCollect Or Not $g_bRunState Then Return
+Func Collect($bCheckTreasury = True, $bSetLog = True, $bForceCollectors = False)
+	If (Not $g_bChkCollect And Not $bForceCollectors) Or Not $g_bRunState Then Return
 
 	ClearScreen()
 
 	StartGainCost()
 
-	If $g_bChkCollectCartFirst And ($g_iTxtCollectGold = 0 Or $g_aiCurrentLoot[$eLootGold] < Number($g_iTxtCollectGold) Or $g_iTxtCollectElixir = 0 Or $g_aiCurrentLoot[$eLootElixir] < Number($g_iTxtCollectElixir) Or $g_iTxtCollectDark = 0 Or $g_aiCurrentLoot[$eLootDarkElixir] < Number($g_iTxtCollectDark)) Then CollectLootCart()
+	If Not $bForceCollectors And $g_bChkCollectCartFirst And ($g_iTxtCollectGold = 0 Or $g_aiCurrentLoot[$eLootGold] < Number($g_iTxtCollectGold) Or $g_iTxtCollectElixir = 0 Or $g_aiCurrentLoot[$eLootElixir] < Number($g_iTxtCollectElixir) Or $g_iTxtCollectDark = 0 Or $g_aiCurrentLoot[$eLootDarkElixir] < Number($g_iTxtCollectDark)) Then CollectLootCart()
 
-	SetLog("Collecting Resources", $COLOR_INFO)
+	If $bSetLog Then SetLog("Collecting Resources", $COLOR_INFO)
 	If _Sleep($DELAYCOLLECT2) Then Return
 
 	Local $aGoldFull = _FullResPixelSearch($aIsGoldFull[0], $aIsGoldFull[0] + 4, $aIsGoldFull[1], 1, Hex(0x0D0D0D, 6), $aIsGoldFull[2], $aIsGoldFull[3])
@@ -42,21 +42,21 @@ Func Collect($bCheckTreasury = True)
 			$aCollectXY = $aResult[$i][5] ; Coords
 			Switch StringLower($sFileName)
 				Case "collectmines"
-					If IsArray($aGoldFull) Then ContinueLoop
-					If $g_iTxtCollectGold <> 0 And $g_aiCurrentLoot[$eLootGold] >= Number($g_iTxtCollectGold) Then
-						SetLog("Gold is high enough, skip collecting", $COLOR_ACTION)
+					If Not $bForceCollectors And IsArray($aGoldFull) Then ContinueLoop
+					If Not $bForceCollectors And $g_iTxtCollectGold <> 0 And $g_aiCurrentLoot[$eLootGold] >= Number($g_iTxtCollectGold) Then
+						If $bSetLog Then SetLog("Gold is high enough, skip collecting", $COLOR_ACTION)
 						ContinueLoop
 					EndIf
 				Case "collectelix"
-					If IsArray($aElixirFull) Then ContinueLoop
-					If $g_iTxtCollectElixir <> 0 And $g_aiCurrentLoot[$eLootElixir] >= Number($g_iTxtCollectElixir) Then
-						SetLog("Elixir is high enough, skip collecting", $COLOR_ACTION)
+					If Not $bForceCollectors And IsArray($aElixirFull) Then ContinueLoop
+					If Not $bForceCollectors And $g_iTxtCollectElixir <> 0 And $g_aiCurrentLoot[$eLootElixir] >= Number($g_iTxtCollectElixir) Then
+						If $bSetLog Then SetLog("Elixir is high enough, skip collecting", $COLOR_ACTION)
 						ContinueLoop
 					EndIf
 				Case "collectdelix"
-					If IsArray($aDarkElixirFull) Then ContinueLoop
-					If $g_iTxtCollectDark <> 0 And $g_aiCurrentLoot[$eLootDarkElixir] >= Number($g_iTxtCollectDark) Then
-						SetLog("Dark Elixir is high enough, skip collecting", $COLOR_ACTION)
+					If Not $bForceCollectors And IsArray($aDarkElixirFull) Then ContinueLoop
+					If Not $bForceCollectors And $g_iTxtCollectDark <> 0 And $g_aiCurrentLoot[$eLootDarkElixir] >= Number($g_iTxtCollectDark) Then
+						If $bSetLog Then SetLog("Dark Elixir is high enough, skip collecting", $COLOR_ACTION)
 						ContinueLoop
 					EndIf
 			EndSwitch
@@ -77,19 +77,17 @@ Func Collect($bCheckTreasury = True)
 	$aDarkElixirFull = _FullResPixelSearch($aIsDarkElixirFull[0], $aIsDarkElixirFull[0] + 4, $aIsDarkElixirFull[1], 1, Hex(0x0D0D0D, 6), $aIsDarkElixirFull[2], $aIsDarkElixirFull[3])
 	Local $iAllResourcesFull = IsArray($aGoldFull) And IsArray($aElixirFull) And IsArray($aDarkElixirFull)
 
-	If Not $g_bChkCollectCartFirst And ($g_iTxtCollectGold = 0 Or $g_aiCurrentLoot[$eLootGold] < Number($g_iTxtCollectGold) Or $g_iTxtCollectElixir = 0 Or _
+	If Not $bForceCollectors And Not $g_bChkCollectCartFirst And ($g_iTxtCollectGold = 0 Or $g_aiCurrentLoot[$eLootGold] < Number($g_iTxtCollectGold) Or $g_iTxtCollectElixir = 0 Or _
 			$g_aiCurrentLoot[$eLootElixir] < Number($g_iTxtCollectElixir) Or $g_iTxtCollectDark = 0 Or $g_aiCurrentLoot[$eLootDarkElixir] < Number($g_iTxtCollectDark)) And Not $iAllResourcesFull Then CollectLootCart()
-	If $g_bChkTreasuryCollect > 0 And $bCheckTreasury And Not $iAllResourcesFull Then TreasuryCollect()
+	If Not $bForceCollectors And $g_bChkTreasuryCollect > 0 And $bCheckTreasury And Not $iAllResourcesFull Then TreasuryCollect()
 	EndGainCost("Collect")
 EndFunc   ;==>Collect
 
 Func CollectLootCart()
 	If Not $g_abNotNeedAllTime[0] Then
-		SetLog("Skipping loot cart check", $COLOR_INFO)
+		SetLog("Skipping Loot Cart Check", $COLOR_DEBUG)
 		Return
 	EndIf
-
-	SetLog("Searching for a Loot Cart", $COLOR_INFO)
 
 	If $g_iTree = $eTreeEG Then
 		If _ColorCheck(_GetPixelColor(54, 278 + $g_iMidOffsetY, True), Hex(0xE90914, 6), 20) Then ; If Egypt Scenery, Open/Close Chat To remove red warning.
@@ -140,7 +138,7 @@ Func CollectLootCart()
 
 		Local $aiCollectButton = findButton("CollectLootCart", Default, 1, True)
 		If IsArray($aiCollectButton) And UBound($aiCollectButton) = 2 Then
-			SetLog("Clicking to collect loot cart.", $COLOR_SUCCESS)
+			SetLog("Collecting Loot Cart", $COLOR_INFO)
 			ClickP($aiCollectButton)
 			If _Sleep(2000) Then Return
 			$aiCollectButton = findButton("CollectLootCart", Default, 1, True)
@@ -157,11 +155,11 @@ Func CollectLootCart()
 				Return False
 			EndIf
 		Else
-			SetLog("Cannot find Collect Button", $COLOR_ERROR)
+			SetLog("Cannot find collect button", $COLOR_ERROR)
 			Return False
 		EndIf
 	Else
-		SetLog("No Loot Cart found on your Village", $COLOR_SUCCESS)
+		SetLog("There is no loot cart found on your village")
 	EndIf
 
 	$g_abNotNeedAllTime[0] = False

@@ -18,7 +18,7 @@
 ; ===============================================================================================================================
 #include-once
 
-Global Const $g_iIniLinesMax = 1300 ; As of 2025-02-04 there are 1252 config.ini lines (All may not be active, but I did not got thru - Chilly Chill)
+Global Const $g_iIniLinesMax = 3200 ; As of 2025-02-04 there are 1252 config.ini lines (All may not be active, but I did not got thru - Chilly Chill)
 Global $g_asIniTable[$g_iIniLinesMax][2] ; section|key, value
 Global $g_iIniLineCount = 0
 
@@ -61,9 +61,13 @@ Func _Ini_Save($filename)
 	ReDim $g_asIniTable[$g_iIniLineCount][3]
 	_ArraySort($g_asIniTable) ; sort on section|key
 
-	FileCopy($filename, $filename & ".bak", $FC_OVERWRITE)
-
-	Local $hFile = FileOpen($filename, $FO_OVERWRITE + $FO_UTF16_LE)
+	Local $sTempFile = $filename & ".tmp"
+	FileDelete($sTempFile)
+	Local $hFile = FileOpen($sTempFile, $FO_OVERWRITE + $FO_UTF16_LE)
+	If $hFile = -1 Then
+		SetLog("Unable to create temporary config file: " & $sTempFile, $COLOR_ERROR)
+		Return False
+	EndIf
 	FileWriteLine($hFile, ";" & TimeDebug() & "MyBot.run configuration saved: " & $filename)
 	Local $sCurrentSection = ""
 
@@ -109,8 +113,11 @@ Func _Ini_Save($filename)
 	Next
 	FileClose($hFile)
 
-	; delete backup
-	FileDelete($filename & ".bak")
+	If Not FileMove($sTempFile, $filename, $FC_OVERWRITE) Then
+		SetLog("Unable to replace config file: " & $filename, $COLOR_ERROR)
+		Return False
+	EndIf
+	Return True
 EndFunc   ;==>_Ini_Save
 
 Func _Ini_Clear()
@@ -152,4 +159,3 @@ Func _Ini_AddNewKeyValue($section, $key, $value)
 	;SetDebugLog("New key value pair: " & $g_iIniLineCount & " " & $g_asIniTable[$g_iIniLineCount][0] & "=" & $g_asIniTable[$g_iIniLineCount][1])
 	$g_iIniLineCount += 1
 EndFunc   ;==>_Ini_AddNewKeyValue
-

@@ -1,4 +1,4 @@
-; #FUNCTION# ====================================================================================================================
+﻿; #FUNCTION# ====================================================================================================================
 ; Name ..........: LocateBlacksmith
 ; Description ...:
 ; Syntax ........: LocateBlacksmith()
@@ -13,31 +13,39 @@
 ; Example .......: No
 ; ===============================================================================================================================
 Func LocateBlacksmith($bCollect = True)
-	; reset position
-	$g_aiBlacksmithPos[0] = -1
-	$g_aiBlacksmithPos[1] = -1
-
 	If $g_iTownHallLevel < 8 Then
 		SetLog("Townhall Lvl " & $g_iTownHallLevel & " has no Blacksmith, so skip locating.", $COLOR_DEBUG)
-		Return
+		Return False
 	EndIf
 
+	Local $aPreviousBlacksmithPos[3] = [$g_aiBlacksmithPos[0], $g_aiBlacksmithPos[1], $g_aiBlacksmithPos[2]]
+	$g_aiBlacksmithPos[0] = -1
+	$g_aiBlacksmithPos[1] = -1
+	$g_aiBlacksmithPos[2] = -1
+
 	; auto locate
-	ImgLocateBlacksmith()
+	If ImgLocateBlacksmith(False, False, $aPreviousBlacksmithPos) Then
+		SetLog("Blacksmith Detected: (" & $g_aiBlacksmithPos[0] & "," & $g_aiBlacksmithPos[1] & "), Level: " & $g_aiBlacksmithPos[2], $COLOR_SUCCESS)
+		Return True
+	EndIf
 
-	SetLog("Blacksmith: (" & $g_aiBlacksmithPos[0] & "," & $g_aiBlacksmithPos[1] & ")", $COLOR_DEBUG)
+	If Not isInsideDiamond($aPreviousBlacksmithPos) Then LogUnknownBuildingPosition("Blacksmith")
 
-	If $g_aiBlacksmithPos[1] = "" Or $g_aiBlacksmithPos[1] = -1 Then _LocateBlacksmith($bCollect) ; manual locate
+	If Not _LocateBlacksmith($bCollect) Then
+		$g_aiBlacksmithPos[0] = $aPreviousBlacksmithPos[0]
+		$g_aiBlacksmithPos[1] = $aPreviousBlacksmithPos[1]
+		$g_aiBlacksmithPos[2] = $aPreviousBlacksmithPos[2]
+		Return False
+	EndIf
+
+	Return True
 EndFunc   ;==>LocateBlacksmith
 
 Func _LocateBlacksmith($bCollect = True)
 	Local $stext, $MsgBox, $iStupid = 0, $iSilly = 0, $sErrorText = ""
 
-	SetLog("Locating Blacksmith", $COLOR_INFO)
-
 	WinGetAndroidHandle()
-	checkMainScreen()
-	If $bCollect Then Collect(False)
+	checkMainScreen(False)
 
 	While 1
 		_ExtMsgBoxSet(1 + 64, $SS_CENTER, 0x004080, 0xFFFF00, 12, "Comic Sans MS", 600)
@@ -55,7 +63,7 @@ Func _LocateBlacksmith($bCollect = True)
 				Select
 					Case $iStupid = 1
 						$sErrorText = "Blacksmith Location Not Valid!" & @CRLF
-						SetLog("Location not valid, try again", $COLOR_ERROR)
+						SetDebugLog("Location not valid, try again", $COLOR_DEBUG)
 						ContinueLoop
 					Case $iStupid = 2
 						$sErrorText = "Please try to click inside the grass field!" & @CRLF
@@ -67,7 +75,7 @@ Func _LocateBlacksmith($bCollect = True)
 						$sErrorText = "Last Chance, DO NOT MAKE ME ANGRY, or" & @CRLF & "I will give ALL of your gold to Barbarian King," & @CRLF & "And ALL of your Gems to the Archer Queen!" & @CRLF
 						ContinueLoop
 					Case $iStupid > 4
-						SetLog(" Operator Error - Bad Blacksmith Location.", $COLOR_ERROR)
+						SetDebugLog(" Operator Error - Bad Blacksmith Location.", $COLOR_DEBUG)
 						ClearScreen()
 						Return False
 				EndSelect
@@ -75,7 +83,7 @@ Func _LocateBlacksmith($bCollect = True)
 		Else
 			SetLog("Locate Blacksmith Cancelled", $COLOR_INFO)
 			ClearScreen()
-			Return
+			Return False
 		EndIf
 		Local $sBlacksmithInfo = BuildingInfo(242, 475 + $g_iBottomOffsetY)
 		If $sBlacksmithInfo[0] > 1 Or $sBlacksmithInfo[0] = "" Then
@@ -97,34 +105,55 @@ Func _LocateBlacksmith($bCollect = True)
 						$sErrorText = $sLocMsg & " ?!?!?!" & @CRLF & @CRLF & "Last Chance, DO NOT MAKE ME ANGRY, or" & @CRLF & "I will give ALL of your gold to Barbarian King," & @CRLF & "And ALL of your Gems to the Archer Queen!" & @CRLF
 						ContinueLoop
 					Case $iSilly > 4
-						SetLog("Ok, you really think that's a Blacksmith?" & @CRLF & "I don't care anymore, go ahead with it!", $COLOR_ERROR)
+						SetDebugLog("Ok, you really think that's a Blacksmith?" & @CRLF & "I don't care anymore, go ahead with it!", $COLOR_DEBUG)
 						ClearScreen()
 						ExitLoop
 				EndSelect
 			EndIf
 		Else
-			SetLog(" Operator Error - Bad Blacksmith Location: " & "(" & $g_aiBlacksmithPos[0] & "," & $g_aiBlacksmithPos[1] & ")", $COLOR_ERROR)
+			SetDebugLog(" Operator Error - Bad Blacksmith Location: " & "(" & $g_aiBlacksmithPos[0] & "," & $g_aiBlacksmithPos[1] & ")", $COLOR_DEBUG)
 			$g_aiBlacksmithPos[0] = -1
 			$g_aiBlacksmithPos[1] = -1
 			ClearScreen()
 			Return False
 		EndIf
-		SetLog("Locate Blacksmith Success: " & "(" & $g_aiBlacksmithPos[0] & "," & $g_aiBlacksmithPos[1] & ")", $COLOR_SUCCESS)
+		$g_aiBlacksmithPos[2] = $sBlacksmithInfo[2]
+		SetLog("Blacksmith Detected: (" & $g_aiBlacksmithPos[0] & "," & $g_aiBlacksmithPos[1] & "), Level: " & $g_aiBlacksmithPos[2], $COLOR_SUCCESS)
 		ExitLoop
 	WEnd
 	ClearScreen()
+	Return True
 
 EndFunc   ;==>_LocateBlacksmith
 
 ; Image Search for Blacksmith
-Func ImgLocateBlacksmith()
+Func ImgLocateBlacksmith($bSilent = False, $bKeepSelected = False, $aPreviousPos = Default)
 	Local $sImgDir = @ScriptDir & "\imgxml\Buildings\Blacksmith\"
 
 	Local $sSearchArea = "FV"
-	Local $avBlacksmith = findMultiple($sImgDir, $sSearchArea, $sSearchArea, 0, 1000, 1, "objectname,objectpoints", True)
+	Local $avBlacksmith, $bLocalSearch = False
+
+	; Fast path: search around the last known position first.
+	If IsArray($aPreviousPos) And UBound($aPreviousPos) >= 2 And $aPreviousPos[0] > 0 And $aPreviousPos[1] > 0 Then
+		Local $iLeft = $aPreviousPos[0] - 90
+		Local $iTop = $aPreviousPos[1] - 90
+		Local $iRight = $aPreviousPos[0] + 90
+		Local $iBottom = $aPreviousPos[1] + 90
+		If $iLeft < 0 Then $iLeft = 0
+		If $iTop < 0 Then $iTop = 0
+		If $iRight > $g_iGAME_WIDTH Then $iRight = $g_iGAME_WIDTH
+		If $iBottom > $g_iGAME_HEIGHT Then $iBottom = $g_iGAME_HEIGHT
+		Local $sLocalArea = GetDiamondFromRect2($iLeft, $iTop, $iRight, $iBottom)
+		$avBlacksmith = findMultiple($sImgDir, $sLocalArea, $sLocalArea, 0, 1000, 1, "objectname,objectpoints", True)
+		$bLocalSearch = True
+	EndIf
+
+	; Fallback: preserve the original full-village search.
+	If Not IsArray($avBlacksmith) Or UBound($avBlacksmith, $UBOUND_ROWS) <= 0 Then _
+		$avBlacksmith = findMultiple($sImgDir, $sSearchArea, $sSearchArea, 0, 1000, 1, "objectname,objectpoints", Not $bLocalSearch)
 
 	If Not IsArray($avBlacksmith) Or UBound($avBlacksmith, $UBOUND_ROWS) <= 0 Then
-		SetLog("Couldn't find Blacksmith on main village", $COLOR_ERROR)
+		If Not $bSilent Then SetDebugLog("Couldn't find Blacksmith on main village", $COLOR_DEBUG)
 		If $g_bDebugImageSave Then SaveDebugImage("Blacksmith", False)
 		Return False
 	EndIf
@@ -135,14 +164,26 @@ Func ImgLocateBlacksmith()
 	; loop thro the detected images
 	For $i = 0 To UBound($avBlacksmith, $UBOUND_ROWS) - 1
 		$avBlacksmithRes = $avBlacksmith[$i]
-		SetLog("Blacksmith Search find : " & $avBlacksmithRes[0])
 		$aiBlacksmithCoords = decodeSingleCoord($avBlacksmithRes[1])
 	Next
 
 	If IsArray($aiBlacksmithCoords) And UBound($aiBlacksmithCoords, $UBOUND_ROWS) > 1 Then
-		$g_aiBlacksmithPos[0] = $aiBlacksmithCoords[0] + 6
-		$g_aiBlacksmithPos[1] = $aiBlacksmithCoords[1] + 10
-		Return True
+		$g_aiBlacksmithPos[0] = $aiBlacksmithCoords[0]
+		$g_aiBlacksmithPos[1] = $aiBlacksmithCoords[1]
+		BuildingClick($g_aiBlacksmithPos[0], $g_aiBlacksmithPos[1])
+		If _Sleep($DELAYIMGLOCATE1) Then Return
+		Local $sBlacksmithInfo = BuildingInfo(242, 475 + $g_iBottomOffsetY)
+		If StringInStr($sBlacksmithInfo[1], "smith") Then
+			$g_aiBlacksmithPos[2] = $sBlacksmithInfo[2]
+			If $bSilent Then SetLog("Blacksmith Detected: (" & $g_aiBlacksmithPos[0] & "," & $g_aiBlacksmithPos[1] & ")", $COLOR_SUCCESS)
+			If _Sleep($DELAYIMGLOCATE1) Then Return
+			If Not $bKeepSelected Then ClearScreen()
+			Return True
+		Else
+			If Not $bSilent Then SetDebugLog("Wrong click position, please manually locate", $COLOR_DEBUG)
+			If _Sleep($DELAYIMGLOCATE1) Then Return
+			ClearScreen()
+		EndIf
 	EndIf
 
 	Return False

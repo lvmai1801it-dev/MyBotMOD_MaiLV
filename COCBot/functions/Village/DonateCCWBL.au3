@@ -33,7 +33,7 @@ Func donateCCWBLUserImageCollect($x, $y)
 	;if OnlyWhiteList enable check and donate TO COMPLETE
 	SetDebugLog("Search into whitelist...", $color_purple)
 	Local $xyz = _FileListToArrayRec($g_sProfileDonateCaptureWhitelistPath, "*.png", $FLTAR_FILES, $FLTAR_NORECUR, $FLTAR_SORT, $FLTAR_NOPATH)
-	If UBound($xyz) > 1 Then
+	If IsArray($xyz) And UBound($xyz) > 1 Then
 		For $i = 1 To UBound($xyz) - 1
 			Local $result = FindImageInPlace("DCCWBL", $g_sProfileDonateCaptureWhitelistPath & $xyz[$i], "40," & $g_TopDividerSearch & "," & $x - 30 & "," & $g_TopDividerSearch + 26, True)
 			If StringInStr($result, ",") > 0 Then
@@ -48,7 +48,7 @@ Func donateCCWBLUserImageCollect($x, $y)
 	;if OnlyBlackList enable check and donate
 	SetDebugLog("Search into blacklist...", $color_purple)
 	Local $xyz1 = _FileListToArrayRec($g_sProfileDonateCaptureBlacklistPath, "*.png", $FLTAR_FILES, $FLTAR_NORECUR, $FLTAR_SORT, $FLTAR_NOPATH)
-	If UBound($xyz1) > 1 Then
+	If IsArray($xyz1) And UBound($xyz1) > 1 Then
 		For $i = 1 To UBound($xyz1) - 1
 			Local $result1 = FindImageInPlace("DCCWBL", $g_sProfileDonateCaptureBlacklistPath & $xyz1[$i], "40," & $g_TopDividerSearch & "," & $x - 30 & "," & $g_TopDividerSearch + 26, True)
 			If StringInStr($result1, ",") > 0 Then
@@ -66,7 +66,7 @@ Func donateCCWBLUserImageCollect($x, $y)
 		SetDebugLog("Search into images to assign...", $color_purple)
 		;try to search into images to Assign
 		Local $xyzw = _FileListToArrayRec($g_sProfileDonateCapturePath, "*.png", $FLTAR_FILES, $FLTAR_NORECUR, $FLTAR_SORT, $FLTAR_NOPATH)
-		If UBound($xyzw) > 1 Then
+		If IsArray($xyzw) And UBound($xyzw) > 1 Then
 			For $i = 1 To UBound($xyzw) - 1
 				Local $resultxyzw = FindImageInPlace("DCCWBL", $g_sProfileDonateCapturePath & $xyzw[$i], "40," & $g_TopDividerSearch & "," & $x - 30 & "," & $g_TopDividerSearch + 26, True)
 				If StringInStr($resultxyzw, ",") > 0 Then
@@ -94,24 +94,36 @@ Func donateCCWBLUserImageCollect($x, $y)
 				SetDebugLog("ChatDivider found (" & $xfound & "," & $yfound & ")", $COLOR_SUCCESS)
 
 				; now crop image to have only request village name and put in $hClone
-				Local $oBitmap = _GDIPlus_BitmapCreateFromHBITMAP($g_hHBitmap2)
-				Local $hClone = _GDIPlus_BitmapCloneArea($oBitmap, 52, $yfound - 18, 100, 14, $GDIP_PXF24RGB)
-				;save image
-				Local $Date = @YEAR & "-" & @MON & "-" & @MDAY
-				Local $Time = @HOUR & "." & @MIN & "." & @SEC
-				$iAllFilesCount = _FileListToArrayRec($g_sProfileDonateCapturePath, "*", 1, 0, 0, 0)
-				If IsArray($iAllFilesCount) Then
-					$iAllFilesCount = $iAllFilesCount[0]
+				If $g_hHBitmap2 <> 0 Then
+					Local $oBitmap = _GDIPlus_BitmapCreateFromHBITMAP($g_hHBitmap2)
+					If $oBitmap <> 0 Then
+						Local $hClone = _GDIPlus_BitmapCloneArea($oBitmap, 52, $yfound - 18, 100, 14, $GDIP_PXF24RGB)
+						If $hClone <> 0 Then
+							;save image
+							Local $Date = @YEAR & "-" & @MON & "-" & @MDAY
+							Local $Time = @HOUR & "." & @MIN & "." & @SEC
+							$iAllFilesCount = _FileListToArrayRec($g_sProfileDonateCapturePath, "*", 1, 0, 0, 0)
+							If IsArray($iAllFilesCount) Then
+								$iAllFilesCount = $iAllFilesCount[0]
+							Else
+								$iAllFilesCount = 0
+							EndIf
+							Local $filename = String("ClanMate--" & $Date & "_" & Number($iAllFilesCount) + 1 & "_98.png")
+							_GDIPlus_ImageSaveToFile($hClone, $g_sProfileDonateCapturePath & $filename)
+							_GDIPlus_BitmapDispose($hClone)
+							If $g_iCmbDonateFilter = 1 Then SetLog("IMAGES TO ASSIGN: stored!", $COLOR_SUCCESS)
+							;remove old files into folder images to assign if are older than 2 days
+							Deletefiles($g_sProfileDonateCapturePath, "*.png", 2, 0)
+						Else
+							SetDebugLog("Unable to clone Clan Mate image", $COLOR_ERROR)
+						EndIf
+						_GDIPlus_BitmapDispose($oBitmap)
+					Else
+						SetDebugLog("Unable to create Clan Mate bitmap", $COLOR_ERROR)
+					EndIf
 				Else
-					$iAllFilesCount = 0
+					SetDebugLog("Unable to capture Clan Mate image", $COLOR_ERROR)
 				EndIf
-				Local $filename = String("ClanMate--" & $Date & "_" & Number($iAllFilesCount) + 1 & "_98.png")
-				_GDIPlus_ImageSaveToFile($hClone, $g_sProfileDonateCapturePath & $filename)
-				_GDIPlus_BitmapDispose($hClone)
-				_GDIPlus_BitmapDispose($oBitmap)
-				If $g_iCmbDonateFilter = 1 Then SetLog("IMAGES TO ASSIGN: stored!", $COLOR_SUCCESS)
-				;remove old files into folder images to assign if are older than 2 days
-				Deletefiles($g_sProfileDonateCapturePath, "*.png", 2, 0)
 			EndIf
 		EndIf
 	EndIf

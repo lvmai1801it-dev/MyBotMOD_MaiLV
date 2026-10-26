@@ -67,7 +67,7 @@ Func UniversalCloseWaitOpenCoC($iWaitTime = 0, $sSource = "Unknown", $StopEmulat
 	Switch $StopAndroidFlag
 		Case 0 ; Do nothing while waiting, Let app time out
 			If $iWaitTime > 0 Then
-				SetLog("Going idle for " & $sWaitTime & "before starting CoC", $COLOR_SUCCESS)
+				SetLog("Going idle for " & $sWaitTime & "before starting Clash of Clans", $COLOR_SUCCESS)
 				Local $hTimer = __TimerInit()
 				LockBotSlot(False)
 				If $bSuspendComputer Then SuspendComputer($iWaitTime)
@@ -111,10 +111,10 @@ Func UniversalCloseWaitOpenCoC($iWaitTime = 0, $sSource = "Unknown", $StopEmulat
 		Case 2 ; Close emulator
 			PoliteCloseCoC($sSource)
 			If _Sleep(3000) Then Return False ; Wait 3 sec.
-			CloseAndroid("UniversalCloseWaitOpenCoC")
+			If Not CloseAndroid("UniversalCloseWaitOpenCoC") And $g_sAndroidEmulator = "MEmu" Then Return False
 			ReduceBotMemory()
 			If $iWaitTime > 0 Then
-				SetLog("Waiting " & $sWaitTime & "before starting CoC", $COLOR_SUCCESS)
+				SetLog("Waiting " & $sWaitTime & "before starting Clash of Clans", $COLOR_SUCCESS)
 				If $iWaitTime > 30000 Then
 					EnableGuiControls() ; enable bot controls is more than 30 seconds wait time
 					SetLog("Enabled bot controls due to long wait time", $COLOR_SUCCESS)

@@ -26,35 +26,28 @@ Func CollectAchievements($bTestMode = False) ;Run with True parameter if testing
 
 	ClearScreen()
 	If Not IsMainPage() Then Return
-
-	SetLog("Begin collecting achievement rewards", $COLOR_INFO)
-	If _Sleep($DELAYCOLLECT2) Then Return
-
-	;Check if possible rewards available from main screen
-	Local $aImgAchievementsMainScreen = decodeSingleCoord(findImage("AchievementsMainScreen", $g_sImgAchievementsMainScreen, GetDiamondFromRect("5,2,70,60"), 1, True))
-	If UBound($aImgAchievementsMainScreen) > 1 Then
-		SetDebugLog("Achievement counter found on main screen", $COLOR_SUCCESS)
-		Click($aImgAchievementsMainScreen[0] - 10, $aImgAchievementsMainScreen[1] + 20)
-		If _Sleep(1500) Then Return
-	Else
-		SetLog("No achievement rewards to collect", $COLOR_INFO)
-		SetDebugLog("Achievement counter not found on main screen", $COLOR_ERROR)
+	If Not CollectAchievementsProfileBadgeDetected() Then
+		SetLog("No achievement available to collect")
 		Return
 	EndIf
 
-	;Check MyProfile window Opened correctly
-	If Not $g_bRunState Then Return
-	Local $aImgAchievementsMyProfile = decodeSingleCoord(findImage("MyProfile", $g_sImgAchievementsMyProfile, GetDiamondFromRect("100,55,275,110"), 1, True))
-	If UBound($aImgAchievementsMainScreen) > 1 Then
-		SetDebugLog("My Profile window opened successfully", $COLOR_SUCCESS)
+	SetLog("Collecting Achievement Rewards", $COLOR_INFO)
+	If _Sleep($DELAYCOLLECT2) Then Return
+
+	; Open the player profile from its current main-screen position.
+	Click(Random(42, 54, 1), Random(76, 88, 1), 1, 120, "Open Player Profile")
+	If _Sleep(1500) Then Return
+
+	Local $bRewardsCollected = CollectAchievementsClaimReward(True, 0)
+	If Not $bRewardsCollected Then
+		If Not $g_bRunState Then Return
+		SetDebugLog("Claim Reward not found; opening My Profile", $COLOR_INFO)
+		Click(Random(116, 128, 1), Random(145, 157, 1), 1, 120, "Open My Profile")
 		If _Sleep(1500) Then Return
-	Else
-		SetDebugLog("My Profile window failed to open", $COLOR_ERROR)
-		ClickAway("Right")
-		If _Sleep(1000) Then Return
+		$bRewardsCollected = CollectAchievementsClaimReward(True)
 	EndIf
 
-	If Not CollectAchievementsClaimReward() Then
+	If Not $bRewardsCollected Then
 		SetDebugLog("There are no achievement rewards to collect", $COLOR_INFO)
 		If _Sleep(1000) Then Return
 		CloseWindow2()
@@ -62,11 +55,23 @@ Func CollectAchievements($bTestMode = False) ;Run with True parameter if testing
 	EndIf
 
 	If _Sleep(1000) Then Return
-	SetDebugLog("All achievment rewards collected successfully", $COLOR_SUCCESS)
+	SetDebugLog("All achievement rewards collected successfully", $COLOR_SUCCESS)
 	CloseWindow2()
 	Return
 EndFunc   ;==>CollectAchievements
 
+Func CollectAchievementsProfileBadgeDetected()
+	; Search the badge ring around its reference point; the center may be covered by the counter text.
+	Local Const $iLeft = 61, $iTop = 22, $iRight = 89, $iBottom = 50
+	Local $aBadge = _PixelSearch($iLeft, $iTop, $iRight, $iBottom, Hex(0xCB1C36, 6), 55)
+	If Not IsArray($aBadge) Then $aBadge = _PixelSearch($iLeft, $iTop, $iRight, $iBottom, Hex(0xFE0B0C, 6), 65)
+	If Not IsArray($aBadge) Then $aBadge = _PixelSearch($iLeft, $iTop, $iRight, $iBottom, Hex(0xE22234, 6), 60)
+	If IsArray($aBadge) Then
+		SetDebugLog("Achievement notification detected at " & $aBadge[0] & "," & $aBadge[1], $COLOR_ACTION)
+		Return True
+	EndIf
+	Return False
+EndFunc   ;==>CollectAchievementsProfileBadgeDetected
 
 Func CollectAchievementsRandomization() ; Add some randomization to avoid running the check every loop if a friend request exists
 
@@ -86,27 +91,38 @@ Func CollectAchievementsRandomization() ; Add some randomization to avoid runnin
 	EndIf
 EndFunc   ;==>CollectAchievementsRandomization
 
-Func CollectAchievementsClaimReward()
-	;Check Profile for Achievements and collect
+Func CollectAchievementsClaimReward($bSuppressNoRewardLog = False, $iMaxScrollAttempts = 3)
 	If Not $g_bRunState Then Return
 
 	Local $sSearchArea = GetDiamondFromRect2(660, 130 + $g_iMidOffsetY, 845, 645 + $g_iMidOffsetY)
-	Local $aClaimButtons = findMultiple($g_sImgAchievementsClaimReward, $sSearchArea, $sSearchArea, 0, 1000, 0, "objectname,objectpoints", True)
-	If IsArray($aClaimButtons) And UBound($aClaimButtons) > 0 Then
-		For $i = 0 To UBound($aClaimButtons) - 1
-			Local $aTemp = $aClaimButtons[$i]
-			Local $aClaimButtonXY = decodeMultipleCoords($aTemp[1])
-			For $i = 0 To UBound($aClaimButtonXY) - 1
-				Local $aTemp = $aClaimButtonXY[$i]
-				Click($aTemp[0], $aTemp[1])
-				SetLog("Achievement reward collected", $COLOR_SUCCESS)
-				If _Sleep(1500) Then Return
-			Next
-		Next
-		Return True
-	Else
-		SetLog("No achievement rewards to collect", $COLOR_INFO)
-		Return False
-	EndIf
+	Local $aClaimButtons, $aClaimButtonXY, $aButton
+	Local $iScrollAttempts = 0, $iClaimAttempts = 0, $iClaimed = 0
+	Local Const $iMaxClaimAttempts = 50
+
+	While $g_bRunState And $iScrollAttempts <= $iMaxScrollAttempts And $iClaimAttempts < $iMaxClaimAttempts
+		$aClaimButtons = findMultiple($g_sImgAchievementsClaimReward, $sSearchArea, $sSearchArea, 0, 1000, 0, "objectname,objectpoints", True)
+		If IsArray($aClaimButtons) And UBound($aClaimButtons) > 0 Then
+			$aButton = $aClaimButtons[0]
+			$aClaimButtonXY = decodeMultipleCoords($aButton[1])
+			If IsArray($aClaimButtonXY) And UBound($aClaimButtonXY) > 0 Then
+				$aButton = $aClaimButtonXY[0]
+				Click($aButton[0], $aButton[1])
+				$iClaimAttempts += 1
+				$iClaimed += 1
+				SetLog("Achievement Reward Collected", $COLOR_SUCCESS)
+				If _Sleep(1200) Then Return
+				ContinueLoop
+			EndIf
+		EndIf
+
+		If $iScrollAttempts = $iMaxScrollAttempts Then ExitLoop
+		ClickDrag(400, 555 + $g_iMidOffsetY, 400, 270 + $g_iMidOffsetY, 400)
+		$iScrollAttempts += 1
+		If _Sleep(700) Then Return
+	WEnd
+
+	If $iClaimed > 0 Then Return True
+	If Not $bSuppressNoRewardLog Then SetLog("No achievement rewards to collect")
+	Return False
 EndFunc   ;==>CollectAchievementsClaimReward
 

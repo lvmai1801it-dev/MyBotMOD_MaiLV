@@ -55,9 +55,6 @@ Func CreateSplashScreen($iSteps = Default)
 			Case 2 ; Mini GUI
 				$g_iSplashTotalSteps = 4
 		EndSwitch
-
-		; Launch only one bot at a time... it simply consumes too much CPU
-		$g_hSplashMutex = AcquireMutexTicket("Launching", 1, Default, False)
 	EndIf
 
 	If $bDisableSplash = False Or $bCustomWindow Then
@@ -103,11 +100,15 @@ Func CreateSplashScreen($iSteps = Default)
 			; Show Splash
 			GUISetState($iGuiState, $g_hSplash)
 			$g_hSplashTimer = __TimerInit()
+			GUICtrlSetData($g_lSplashStatus, GetTranslatedFileIni("MBR GUI Design - Loading", "Waiting_for_Launch_Slot", "Waiting for launch slot..."))
+			$g_hSplashMutex = AcquireMutexTicket("Launching", 1, Default, False)
 		EndIf
 
 		Local $a = [$iX, $iHeight, $iY + $iT + $iB]
 		Return $a
 	EndIf
+
+	If Not $bCustomWindow Then $g_hSplashMutex = AcquireMutexTicket("Launching", 1, Default, False)
 
 EndFunc   ;==>CreateSplashScreen
 #EndRegion Splash

@@ -1,10 +1,16 @@
-ReferenceFunctions() ; call reference function so stripper is not removing these
+﻿ReferenceFunctions() ; call reference function so stripper is not removing these
 ReferenceGlobals() ; call reference globals so stripper is not removing these
 
 Func ReferenceFunctions()
 	If True Then Return
 	; Reference to functions
 	Local $a1, $a2
+	TestArmyCampOCR()
+	TestDonateOCR()
+	TestArmyOverview()
+	TestAutoUpgradeStation()
+	TestPetHouse()
+	TestLaboratory()
 	BotMoveRequest()
 	BotMinimizeRequest()
 	FindPreferredAdbPath()
@@ -46,7 +52,6 @@ Func ReferenceFunctions()
 	_SysTrayIconMove(0, 0)
 	ZoomOutBlueStacks5()
 	ZoomOutMEmu()
-	ZoomOutNox()
 	DefaultZoomOut()
 	ZoomOutCtrlWheelScroll()
 	ZoomOutCtrlClick()
@@ -78,21 +83,6 @@ Func ReferenceFunctions()
 	CheckScreenMEmu()
 	UpdateMEmuConfig()
 	UpdateMEmuWindowState()
-	OpenNox()
-	IsNoxCommandLine(0)
-	GetNoxProgramParameter()
-	GetNoxRtPath()
-	GetNoxPath()
-	GetNoxAdbPath()
-	InitNox()
-	SetScreenNox()
-	RebootNoxSetScreen()
-	CloseNox()
-	CheckScreenNox()
-	GetNoxRunningInstance()
-	RedrawNoxWindow()
-	HideNoxWindow()
-	EmbedNox()
 	AndroidEmbedded()
 	_ProcessSuspendResume2(0)
 	__EnumDefaultProc(0, 0)
@@ -109,9 +99,7 @@ Func ReferenceFunctions()
 	returnAllMatches(0)
 	returnLowestLevelSingleMatch(0)
 	updateGlobalVillageOffset(0, 0)
-	GemClickR(0, 0, 0)
 	GetMEmuBackgroundMode()
-	GetNoxBackgroundMode()
 	; DonateCC.au3
 	getChatString(0, 0, 0)
 	getChatStringChinese(0, 0)
@@ -164,7 +152,7 @@ Func ReferenceGlobals()
 	$a1 = $eIcnDonBalloon
 	$a1 = $eIcnBarbarian
 	$a1 = $eIcnDonBarbarian
-	$a1 = $eBtnTest
+	$a1 = $eIcnYetiUndertaker
 	$a1 = $eIcnBuilder
 	$a1 = $eIcnCC
 	$a1 = $eIcnGUI
@@ -202,7 +190,7 @@ Func ReferenceGlobals()
 	$a1 = $eIcnRageSpell
 	$a1 = $eIcnTroops
 	$a1 = $eIcnHourGlass
-	$a1 = $eIcnTH1
+	$a1 = $eIcnVillager
 	$a1 = $eIcnTH10
 	$a1 = $eIcnTH11
 	$a1 = $eIcnTH12
@@ -210,7 +198,7 @@ Func ReferenceGlobals()
 	$a1 = $eIcnTH14
 	$a1 = $eIcnTH15
 	$a1 = $eIcnTH16
-	$a1 = $eIcnTH17
+	$a1 = $eIcnTH
 	$a1 = $eIcnTrophy
 	$a1 = $eIcnValkyrie
 	$a1 = $eIcnDonValkyrie
@@ -222,23 +210,22 @@ Func ReferenceGlobals()
 	$a1 = $eIcnWizard
 	$a1 = $eIcnDonWizard
 	$a1 = $eIcnXbow
-	$a1 = $eIcnBarrackBoost
+	$a1 = $eIcnRicochetCannon
 	$a1 = $eIcnMine
 	$a1 = $eIcnCamp
 	$a1 = $eIcnBarrack
 	$a1 = $eIcnSpellFactory
-	$a1 = $eIcnDonBlacklist
-	$a1 = $eIcnSpellFactoryBoost
+	$a1 = $eIcnMisc
+	$a1 = $eIcnBuilderBarrack
 	$a1 = $eIcnMortar
 	$a1 = $eIcnWizTower
-	$a1 = $eIcnPayPal
+	$a1 = $eIcnCraftingStation
 	$a1 = $eIcnNotify
 	$a1 = $eIcnGreenLight
 	$a1 = $eIcnLaboratory
 	$a1 = $eIcnRedLight
 	$a1 = $eIcnBlank
 	$a1 = $eIcnYellowLight
-	$a1 = $eIcnDonCustom
 	$a1 = $eIcnTombstone
 	$a1 = $eIcnSilverStar
 	$a1 = $eIcnGoldStar
@@ -265,13 +252,13 @@ Func ReferenceGlobals()
 	$a1 = $eIcnKing
 	$a1 = $eIcnQueen
 	$a1 = $eIcnDarkSpellBoost
-	$a1 = $eIcnQueenBoostLocate
-	$a1 = $eIcnKingBoostLocate
+	$a1 = $eIcnStickHorse
+	$a1 = $eIcnDarkCrown
 	$a1 = $eIcnKingUpgr
 	$a1 = $eIcnQueenUpgr
 	$a1 = $eIcnWardenUpgr
 	$a1 = $eIcnWarden
-	$a1 = $eIcnWardenBoostLocate
+	$a1 = $eIcnMeteorStaff
 	$a1 = $eIcnKingBoost
 	$a1 = $eIcnQueenBoost
 	$a1 = $eIcnWardenBoost
@@ -280,9 +267,9 @@ Func ReferenceGlobals()
 	$a1 = $eIcnCopy
 	$a1 = $eIcnAddcvs
 	$a1 = $eIcnEdit
-	$a1 = $eIcnTreeSnow
-	$a1 = $eIcnSleepingQueen
-	$a1 = $eIcnSleepingKing
+	$a1 = $eIcnHP
+	$a1 = $eIcnFireHeart
+	$a1 = $eIcnFlameBlower
 	$a1 = $eIcnGoldElixir
 	$a1 = $eIcnBowler
 	$a1 = $eIcnDonBowler
@@ -292,21 +279,21 @@ Func ReferenceGlobals()
 	$a1 = $eIcnGembox
 	$a1 = $eIcnInferno4
 	$a1 = $eIcnInfo
-	$a1 = $eIcnMain
-	$a1 = $eIcnTree
+	$a1 = $eIcnBuilderHut
+	$a1 = $eIcnGeneral
 	$a1 = $eIcnProfile
 	$a1 = $eIcnCCRequest
 	$a1 = $eIcnTelegram
-	$a1 = $eIcnTiles
+	$a1 = $eIcnDamage
 	$a1 = $eIcnXbow3
 	$a1 = $eIcnBark
-	$a1 = $eIcnDailyProgram
+	$a1 = $eIcnPoison
 	$a1 = $eIcnLootCart
-	$a1 = $eIcnSleepMode
+	$a1 = $eIcnCD
 	$a1 = $eIcnTH11
 	$a1 = $eIcnTH12
-	$a1 = $eIcnTrainMode
-	$a1 = $eIcnSleepingWarden
+	$a1 = $eIcnSettings
+	$a1 = $eIcnStunBlaster
 	$a1 = $eIcnCloneSpell
 	$a1 = $eIcnSkeletonSpell
 	$a1 = $eIcnBabyDragon
@@ -317,16 +304,15 @@ Func ReferenceGlobals()
 	$a1 = $eIcnMiner
 	$a1 = $eIcnDonMiner
 	$a1 = $eIcnNoShield
-	$a1 = $eIcnDonCustomB
 	$a1 = $eIcnAirdefense
 	$a1 = $eIcnScattershot
 	$a1 = $eIcnMonolith
-	$a1 = $eIcnDarkBarrackBoost
+	$a1 = $eIcnMasterBuilder
 	$a1 = $eIcnDarkElixirStorage
 	$a1 = $eIcnSpellsCost
 	$a1 = $eIcnTroopsCost
 	$a1 = $eIcnResetButton
-	$a1 = $eIcnNewSmartZap
+	$a1 = $eIcnRocketBackpack
 	$a1 = $eIcnTrain
 	$a1 = $eIcnAttack
 	$a1 = $eIcnDelay
@@ -375,7 +361,7 @@ Func ReferenceGlobals()
 	$a1 = $eIcnPBNotify
 	$a1 = $eIcnCCTroops
 	$a1 = $eIcnCCSpells
-	$a1 = $eIcnSpellsGroup
+	$a1 = $eIcnMultiStats
 	$a1 = $eBahasaIND
 	$a1 = $eChinese_S
 	$a1 = $eChinese_T
@@ -398,38 +384,82 @@ Func ReferenceGlobals()
 	$a1 = $eKorean
 
 	$a1 = $eTroopBarbarian
+	$a1 = $eTroopSuperBarbarian
 	$a1 = $eTroopArcher
+	$a1 = $eTroopSuperArcher
 	$a1 = $eTroopGiant
+	$a1 = $eTroopSuperGiant
 	$a1 = $eTroopGoblin
+	$a1 = $eTroopSneakyGoblin
 	$a1 = $eTroopWallBreaker
+	$a1 = $eTroopSuperWallBreaker
 	$a1 = $eTroopBalloon
+	$a1 = $eTroopRocketBalloon
 	$a1 = $eTroopWizard
+	$a1 = $eTroopSuperWizard
 	$a1 = $eTroopHealer
 	$a1 = $eTroopDragon
+	$a1 = $eTroopSuperDragon
 	$a1 = $eTroopPekka
 	$a1 = $eTroopBabyDragon
+	$a1 = $eTroopInfernoDragon
 	$a1 = $eTroopMiner
+	$a1 = $eTroopSuperMiner
 	$a1 = $eTroopElectroDragon
 	$a1 = $eTroopYeti
-	$a1 = $eTroopDragonRider
+	$a1 = $eTroopSuperYeti
 	$a1 = $eTroopDragonRider
 	$a1 = $eTroopElectroTitan
-	$a1 = $eTroopRootRider
-	$a1 = $eTroopThrower
-
+ 	$a1 = $eTroopRootRider
+ 	$a1 = $eTroopThrower
+	$a1 = $eTroopMeteorGolem
 	$a1 = $eTroopMinion
-	$a1 = $eTroopHogRider
+	$a1 = $eTroopSuperMinion
+ 	$a1 = $eTroopHogRider
 	$a1 = $eTroopSuperHogRider
 	$a1 = $eTroopValkyrie
+	$a1 = $eTroopSuperValkyrie
 	$a1 = $eTroopGolem
 	$a1 = $eTroopWitch
+	$a1 = $eTroopSuperWitch
 	$a1 = $eTroopLavaHound
+	$a1 = $eTroopIceHound
 	$a1 = $eTroopBowler
+	$a1 = $eTroopSuperBowler
 	$a1 = $eTroopIceGolem
 	$a1 = $eTroopHeadhunter
 	$a1 = $eTroopAppWard
 	$a1 = $eTroopDruid
 	$a1 = $eTroopFurnace
+	$a1 = $eTroopRuinWitch
+	$a1 = $eTroopDebtCollector
+	$a1 = $eTroopElephantRider
+	$a1 = $eTroopGiantGiant
+	$a1 = $eTroopKANE
+	$a1 = $eTroopYEETer
+	$a1 = $eTroopTheDisarmer
+	$a1 = $eTroopYetiUndertaker
+	$a1 = $eTroopBarbarianKicker
+	$a1 = $eTroopGiantThrower
+	$a1 = $eTroopBroomWitch
+	$a1 = $eTroopMECHA
+	$a1 = $eTroopIceMinion
+	$a1 = $eTroopIceWizard
+	$a1 = $eTroopPartyWizard
+	$a1 = $eTroopCOOKIE
+	$a1 = $eTroopFirecracker
+	$a1 = $eTroopRamRider
+	$a1 = $eTroopPumpkinBarbarian
+	$a1 = $eTroopRoyalGhost
+	$a1 = $eTroopBarcher
+	$a1 = $eTroopHogWizard
+	$a1 = $eTroopLavaloon
+	$a1 = $eTroopTotemThrower
+	$a1 = $eTroopWitchGolem
+	$a1 = $eTroopGiantSkeleton
+	$a1 = $eTroopSkeletonBarrel
+	$a1 = $eTroopAzureDragon
+	$a1 = $eTroopGoldenDragon
 	$a1 = $eTroopCount
 
 	$a1 = $eSpellLightning
@@ -441,51 +471,100 @@ Func ReferenceGlobals()
 	$a1 = $eSpellInvisibility
 	$a1 = $eSpellRecall
 	$a1 = $eSpellRevive
+	$a1 = $eSpellTotem
 	$a1 = $eSpellPoison
 	$a1 = $eSpellEarthquake
 	$a1 = $eSpellHaste
 	$a1 = $eSpellSkeleton
 	$a1 = $eSpellBat
 	$a1 = $eSpellOvergrowth
+	$a1 = $eSpellIBSpell
+	$a1 = $eSpellAngrySpell
 	$a1 = $eSpellCount
 
 	$a1 = $eBarb
+	$a1 = $eSBarb
 	$a1 = $eArch
+	$a1 = $eSArch
 	$a1 = $eGiant
+	$a1 = $eSGiant
 	$a1 = $eGobl
+	$a1 = $eSGobl
 	$a1 = $eWall
+	$a1 = $eSWall
 	$a1 = $eBall
+	$a1 = $eRBall
 	$a1 = $eWiza
+	$a1 = $eSWiza
 	$a1 = $eHeal
 	$a1 = $eDrag
 	$a1 = $eSDrag
 	$a1 = $ePekk
 	$a1 = $eBabyD
-	$a1 = $eEDrag
-	$a1 = $eYeti
-	$a1 = $eRDrag
+	$a1 = $eInfernoD
 	$a1 = $eMine
 	$a1 = $eSMine
+	$a1 = $eEDrag
+	$a1 = $eYeti
+	$a1 = $eSYeti
+	$a1 = $eRDrag
 	$a1 = $eETitan
 	$a1 = $eRootR
+	$a1 = $eThrower
+	$a1 = $eMeteorG
 	$a1 = $eMini
+	$a1 = $eSMini
 	$a1 = $eHogs
 	$a1 = $eSHogs
 	$a1 = $eValk
+	$a1 = $eSValk
 	$a1 = $eGole
 	$a1 = $eWitc
+	$a1 = $eSWitc
 	$a1 = $eLava
+	$a1 = $eIceH
 	$a1 = $eBowl
 	$a1 = $eSBowl
 	$a1 = $eIceG
 	$a1 = $eHunt
-	$a1 = $eAppWard
-	$a1 = $eDruid
+ 	$a1 = $eAppWard
+ 	$a1 = $eDruid
 	$a1 = $eFurn
-	$a1 = $eThrower
-	$a1 = $eKing
+	$a1 = $eRuinW
+	$a1 = $eDebt
+	$a1 = $eERider
+	$a1 = $eGGiant
+	$a1 = $eKANE
+	$a1 = $eYEET
+	$a1 = $eDisarmer
+	$a1 = $eYUnder
+	$a1 = $eKicker
+	$a1 = $eGThrow
+	$a1 = $eBroom
+	$a1 = $eMECHA
+	$a1 = $eIceMini
+	$a1 = $eIceWiz
+	$a1 = $ePartyWiz
+	$a1 = $eCOOKIE
+	$a1 = $eFire
+	$a1 = $eRamR
+	$a1 = $ePBarb
+	$a1 = $eRoyalG
+	$a1 = $eBarcher
+	$a1 = $eHogWiz
+	$a1 = $eLavaloon
+	$a1 = $eTThrow
+	$a1 = $eWitchG
+	$a1 = $eGiantS
+	$a1 = $eSBarrel
+	$a1 = $eADrag
+	$a1 = $eGDrag
+ 	$a1 = $eKing
 	$a1 = $eQueen
+	$a1 = $ePrince
 	$a1 = $eWarden
+	$a1 = $eChampion
+	$a1 = $eDuke
 	$a1 = $eCastle
 
 	$a1 = $eLSpell
@@ -497,15 +576,20 @@ Func ReferenceGlobals()
 	$a1 = $eISpell
 	$a1 = $eReSpell
 	$a1 = $eRvSpell
+	$a1 = $eTSpell
 	$a1 = $ePSpell
 	$a1 = $eESpell
 	$a1 = $eHaSpell
 	$a1 = $eSkSpell
 	$a1 = $eBtSpell
 	$a1 = $eOgSpell
+	$a1 = $eIBSpell
+	$a1 = $eASpell
 
 	$a1 = $eIcnChampion
-	$a1 = $eIcnChampionBoostLocate
+	$a1 = $eIcnElectroFangs
+	$a1 = $eIcnFrostFlake
+	$a1 = $eIcnHeroicTorch
 	$a1 = $eIcnChampionUpgr
 	$a1 = $eIcnChampionBoost
 	$a1 = $eIcnSleepingChampion

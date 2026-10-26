@@ -44,7 +44,6 @@ Global $g_iGlobalActiveBotsAllowed = 0 ; Dummy
 Global $g_hMutextOrSemaphoreGlobalActiveBots = 0 ; Dummy
 Global $g_bBotLaunchOption_NoBotSlot = True
 Global $g_hStatusBar = 0 ; Dummy
-Global Const $COLOR_ORANGE = 0xFF7700 ; Used for donate GUI buttons
 Global Const $COLOR_ERROR = $COLOR_RED ; Error messages
 Global Const $COLOR_WARNING = $COLOR_MAROON ; Warning messages
 Global Const $COLOR_INFO = $COLOR_BLUE ; Information or Status updates for user
@@ -53,7 +52,7 @@ Global Const $COLOR_SUCCESS1 = 0x009900 ; Med green, optional success message fo
 Global Const $COLOR_DEBUG = $COLOR_PURPLE ; Purple, basic debug color
 Global Const $COLOR_DEBUG1 = 0x7A00CC ; Dark Purple, Debug for successful status checks
 Global Const $COLOR_DEBUG2 = 0xAA80FF ; lt Purple, secondary debug color
-Global Const $COLOR_DEBUGS = $COLOR_MEDGRAY ; Med Grey, debug color for less important but needed supporting data points in multiple messages
+Global Const $COLOR_DEBUGS = $COLOR_GRAY ; Med Grey, debug color for less important but needed supporting data points in multiple messages
 Global Const $COLOR_ACTION = 0xFF8000 ; Med Orange, debug color for individual actions, clicks, etc
 Global Const $COLOR_ACTION1 = 0xCC80FF ; Light Purple, debug color for pixel/window checks
 
@@ -83,13 +82,20 @@ Else
 	$query = "Select " & GetWmiSelectFields() & " from Win32_Process"
 EndIf
 
-Local $oProcessColl = GetWmiObject().ExecQuery($query, "WQL", 0x20 + 0x10)
+Local $oWmiObject = GetWmiObject()
+If $oWmiObject = -1 Or @error Then
+	OutputWmiData("<Processes>")
+	OutputWmiData("</Processes>")
+	Exit
+EndIf
+
+Local $oProcessColl = $oWmiObject.ExecQuery($query, "WQL", 0x20 + 0x10)
 
 OutputWmiData("<Processes>")
 For $Process In $oProcessColl
 	OutputWmiData("  <Process>")
 	For $sField In $g_WmiFields
-		OutputWmiData("    <" & $sField & ">" & Execute("$Process." & $sField) & "</" & $sField & ">")
+		OutputWmiData("    <" & $sField & ">" & WmiXmlEscape(Execute("$Process." & $sField)) & "</" & $sField & ">")
 	Next
 	OutputWmiData("  </Process>")
 Next
@@ -123,6 +129,14 @@ Func OutputWmiData($s)
 	ConsoleWrite($s & @CRLF)
 EndFunc   ;==>OutputWmiData
 
+Func WmiXmlEscape($s)
+	$s = String($s)
+	$s = StringReplace($s, "&", "&amp;")
+	$s = StringReplace($s, "<", "&lt;")
+	$s = StringReplace($s, ">", "&gt;")
+	Return $s
+EndFunc   ;==>WmiXmlEscape
+
 ; Dummy functions
 Func _GUICtrlStatusBar_SetText($a, $b)
 EndFunc
@@ -132,4 +146,3 @@ Func GetTranslatedFileIni($a, $b, $c)
 EndFunc
 Func _GUICtrlStatusBar_SetTextEx($hWnd, $sText = "", $iPart = 0, $iUFlag = 0)
 EndFunc
-

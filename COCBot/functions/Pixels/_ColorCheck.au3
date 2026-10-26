@@ -13,7 +13,7 @@
 ; Example .......: No
 ; ===============================================================================================================================
 
-Func _ColorCheck($nColor1, $nColor2, $sVari = 5, $Ignore = Default)
+Func _ColorCheck($nColor1, $nColor2, $sVari = 5, $Ignore = Default, $sComment = "")
 	Local $Red1, $Red2, $Blue1, $Blue2, $Green1, $Green2
 
 	$Red1 = Dec(StringMid(String($nColor1), 1, 2))

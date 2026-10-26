@@ -18,7 +18,7 @@ Global $g_hCmbCOCDistributors = 0, $g_hCmbAndroidBackgroundMode = 0, $g_hCmbAndr
 	$g_hChkAndroidAdbClickDragScript = 0, $g_hBtnAndroidAdbShell = 0, $g_hBtnAndroidHome = 0, $g_hBtnAndroidBack = 0, $g_hTxtAndroidRebootHours = 0, _
 	$g_hChkAndroidCloseWithBot = 0, $g_hChkUpdateSharedPrefs = 0, $g_hBtnAndroidEnableTouch = 0, $g_hBtnAndroidDisableTouch = 0, $g_lblHelpBot = 0, _
 	$g_hLblAdditionalClickDelay = 0, $g_hSldAdditionalClickDelay = 0, $g_hChkUseDedicatedAdbPort = 0, $g_hCmbAndroidReplaceAdb = 0, _
-	$g_hCmbAndroidEmulator = 0, $g_hCmbAndroidInstance = 0
+	$g_hCmbAndroidEmulator = 0, $g_hCmbAndroidInstance = 0, $g_hTxtBotRestartHours = 0, $g_hChkBotRestartEnabled = 0
 
 Func CreateBotAndroid()
 
@@ -60,44 +60,44 @@ Func CreateBotAndroid()
 	GUICtrlCreateGroup(GetTranslatedFileIni("Android", "Android_Options", "Android Options"), $x - 20, $y - 20, $w, $h)
 		GUICtrlCreateLabel(GetTranslatedFileIni("Android", "LblBackgroundMode", "Screencapture Background Mode"), $x - 8, $y + 5, 180, 22, $SS_RIGHT)
 		$g_hCmbAndroidBackgroundMode = GUICtrlCreateCombo("", $x - 8 + 180 + 5, $y, 200, -1, BitOR($CBS_DROPDOWNLIST, $CBS_AUTOHSCROLL))
-			GUICtrlSetData(-1, GetTranslatedFileIni("Android", "CmbBackgroundMode", "Default|Use WinAPI (need Android DirectX)|Use ADB screencap"))
+			GUICtrlSetData(-1, GetTranslatedFileIni("Android", "CmbBackgroundMode", "Default|Use WinAPI (DirectX Only)|Use Screencap"))
 			_GUICtrlSetTip(-1, GetTranslatedFileIni("Android", "CmbBackgroundMode_Info", 'Control how the Android screenshot is taken in background mode.\nDefault chooses WinAPI or screencap based on Android Emulator.\nInfo: WinAPI is faster than screencap, but screencap always works,\neven if screen is off (we call that the "True Background Mode")!'))
 			_GUICtrlComboBox_SetCurSel(-1, $g_iAndroidBackgroundMode)
 			GUICtrlSetOnEvent(-1, "cmbAndroidBackgroundMode")
 	$y += 25
 		GUICtrlCreateLabel(GetTranslatedFileIni("Android", "LblZoomoutMode", "Zoomout Mode"), $x - 8, $y + 5, 180, 22, $SS_RIGHT)
 		$g_hCmbAndroidZoomoutMode = GUICtrlCreateCombo("", $x - 8 + 180 + 5, $y, 200, -1, BitOR($CBS_DROPDOWNLIST, $CBS_AUTOHSCROLL))
-			GUICtrlSetData(-1, GetTranslatedFileIni("Android", "CmbZoomoutMode", "Default|Use Minitouch script|Use dd script|WinAPI|Update shared_prefs"))
+			GUICtrlSetData(-1, GetTranslatedFileIni("Android", "CmbZoomoutMode", "Default|Use minitouch script|Use dd script|WinAPI|Update shared_prefs"))
 			_GUICtrlSetTip(-1, GetTranslatedFileIni("Android", "CmbZoomoutMode_Info", 'Control how the zoomout is done. Default chooses usually Minitouch script, which is most stable.'))
 			_GUICtrlComboBox_SetCurSel(-1, $g_iAndroidZoomoutMode)
 	$y += 25
 		GUICtrlCreateLabel(GetTranslatedFileIni("MBR Distributors", "LblAdvanced_Android_Options", "Suspend/Resume Android"), $x - 8, $y + 5, 180, 22, $SS_RIGHT)
 		$g_hCmbSuspendAndroid = GUICtrlCreateCombo("", $x - 8 + 180 + 5, $y, 200, -1, BitOR($CBS_DROPDOWNLIST, $CBS_AUTOHSCROLL))
-			GUICtrlSetData(-1, GetTranslatedFileIni("MBR Distributors", "CmbSuspendAndroid_Item_01", "Disabled|Only during Search/Attack|For every Image processing call"))
-			_GUICtrlSetTip(-1, GetTranslatedFileIni("MBR Distributors", "CmbSuspendAndroid_Info_01", 'Specify if Android will be suspended for brief time only during search and attack or\r\nfor every ImgLoc/Image processing call. If you experience more frequent network issues\r\ntry to use "Only during Search/Attack" option or disable this feature.'))
+			GUICtrlSetData(-1, GetTranslatedFileIni("MBR Distributors", "CmbSuspendAndroid_Item_01", "Disabled|Search Attack Only|Every Image Processing Call"))
+			_GUICtrlSetTip(-1, GetTranslatedFileIni("MBR Distributors", "CmbSuspendAndroid_Info_01", 'Specify if Android will be suspended for brief time only during search and attack or\r\nfor every ImgLoc/Image processing call. If you experience more frequent network issues\r\ntry to use "Search Attack Only" option or disable this feature.'))
 			_GUICtrlComboBox_SetCurSel(-1, AndroidSuspendFlagsToIndex($g_iAndroidSuspendModeFlags))
 			GUICtrlSetOnEvent(-1, "cmbSuspendAndroid")
 	$y += 25
-		GUICtrlCreateLabel(GetTranslatedFileIni("Android", "LblReplaceAdb", "ADB Path From"), $x - 8, $y + 5, 180, 22, $SS_RIGHT)
+		GUICtrlCreateLabel(GetTranslatedFileIni("Android", "LblReplaceAdb", "ADB Path"), $x - 8, $y + 5, 180, 22, $SS_RIGHT)
 		$g_hCmbAndroidReplaceAdb = GUICtrlCreateCombo("", $x - 8 + 180 + 5, $y, 200, -1, BitOR($CBS_DROPDOWNLIST, $CBS_AUTOHSCROLL))
 			GUICtrlSetData(-1, GetTranslatedFileIni("Android", "CmbReplaceAdb", "Emulator|MyBotRun"))
 			_GUICtrlSetTip(-1, GetTranslatedFileIni("Android", "CmbReplaceAdb_Info", 'Configure if Android Emulator adb.exe should be replaced with MyBotRun adb.exe to solve adb issues.'))
 			_GUICtrlComboBox_SetCurSel(-1, $g_iAndroidAdbReplace)
 	$y += 25
-		$g_hChkAndroidAdbClick = GUICtrlCreateCheckbox(GetTranslatedFileIni("Android", "ChkAdbClick", "Use minitouch for Click"), $x, $y, -1, -1)
+		$g_hChkAndroidAdbClick = GUICtrlCreateCheckbox(GetTranslatedFileIni("Android", "ChkAdbClick", "Use Minitouch for Click"), $x, $y, -1, -1)
 			_GUICtrlSetTip(-1, GetTranslatedFileIni("Android", "ChkAdbClick_Info", "Use minitouch for Android clicks.\r\nIf unchecked use WinAPI control messages."))
 			GUICtrlSetState(-1, (($g_bAndroidAdbClickEnabled) ? ($GUI_CHECKED) : ($GUI_UNCHECKED)))
 	$y += 25
-		$g_hChkAndroidAdbClickDragScript = GUICtrlCreateCheckbox(GetTranslatedFileIni("Android", "ChkAdbClickDragScript", "Use minitouch for accurate Click && Drag"), $x, $y, -1, -1)
-			_GUICtrlSetTip(-1, GetTranslatedFileIni("Android", "ChkAdbClickDragScript_Info", "Use minitouch for accurate Click & Drag.\r\nIf unchecked use more compatible 'input swipe' or WinAPI."))
+		$g_hChkAndroidAdbClickDragScript = GUICtrlCreateCheckbox(GetTranslatedFileIni("Android", "ChkAdbClickDragScript", "Use Minitouch for Accurate Click && Drag"), $x, $y, 250, -1)
+			_GUICtrlSetTip(-1, GetTranslatedFileIni("Android", "ChkAdbClickDragScript_Info", "Use minitouch for Click & Drag.\r\nIf unchecked use more compatible 'input swipe' or WinAPI."))
 			GUICtrlSetState(-1, (($g_bAndroidAdbClickDragScript) ? ($GUI_CHECKED) : ($GUI_UNCHECKED)))
 
 	$y += 25
-		$g_hChkAndroidCloseWithBot = GUICtrlCreateCheckbox(GetTranslatedFileIni("Android", "ChkAndroidCloseWithBot", "Close Android with bot"), $x, $y, -1, -1)
+		$g_hChkAndroidCloseWithBot = GUICtrlCreateCheckbox(GetTranslatedFileIni("Android", "ChkAndroidCloseWithBot", "Close Android && Bot"), $x, $y, -1, -1)
 			_GUICtrlSetTip(-1, GetTranslatedFileIni("Android", "ChkAndroidCloseWithBot_Info", "Close also Android Emulator when bot exists."))
 			GUICtrlSetState(-1, (($g_bAndroidCloseWithBot) ? ($GUI_CHECKED) : ($GUI_UNCHECKED)))
 
-		$g_hChkUseDedicatedAdbPort = GUICtrlCreateCheckbox(GetTranslatedFileIni("Android", "ChkUseDedicatedAdbPort", "Use dedicated ADB port"), $x + 227, $y - 50, -1, -1)
+		$g_hChkUseDedicatedAdbPort = GUICtrlCreateCheckbox(GetTranslatedFileIni("Android", "ChkUseDedicatedAdbPort", "Use Dedicated ADB Port"), $x + 227, $y - 50, -1, -1)
 			_GUICtrlSetTip(-1, GetTranslatedFileIni("Android", "ChkUseDedicatedAdbPort_Info", "Use dedicated ADB instance on unique port. Disable can fix ""device offline"" issues."))
 			GUICtrlSetState(-1, (($g_bAndroidAdbPortPerInstance) ? ($GUI_CHECKED) : ($GUI_UNCHECKED)))
 
@@ -114,6 +114,18 @@ Func CreateBotAndroid()
 			_GUICtrlSetTip(-1, $sTxtTip)
 			GUICtrlSetLimit(-1, 4)
 		GUICtrlCreateLabel(GetTranslatedFileIni("MBR Global GUI Design", "hrs", -1), $x + 362, $y - 48, -1, -1)
+
+	$y += 5
+		$g_hChkBotRestartEnabled = GUICtrlCreateCheckbox("", $x + 227, $y - 30, 15, 15)
+			_GUICtrlSetTip(-1, "Enable automatic bot restart after specified hours.")
+			GUICtrlSetState(-1, (($g_bBotRestartEnabled) ? ($GUI_CHECKED) : ($GUI_UNCHECKED)))
+		GUICtrlCreateLabel("Restart Bot in:", $x + 247, $y - 30, -1, -1)
+			$sTxtTip = "Enter hours when Bot will be automatically restarted after specified run-time."
+			_GUICtrlSetTip(-1, $sTxtTip)
+		$g_hTxtBotRestartHours = GUICtrlCreateInput($g_iBotRestartHours, $x + 327, $y - 31, 30, 16, BitOR($GUI_SS_DEFAULT_INPUT, $ES_CENTER, $ES_NUMBER))
+			_GUICtrlSetTip(-1, $sTxtTip)
+			GUICtrlSetLimit(-1, 4)
+		GUICtrlCreateLabel(GetTranslatedFileIni("MBR Global GUI Design", "hrs", -1), $x + 362, $y - 30, -1, -1)
 	GUICtrlCreateGroup("", -99, -99, 1, 1)
 
 	$y = $y2 + $h

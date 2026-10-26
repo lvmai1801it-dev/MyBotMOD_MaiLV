@@ -13,6 +13,7 @@
 
 #include-once
 #include "_Memory.au3"
+#include "Api.au3"
 
 Global $g_ahManagedMyBotDetails[0] ; Contains array of MemoryHandleArray - frmBot - Timer Handle of last response - Command line of bot - Bot Window Title - RunState - TPaused - Verify count
 GUIRegisterMsg($WM_MYBOTRUN_API, "WM_MYBOTRUN_API_HOST")
@@ -219,6 +220,8 @@ EndFunc   ;==>UnregisterManagedMyBotClient
 
 Func CheckManagedMyBot($iTimeout)
 
+	If Not IsArray($g_ahManagedMyBotDetails) Then Return
+
 	; Launch crashed bot again
 	For $i = 0 To UBound($g_ahManagedMyBotDetails) - 1
 		Local $a = $g_ahManagedMyBotDetails[$i]
@@ -233,6 +236,7 @@ Func CheckManagedMyBot($iTimeout)
 			_ArrayDelete($g_ahManagedMyBotDetails, $i)
 			; check if bot has been already restarted manually
 			Local $cmd = $a[$g_eBotDetailsCommandLine]
+			Local $bWasRunState = $a[$g_eBotDetailsRunState]
 			Local $g_sBotTitle = $a[$g_eBotDetailsTitle]
 			For $j = 0 To UBound($g_ahManagedMyBotDetails) - 1
 				$a = $g_ahManagedMyBotDetails[$j]
@@ -241,8 +245,12 @@ Func CheckManagedMyBot($iTimeout)
 					Return WinGetProcess($a[$g_eBotDetailsBotForm])
 				EndIf
 			Next
+			If $cmd = -1 Or $cmd = "" Then
+				SetLog("Cannot restart bot, command line is unknown: " & $g_sBotTitle, $COLOR_ERROR)
+				Return 0
+			EndIf
 			If StringInStr($cmd, " /restart") = 0 Then $cmd &= " /restart"
-			If $a[$g_eBotDetailsRunState] Then
+			If $bWasRunState Then
 				; bot was started, autostart again
 				If StringInStr($cmd, " /autostart") = 0 Then $cmd &= " /autostart"
 			EndIf

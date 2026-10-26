@@ -138,7 +138,6 @@ Func MakeSavePresetMessage()
 	$message &= "NOTES:" & @CRLF & @CRLF
 
 
-	If $g_bDropTrophyEnable Then $message &= "TROPHIES RANGE: " & $g_iDropTrophyMin & " - " & $g_iDropTrophyMax & @CRLF & @CRLF
 	$message &= "TRAIN ARMY SETTINGS:" & @CRLF
 	$message &= "- Custom Train Troops:" & @CRLF
 	For $i = 0 To $eTroopCount - 1
@@ -159,7 +158,6 @@ Func MakeSavePresetMessage()
 					$message &= "- AB search: "
 			EndSwitch
 			If $g_abSearchSearchesEnable[$i] Then $message &= " " & "s. " & $g_aiSearchSearchesMin[$i] & "-" & $g_aiSearchSearchesMax[$i]
-			If $g_abSearchTropiesEnable[$i] Then $message &= "  " & "t. " & $g_aiSearchTrophiesMin[$i] & "-" & $g_aiSearchTrophiesMax[$i]
 			If $g_abSearchCampsEnable[$i] Then $message &= " " & "c. >" & $g_aiSearchCampsPct[$i] & "%"
 			$message &= @CRLF
 			Switch $i
@@ -181,8 +179,6 @@ Func MakeSavePresetMessage()
 					$message &= " G+E >= " & $g_aiFilterMinGoldPlusElixir[$i] & "  "
 			EndSwitch
 			If $g_abFilterMeetDEEnable[$i] Then $message &= " D >= " & $g_aiFilterMeetDEMin[$i] & "  "
-			If $g_abFilterMeetTrophyEnable[$i] Then $message &= " TR >= " & $g_aiFilterMeetTrophyMin[$i] & "  "
-			If $g_abFilterMeetTrophyEnable[$i] Then $message &= " TR <= " & $g_aiFilterMeetTrophyMax[$i] & "  "
 			If $g_abFilterMeetTH[$i] Then $message &= " TH >= " & $g_aiFilterMeetTHMin[$i] + 6 & "  "
 			If $g_abFilterMeetTHOutsideEnable[$i] Then $message &= " THO" & "  "
 			If IsWeakBaseActive($i) Then $message &= " WB" & "  "
@@ -212,7 +208,7 @@ Func MakeSavePresetMessage()
 			EndIf
 
 			If ($i = $DB Or $i = $LB) And $g_aiAttackAlgorithm[$i] = 0 Then
-				Local $tmp = StringSplit("one side|two sides|three sides|four sides|DE side|TH side", "|", 2)
+				Local $tmp = StringSplit("One Side|Two Side|Three Side|All Sides Equally|DE side|TH side", "|", 2)
 				$message &= $tmp[$g_aiAttackStdDropSides[$i]] & @CRLF
 			EndIf
 		EndIf
@@ -220,23 +216,15 @@ Func MakeSavePresetMessage()
 
 
 	$message &= @CRLF & "END BATTLE SETTINGS:" & @CRLF
-	For $i = $DB To $LB
-		If IsSearchModeActive($i, True) Then
-			Switch $i
-				Case $DB
-					$message &= "- DB: "
-				Case $LB
-					$message &= "- AB: "
-			EndSwitch
-			If $g_abStopAtkNoLoot1Enable[$i] Then $message &= "wait " & $g_aiStopAtkNoLoot1Time[$i] & "  "
-			If $g_abStopAtkNoLoot2Enable[$i] Then $message &= "wait " & $g_aiStopAtkNoLoot2Time[$i] & " ->(" & $g_aiStopAtkNoLoot2MinGold[$i] & "," & $g_aiStopAtkNoLoot2MinElixir[$i] & "," & $g_aiStopAtkNoLoot2MinDark[$i] & ")  "
-			If $g_abStopAtkNoResources[$i] Then $message &= "nores "
-			If $g_abStopAtkOneStar[$i] Then $message &= "1star  "
-			If $g_abStopAtkTwoStars[$i] Then $message &= "2stars  "
-
-		EndIf
-		$message &= @CRLF
-	Next
+	If IsSearchModeActive($DB, True) Or IsSearchModeActive($LB, True) Then
+		$message &= "- DB/AB: "
+		If $g_bStopAtkNoLoot1Enable Then $message &= "wait " & $g_iStopAtkNoLoot1Time & "  "
+		If $g_bStopAtkNoLoot2Enable Then $message &= "wait " & $g_iStopAtkNoLoot2Time & " ->(" & $g_iStopAtkNoLoot2MinGold & "," & $g_iStopAtkNoLoot2MinElixir & "," & $g_iStopAtkNoLoot2MinDark & ")  "
+		If $g_bStopAtkNoResources Then $message &= "nores "
+		If $g_bStopAtkOneStar Then $message &= "1star  "
+		If $g_bStopAtkTwoStars Then $message &= "2stars  "
+	EndIf
+	$message &= @CRLF
 
 
 	GUICtrlSetData($g_hTxtSavePresetMessage, $message)

@@ -15,9 +15,8 @@
 ; ===============================================================================================================================
 Func chkShieldStatus($bChkShield = True)
 
-	; skip shield data collection if wait for shield, or close while training not enabled, or window is not on main base
-	Local $bHaltModeWithShield = $g_bChkBotStop And $g_iCmbBotCond >= 19 And $g_iCmbBotCond <= 21
-	If Not $bHaltModeWithShield And Not $g_bCloseWhileTrainingEnable Or Not (IsMainPage()) Then Return
+	; skip shield data collection if close while training is not enabled, or window is not on main base
+	If Not $g_bCloseWhileTrainingEnable Or Not (IsMainPage()) Then Return
 
 	Local $Result
 
@@ -39,24 +38,6 @@ Func chkShieldStatus($bChkShield = True)
 
 			$g_asShieldStatus = $Result ; update ShieldStatus global values
 
-			If $bHaltModeWithShield Then ; is Halt mode enabled and With Shield selected?
-				If $g_asShieldStatus[0] = "shield" Then ; verify shield
-					SetLog("Shield found, Halt Attack Now!", $COLOR_INFO)
-					$g_bWaitShield = True
-					$g_bIsClientSyncError = False ; cancel OOS restart to enable BotCommand to process Halt mode
-					$g_bIsSearchLimit = False ; reset search limit flag to enable BotCommand to process Halt mode
-				Else
-					$g_bWaitShield = False
-					If $g_bMeetCondStop = True Then
-						SetLog("Shield expired, resume attacking", $COLOR_INFO)
-						$g_bTrainEnabled = True
-						$g_bDonationEnabled = True
-						$g_bMeetCondStop = False
-					Else
-						SetDebugLog("Halt With Shield: Shield not found...", $COLOR_DEBUG)
-					EndIf
-				EndIf
-			EndIf
 		Else
 			SetDebugLog("Bad getShieldInfo() return value: " & $Result, $COLOR_ERROR)
 			If _Sleep($DELAYRESPOND) Then Return

@@ -1,4 +1,4 @@
-; #FUNCTION# ====================================================================================================================
+﻿; #FUNCTION# ====================================================================================================================
 ; Name ..........: imglocTHSearch
 ; Description ...: Searches for the TH in base, and returns; X&Y location, Bldg Level
 ; Syntax ........: imglocTHSearch([$bReTest = False])
@@ -19,13 +19,13 @@ Global $IMGLOCTHNEAR
 Global $IMGLOCTHFAR
 Global $IMGLOCTHRDISTANCE
 
-Func imglocTHSearch($bReTest = False, $myVillage = False, $bForceCapture = True)
+Func imglocTHSearch($bReTest = False, $myVillage = False, $bForceCapture = True, $sSearchArea = Default, $bSinglePass = False)
 	Local $xdirectorya = @ScriptDir & "\imgxml\Buildings\Townhall"
 	Local $xdirectoryb = @ScriptDir & "\imgxml\Buildings\Townhall2"
 	Local $xdirectorySnowa = @ScriptDir & "\imgxml\Buildings\snow-Townhall"
 	Local $xdirectorySnowb = @ScriptDir & "\imgxml\Buildings\snow-Townhall2"
 	Local $xdirectory, $xdirectorySnow
-	Local $sCocDiamond = $CocDiamondECD
+	Local $sCocDiamond = ($sSearchArea = Default) ? $CocDiamondECD : $sSearchArea
 	Local $redLines = ""
 	Local $minLevel = 6 ; We only support TH6+
 	Local $maxLevel = 100
@@ -37,7 +37,7 @@ Func imglocTHSearch($bReTest = False, $myVillage = False, $bForceCapture = True)
 		ResetTHsearch() ;see below
 		$redLines = $CocDiamondECD ;quick fix for bad redline data
 	Else
-		$redLines = $CocDiamondECD ;needed for searching your own village
+		$redLines = ($sSearchArea = Default) ? $CocDiamondECD : $sCocDiamond ;needed for searching your own village
 	EndIf
 
 	;aux data
@@ -47,6 +47,7 @@ Func imglocTHSearch($bReTest = False, $myVillage = False, $bForceCapture = True)
 	If $g_iDetectedImageType = 1 Then
 		$numRetry = 3 ; try to find TH 4 times (three retries also without snow)
 	EndIf
+	If $bSinglePass Then $numRetry = 0
 
 	For $retry = 0 To $numRetry
 		Local $iLvlFound = 0
@@ -126,7 +127,7 @@ Func imglocTHSearch($bReTest = False, $myVillage = False, $bForceCapture = True)
 								_ObjPutValue($g_oBldgAttackInfo, $eBldgTownHall & "_MAXLEVELFOUND", $propsValues[$pv]) ; add TH Level found to buidling dictionary
 								If @error Then _ObjErrMsg("$g_oBldgAttackInfo imglocTHSearch " & $g_sBldgNames[$eBldgTownHall] & "_MAXLEVELFOUND", @error) ; Log COM error prevented
 							Else
-								$g_iTownHallLevel = $iLvlFound ; I think $g_iTownHallLevel needs to be decreased
+								$g_iTownHallLevel = $iLvlFound
 							EndIf
 						Case "objectpoints"
 							If $propsValues[$pv] = "0" Then
@@ -174,17 +175,18 @@ Func imglocTHSearch($bReTest = False, $myVillage = False, $bForceCapture = True)
 								EndIf
 							Else
 								$g_aiTownHallPos = decodeSingleCoord($propsValues[$pv])
-								ConvertFromVillagePos($g_aiTownHallPos[0], $g_aiTownHallPos[1])
-								Switch $iLvlFound
-									Case 9
-										$g_aiTownHallPos[1] = $g_aiTownHallPos[1] + 22
-									Case 10
-										$g_aiTownHallPos[0] = $g_aiTownHallPos[0] - 7
-									Case 12
-										$g_aiTownHallPos[1] = $g_aiTownHallPos[1] - 10
-									Case 15
-										$g_aiTownHallPos[1] = $g_aiTownHallPos[1] + 15
-								EndSwitch
+								If Not ConvertFromVillagePos($g_aiTownHallPos[0], $g_aiTownHallPos[1]) Then
+									Local $aDetectedTownHallPos = decodeSingleCoord($propsValues[$pv])
+									$g_bVillageOffsetReady = False
+									If EnsureVillageOffset() Then
+										$g_aiTownHallPos = $aDetectedTownHallPos
+										SetDebugLog("Retrying Town Hall coordinate conversion after village offset refresh", $COLOR_DEBUG)
+									EndIf
+									If Not $g_bVillageOffsetReady Or Not ConvertFromVillagePos($g_aiTownHallPos[0], $g_aiTownHallPos[1]) Then
+										ResetTHsearch()
+										Return False
+									EndIf
+								EndIf
 							EndIf
 						Case "nearpoints"
 							If $myVillage = False Then

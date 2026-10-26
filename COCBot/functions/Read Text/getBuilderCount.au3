@@ -1,4 +1,4 @@
-; #FUNCTION# ====================================================================================================================
+﻿; #FUNCTION# ====================================================================================================================
 ; Name ..........: getBuilderCount
 ; Description ...: updates global builder count variables
 ; Syntax ........: getBuilderCount([$bSuppressLog = False], [$bBuilderBase = False])
@@ -17,29 +17,40 @@
 Func getBuilderCount($bSuppressLog = False, $bBuilderBase = False)
 
 	Local $sBuilderInfo, $aGetBuilders, $bIsMainPage = False
+	Local $iBuilderOcrX = $aBuildersDigits[0], $iBuilderOcrY = $aBuildersDigits[1]
 
 	If Not $bBuilderBase Then
-		$bIsMainPage = IsMainPage()
+		$bIsMainPage = IsMainPage(1)
 	Else
-		$bIsMainPage = IsMainPageBuilderBase()
+		$bIsMainPage = IsMainPageBuilderBase(1)
 	EndIf
 
 	If $bIsMainPage Then ; check for proper window location
 
 		If Not $bBuilderBase Then
 			Local $ExtraBuilderCount = 0
-			If UBound(decodeSingleCoord(FindImageInPlace2("GobBuilder", $g_sImgGobBuilder, 360, 0, 450, 60, True))) > 1 Then $ExtraBuilderCount = 1
-			$sBuilderInfo = getBuilders($aBuildersDigits[0], $aBuildersDigits[1]) ; get builder string with OCR
+			If UBound(decodeSingleCoord(FindImageInPlace2("GobBuilder", $g_sImgGobBuilder, 735, 510 + $g_iBottomOffsetY, 800, 540 + $g_iBottomOffsetY, True))) > 1 Then $ExtraBuilderCount = 1
+			$iBuilderOcrX = $aBuildersDigits[0]
+			$iBuilderOcrY = $aBuildersDigits[1]
+			Local $aMainBuilderOcrOffset[5] = [0, -3, 3, -6, 6]
+			For $i = 0 To UBound($aMainBuilderOcrOffset) - 1
+				Local $sMainBuilderInfoRaw = getBuilders($iBuilderOcrX, $iBuilderOcrY + $aMainBuilderOcrOffset[$i], True)
+				$sBuilderInfo = _NormalizeBuilderCount($sMainBuilderInfoRaw)
+				SetDebugLog("Main Village builders OCR raw [Y" & ($aMainBuilderOcrOffset[$i] >= 0 ? "+" : "") & $aMainBuilderOcrOffset[$i] & "]: '" & $sMainBuilderInfoRaw & "'", $COLOR_DEBUG)
+				If StringRegExp($sBuilderInfo, "^\d+#\d+$") Then ExitLoop
+			Next
 		Else
-			Local $asSearchResult = decodeSingleCoord(FindImageInPlace2("MasterBuilderHead", $g_sImgMasterBuilderHead, 445, 0, 500, 54, True))
-			If IsArray($asSearchResult) And UBound($asSearchResult) = 2 Then
-				$sBuilderInfo = getBuilders($asSearchResult[0] + 24, $aBuildersDigitsBuilderBase[1]) ; get builder base builder string with OCR
-			Else
-				SetLog("Cannot find Master Builder Head", $COLOR_ERROR)
-				If $g_bDebugImageSave Then SaveDebugImage("MasterBuilderHead") ; Debug Only
-			EndIf
+			$iBuilderOcrX = $aBuildersDigitsBuilderBase[0]
+			$iBuilderOcrY = $aBuildersDigitsBuilderBase[1]
+			Local $aBuilderOcrOffset[5] = [0, -3, 3, -6, 6]
+			For $i = 0 To UBound($aBuilderOcrOffset) - 1
+				Local $sBuilderInfoRaw = getBuilders($iBuilderOcrX, $iBuilderOcrY + $aBuilderOcrOffset[$i], True, True)
+				$sBuilderInfo = _NormalizeBuilderCount($sBuilderInfoRaw)
+				SetDebugLog("Builder Base builders OCR raw [Y" & ($aBuilderOcrOffset[$i] >= 0 ? "+" : "") & $aBuilderOcrOffset[$i] & "]: '" & $sBuilderInfoRaw & "'", $COLOR_DEBUG)
+				If StringRegExp($sBuilderInfo, "^\d+#\d+$") Then ExitLoop
+			Next
 		EndIf
-		If StringInStr($sBuilderInfo, "#") > 0 Then ; check for valid OCR read
+		If StringRegExp($sBuilderInfo, "^\d+#\d+$") Then ; check for valid OCR read
 			$aGetBuilders = StringSplit($sBuilderInfo, "#", $STR_NOCOUNT) ; Split into free and total builder strings
 			If Not $bBuilderBase Then
 				$g_iFreeBuilderCount = Int($aGetBuilders[0] - $ExtraBuilderCount) ; update global values
@@ -55,21 +66,56 @@ Func getBuilderCount($bSuppressLog = False, $bBuilderBase = False)
 			$g_iGfxErrorCount = 0
 			Return True ; Happy Monkey returns!
 		Else
-			SetLog("Bad OCR read Free/Total Builders", $COLOR_ERROR) ; OCR returned unusable value?
-			$g_iGfxErrorCount += 1
-			If $g_iGfxErrorCount > $g_iGfxErrorMax Then 
-				SetLog("gfxError occured, set to Reboot Android Instance", $COLOR_INFO)
-				$g_bGfxError = True
-				CheckAndroidReboot()
-			EndIf
-			; drop down to error handling code
+			SetLog("Bad OCR Read Free/Total Builders", $COLOR_ERROR) ; OCR returned unusable value?
+			SetLog("Keeping previous " & ($bBuilderBase ? "Builder Base" : "Main Village") & " builder values", $COLOR_WARNING)
+			If $g_bDebugImageSave Then SaveDebugImage($bBuilderBase ? "getBuilderCount_BB_" : "getBuilderCount_")
+			Return False
 		EndIf
 	Else
-		SetLog("Unable to read Builders info at this time", $COLOR_ERROR)
+		SetLog("Unable to read builders info at this time", $COLOR_ERROR)
 		; drop down to error handling code
 	EndIf
 	If $g_bDebugSetLog Or $g_bDebugImageSave Then SaveDebugImage("getBuilderCount_")
-	If checkObstacles() Then checkMainScreen() ; trap common error messages
+	If checkObstacles() And Not $g_bRestart Then checkMainScreen() ; trap common error messages
 	Return False
-
 EndFunc   ;==>getBuilderCount
+
+; #FUNCTION# ===========================================================================================================
+; Name ..........: getLabBuilderCount
+; Description ...: Reads the laboratory availability counter beside the main village builder count.
+; Remarks .......: Returns normalized free/total values as #; only 0/1 and 1/1 are accepted.
+; ======================================================================================================================
+
+Func getLabBuilderCount()
+	Local $aYOffset[5] = [0, -3, 3, -6, 6]
+	For $i = 0 To UBound($aYOffset) - 1
+		Local $sRaw = getBuilders($aLabBuilderDigits[0], $aLabBuilderDigits[1] + $aYOffset[$i], True)
+		Local $sCount = _NormalizeBuilderCount($sRaw)
+		If StringRegExp($sCount, "^[01]#1$") Then Return $sCount
+	Next
+	Return ""
+EndFunc   ;==>getLabBuilderCount
+
+; #FUNCTION# ===========================================================================================================
+; Name ..........: _NormalizeBuilderCount
+; Description ...: Normalizes Main Village and Builder Base free/total builder OCR results.
+; Remarks .......: Supports # and / separators and rejects inconsistent free/total values.
+; ======================================================================================================================
+
+Func _NormalizeBuilderCount($sRaw)
+	Local $sResult = StringStripWS(StringReplace($sRaw, "/", "#"), $STR_STRIPALL)
+	If StringRegExp($sResult, "^\d#\d$") Then
+		Local $aBuilderCount = StringSplit($sResult, "#", $STR_NOCOUNT)
+		If Number($aBuilderCount[1]) > 0 And Number($aBuilderCount[0]) <= Number($aBuilderCount[1]) Then Return $sResult
+	EndIf
+
+	; OCR can omit the separator and return values like "0 6"; accept only a plausible two-digit free/total pair.
+	Local $sDigits = StringRegExpReplace($sResult, "\D", "")
+	If StringLen($sDigits) = 2 Then
+		Local $iFreeBuilders = Number(StringLeft($sDigits, 1))
+		Local $iTotalBuilders = Number(StringRight($sDigits, 1))
+		If $iTotalBuilders > 0 And $iTotalBuilders <= 6 And $iFreeBuilders <= $iTotalBuilders Then Return $iFreeBuilders & "#" & $iTotalBuilders
+	EndIf
+
+	Return ""
+EndFunc   ;==>_NormalizeBuilderCount

@@ -29,17 +29,20 @@ Func ParseAttackCSV_Read_SIDE_variables()
 	$g_bCSVLocateWizTower = False
 	$g_bCSVLocateMortar = False
 	$g_bCSVLocateAirDefense = False
+	$g_bCSVLocateFirespitter = False
+	$g_bCSVLocateRevengeTower = False
 	$g_bCSVLocateWall = False
 	; $g_bCSVLocateGemBox = False
 
 	If $g_iMatchMode = $DB Then
-		Local $filename = $g_sAttackScrScriptName[$DB]
+		Local $filename = GetAttackCSVScriptName($DB)
 	Else
-		Local $filename = $g_sAttackScrScriptName[$LB]
+		Local $filename = GetAttackCSVScriptName($LB)
 	EndIf
 
 	Local $f, $line, $acommand, $command
 	Local $value1, $value2, $value3, $value4, $value5, $value6, $value7, $value8, $value9
+	Local $sSideValue7Header = "TOWNHALL"
 	Local $bForceSideExist = False
 
 	If FileExists($g_sCSVAttacksPath & "\" & $filename & ".csv") Then
@@ -55,18 +58,18 @@ Func ParseAttackCSV_Read_SIDE_variables()
 				$command = StringStripWS(StringUpper($acommand[1]), $STR_STRIPTRAILING)
 
 				If $command <> "SIDE" And $command <> "SIDEB" And $command <> "MAKE" Then ContinueLoop
+				If $command = "SIDE" And $iLine > 0 Then
+					Local $aHeader = StringSplit($aLines[$iLine - 1], "|")
+					If $aHeader[0] >= 8 Then
+						$sSideValue7Header = StringStripWS(StringUpper($aHeader[8]), $STR_STRIPALL)
+						If $sSideValue7Header = "" Then $sSideValue7Header = "TOWNHALL"
+					EndIf
+				EndIf
 
-				$value1 = StringStripWS(StringUpper($acommand[2]), $STR_STRIPTRAILING)
-				$value2 = StringStripWS(StringUpper($acommand[3]), $STR_STRIPTRAILING)
-				$value3 = StringStripWS(StringUpper($acommand[4]), $STR_STRIPTRAILING)
-				$value4 = StringStripWS(StringUpper($acommand[5]), $STR_STRIPTRAILING)
-				$value5 = StringStripWS(StringUpper($acommand[6]), $STR_STRIPTRAILING)
-				$value6 = StringStripWS(StringUpper($acommand[7]), $STR_STRIPTRAILING)
-				$value7 = StringStripWS(StringUpper($acommand[8]), $STR_STRIPTRAILING)
-				$value8 = StringStripWS(StringUpper($acommand[9]), $STR_STRIPTRAILING)
-				$value9 = StringStripWS(StringUpper($acommand[10]), $STR_STRIPTRAILING)
+				__ParseAttackCSV_ReadValues($acommand, $value1, $value2, $value3, $value4, $value5, $value6, $value7, $value8, $value9)
 
-				If $command = "SIDE" And StringUpper($value8) = "TOP-LEFT" Or StringUpper($value8) = "TOP-RIGHT" Or StringUpper($value8) = "BOTTOM-LEFT" Or StringUpper($value8) = "BOTTOM-RIGHT" Then
+				If $command = "SIDE" And (StringUpper($value8) = "TOP-LEFT" Or StringUpper($value8) = "TOP-RIGHT" Or StringUpper($value8) = "BOTTOM-LEFT" Or StringUpper($value8) = "BOTTOM-RIGHT" Or _
+						StringUpper($value8) = "TOP" Or StringUpper($value8) = "BOT") Then
 					$bForceSideExist = True ;keep original values
 				EndIf
 
@@ -79,7 +82,10 @@ Func ParseAttackCSV_Read_SIDE_variables()
 							If Int($value4) > 0 Then $g_bCSVLocateStorageGold = True
 							If Int($value5) > 0 Then $g_bCSVLocateStorageElixir = True
 							If Int($value6) > 0 Then $g_bCSVLocateStorageDarkElixir = True
-							If Int($value7) > 0 Then $g_bCSVLocateStorageTownHall = True
+							If Int($value7) > 0 Then
+								$g_bCSVLocateStorageTownHall = True
+								If $sSideValue7Header = "REVENGE" Then $g_bCSVLocateRevengeTower = True
+							EndIf
 							; $value8 = Forced Side value
 						EndIf
 					Case "SIDEB"
@@ -101,6 +107,8 @@ Func ParseAttackCSV_Read_SIDE_variables()
 									$g_bCSVLocateStorageTownHall = True
 								Case "EAGLE"
 									$g_bCSVLocateEagle = True
+								Case "FIRESPITTER"
+									$g_bCSVLocateFirespitter = True
 								Case "INFERNO"
 									$g_bCSVLocateInferno = True
 								Case "XBOW"
@@ -109,6 +117,8 @@ Func ParseAttackCSV_Read_SIDE_variables()
 									$g_bCSVLocateScatter = True
 								Case "MONOLITH"
 									$g_bCSVLocateMonolith = True
+								Case "REVENGE"
+									$g_bCSVLocateRevengeTower = True
 								Case "WIZTOWER"
 									$g_bCSVLocateWizTower = True
 								Case "MORTAR"

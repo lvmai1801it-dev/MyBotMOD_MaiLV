@@ -1,4 +1,4 @@
-; #FUNCTION# ====================================================================================================================
+﻿; #FUNCTION# ====================================================================================================================
 ; Name ..........: OCR
 ; Description ...: Gets complete value of gold/Elixir/DarkElixir/Trophy/Gem xxx,xxx
 ; Author ........: Didipe (2015)
@@ -10,27 +10,42 @@
 ; Example .......: No
 ; ===============================================================================================================================
 Func getYellowLevel($x_start, $y_start) ;  -> Get Hero/TownHall level
-	Local $Result = Number(StringRegExpReplace(getOcrAndCapture("coc-YellowLevel", $x_start, $y_start, 170, 20, True), "[Level]", ""))
-	Return $Result
+	Local $sResult = getOcrAndCapture("coc-YellowLevel", $x_start, $y_start, 170, 20, True)
+	Return Number(StringRegExpReplace($sResult, "\D", ""))
 EndFunc   ;==>getYellowLevel
 
 Func getNameBuilding($x_start, $y_start) ; getNameBuilding(242,Y) -> Gets complete name and level of the buildings, bottom of screen
-	Local $b_Obstacles[10] = ["Broken", "Cart", "Tree", "Mush", "Trunk", "Bush", "Bark", "Gem", "Cake", "Groove"]
-	Local $bResult = getOcrAndCapture("coc-build", $x_start, $y_start, 420, 27)
-	If StringInStr($bResult, "Helper", $STR_NOCASESENSEBASIC) Then Return $bResult
-	If StringInStr($bResult, "O T T O", $STR_CASESENSE) Then
-		$bResult = StringReplace($bResult, "O T T O", "O.T.T.O")
-		Return $bResult
-	ElseIf StringInStr($bResult, "B O B", $STR_CASESENSE) Then
-		$bResult = StringReplace($bResult, "B O B", "B.O.B")
-		Return $bResult
-	Else
-		For $i = 0 To UBound($b_Obstacles) - 1
-			If StringInStr($bResult, $b_Obstacles[$i], $STR_NOCASESENSEBASIC) Then Return $bResult
-		Next
+	Local Static $aObstacles[10] = ["Broken", "Cart", "Tree", "Mush", "Trunk", "Bush", "Bark", "Gem", "Cake", "Groove"]
+
+	Local $sResult = getOcrAndCapture("coc-build", $x_start, $y_start, 420, 27)
+
+	If StringInStr($sResult, "O T T O", $STR_CASESENSE) Then Return StringReplace($sResult, "O T T O", "O.T.T.O")
+	If StringInStr($sResult, "B O B", $STR_CASESENSE) Then Return StringReplace($sResult, "B O B", "B.O.B")
+	If StringInStr($sResult, "Helper", $STR_NOCASESENSEBASIC) Then Return $sResult
+
+	For $i = 0 To UBound($aObstacles) - 1
+		If StringInStr($sResult, $aObstacles[$i], $STR_NOCASESENSEBASIC) Then Return $sResult
+	Next
+
+	; A partial result such as "Builder's Hut (Level )" contains the Level label
+	; but cannot be parsed by BuildingInfo. Retry with the alternate OCR only when
+	; the complete numeric level is missing, and keep the original name if the
+	; alternate read is also incomplete.
+	If $sResult = "" Or Not StringRegExp($sResult, "(?i)\(\s*Level\s+\d+\s*\)") Then
+		Local $sAlternateResult = getOcrAndCapture("coc-build2", $x_start, $y_start - 27, 420, 27)
+		If $sResult = "" Or StringRegExp($sAlternateResult, "(?i)\(\s*Level\s+\d+\s*\)") Then $sResult = $sAlternateResult
 	EndIf
-	If $bResult = "" Or Not StringInStr($bResult, "Level") Then $bResult = getOcrAndCapture("coc-build2", $x_start, $y_start - 27, 420, 27)
-	Return $bResult
+
+	; The current building-title glyph for 8 is returned as "ii" by coc-build.
+	; Normalize only that invalid token inside the Level field: "ii" -> 8 and
+	; "1 ii" -> 18, while preserving every other OCR result unchanged.
+	Local $aInvalidLevel = StringRegExp($sResult, "(?i)\(\s*Level\s+([0-9\s]*ii)\s*\)", 1)
+	If IsArray($aInvalidLevel) Then
+		Local $sNormalizedLevel = StringStripWS(StringRegExpReplace($aInvalidLevel[0], "(?i)ii", "8"), 8)
+		$sResult = StringRegExpReplace($sResult, "(?i)\(\s*Level\s+[0-9\s]*ii\s*\)", "(Level " & $sNormalizedLevel & ")")
+	EndIf
+
+	Return $sResult
 EndFunc   ;==>getNameBuilding
 
 Func getGoldVillageSearch($x_start, $y_start) ;48, 69 -> Gets complete value of gold xxx,xxx while searching, top left, Getresources.au3
@@ -54,15 +69,58 @@ Func getTrophyVillageSearch($x_start, $y_start) ;48, 69+99 or 69+69 -> Gets comp
 EndFunc   ;==>getTrophyVillageSearch
 
 Func getTrophyMainScreen($x_start, $y_start) ; -> Gets trophy value, top left of main screen "VillageReport.au3"
-	Return getOcrAndCapture("coc-ms", $x_start, $y_start, 50, 16, True)
+	Local $sResult = StringRegExpReplace(getOcrAndCapture("coc-ms", $x_start, $y_start, 50, 16, True), "\D", "")
+
+	If StringLen($sResult) < 3 Then
+		Local Const $aTrophyOcrLanguages[4] = ["coc-cc-trophy", "coc-t-b", "coc-profile", "coc-v-t"]
+		Local $sDebug = "coc-ms='" & $sResult & "'"
+
+		For $i = 0 To UBound($aTrophyOcrLanguages) - 1
+			Local $sRetry = StringRegExpReplace(getOcrAndCapture($aTrophyOcrLanguages[$i], $x_start - 1, $y_start - 1, 58, 18, True), "\D", "")
+			$sDebug &= " " & $aTrophyOcrLanguages[$i] & "='" & $sRetry & "'"
+			If StringLen($sRetry) >= 3 And StringLen($sRetry) <= 5 Then
+				If $g_bDebugSetLog Then SetDebugLog("Main screen trophy OCR fallback: " & $sDebug, $COLOR_DEBUG)
+				Return $sRetry
+			EndIf
+		Next
+
+		If $g_bDebugSetLog Then SetDebugLog("Main screen trophy OCR fallback failed: " & $sDebug, $COLOR_DEBUG)
+	EndIf
+
+	Return $sResult
 EndFunc   ;==>getTrophyMainScreen
+
+Func getTrophyBuilderBase($x_start, $y_start) ; -> Gets Builder Base trophy value from the main screen
+	; Use the numeric OCR model that has correctly recognized this Builder Base field.
+	; Other models produced conflicting values (for example 3527 vs 4527), so voting
+	; across different models can reject a valid read or select a wrong one.
+	Local Const $aVerticalOffsets[5] = [0, -2, 2, -4, 4]
+	Local $aReads[5], $sResult = ""
+	For $i = 0 To UBound($aVerticalOffsets) - 1
+		$sResult = StringRegExpReplace(getOcrAndCapture("coc-t-b", $x_start + 2, $y_start + $aVerticalOffsets[$i], 50, 18, True), "\D", "")
+		$aReads[$i] = (StringLen($sResult) >= 1 And StringLen($sResult) <= 4) ? $sResult : ""
+	Next
+
+	; Prefer a result repeated at nearby capture positions.
+	For $i = 0 To UBound($aReads) - 1
+		If $aReads[$i] = "" Then ContinueLoop
+		Local $iMatches = 0
+		For $j = 0 To UBound($aReads) - 1
+			If $aReads[$i] = $aReads[$j] Then $iMatches += 1
+		Next
+		If $iMatches >= 2 Then Return Number($aReads[$i])
+	Next
+
+	; If no offset agrees, keep the centered OCR result rather than reporting zero.
+	Return Number($aReads[0])
+EndFunc   ;==>getTrophyBuilderBase
 
 Func getTrophyLossAttackScreen($x_start, $y_start) ; 48,214 or 48,184 WO/DE -> Gets red number of trophy loss from attack screen, top left
 	Return getOcrAndCapture("coc-t-p", $x_start, $y_start, 50, 16, True)
 EndFunc   ;==>getTrophyLossAttackScreen
 
 Func getResourcesMainScreen($x_start, $y_start) ; -> Gets complete value of Gold/Elixir/Dark Elixir/Trophies/Gems xxx,xxx "VillageReport.au3"
-	Return getOcrAndCapture("coc-ms", $x_start, $y_start, 110, 16, True)
+	Return StringReplace(getOcrAndCapture("coc-ms", $x_start, $y_start, 125, 16, True), "-", "")
 EndFunc   ;==>getResourcesMainScreen
 
 Func getResourcesLoot($x_start, $y_start) ; -> Gets complete value of Gold/Elixir after attack xxx,xxx "AttackReport"
@@ -70,11 +128,11 @@ Func getResourcesLoot($x_start, $y_start) ; -> Gets complete value of Gold/Elixi
 EndFunc   ;==>getResourcesLoot
 
 Func getResourcesLootDE($x_start, $y_start) ; -> Gets complete value of Dark Elixir after attack xxx,xxx "AttackReport"
-	Return getOcrAndCapture("coc-loot", $x_start, $y_start, 85, 22, True)
+	Return getOcrAndCapture("coc-loot", $x_start, $y_start, 120, 22, True)
 EndFunc   ;==>getResourcesLootDE
 
 Func getResourcesLootT($x_start, $y_start) ; -> Gets complete value of Trophies after attack. xxx,xxx "AttackReport"
-	Return getOcrAndCapture("coc-loot", $x_start, $y_start, 37, 22, True)
+	Return getOcrAndCapture("coc-loot", $x_start, $y_start, 50, 22, True)
 EndFunc   ;==>getResourcesLootT
 
 Func getResourcesBonus($x_start, $y_start) ; -> Gets complete value of Gold/Elixir bonus loot in "AttackReport.au3"
@@ -82,8 +140,8 @@ Func getResourcesBonus($x_start, $y_start) ; -> Gets complete value of Gold/Elix
 EndFunc   ;==>getResourcesBonus
 
 Func getCostsUpgrade($x_start, $y_start) ; -> Gets complete value of Gold/Elixir bonus loot in "AttackReport.au3"
-	Local $Result = StringReplace(getOcrAndCapture("coc-CostsUpgrades", $x_start, $y_start, 120, 18, True), "b", "")
-	Return $Result
+	Local $Result = getOcrAndCapture("coc-CostsUpgrades", $x_start, $y_start, 120, 18, True)
+	Return StringRegExpReplace($Result, "[^0-9]", "")
 EndFunc   ;==>getCostsUpgrade
 
 Func getCostsUpgradeRed($x_start, $y_start) ; -> Gets complete value of Gold/Elixir xxx,xxx , RED text on green upgrade button."UpgradeBuildings.au3"
@@ -112,8 +170,8 @@ Func getStarLabUpgrdResourceRed($x_start, $y_start) ; -> Gets complete value of 
 EndFunc   ;==>getStarLabUpgrdResourceRed
 
 Func getBldgUpgradeTime($x_start, $y_start) ; -> Gets complete remain building upgrade time
-	Local $Result = StringRegExpReplace(getOcrAndCapture("coc-uptime", $x_start, $y_start, 105, 18, True), "[bc]", "")
-	Return $Result
+	Local $Result = StringLower(getOcrAndCapture("coc-uptime", $x_start, $y_start, 105, 18, True))
+	Return StringRegExpReplace($Result, "[^0-9wdhms]", "")
 EndFunc   ;==>getBldgUpgradeTime
 
 Func getBldgUpgradeTime2($x_start, $y_start) ; -> Gets complete remain building upgrade time
@@ -146,8 +204,22 @@ Func getChatString($x_start, $y_start, $language) ; -> Get string chat request -
 	Return getOcrAndCapture($language, $x_start, $y_start, 320, 16)
 EndFunc   ;==>getChatString
 
-Func getBuilders($x_start, $y_start) ;  -> Gets Builders number - main screen --> getBuilders(324,23)  coc-profile
-	Return getOcrAndCapture("coc-Builders", $x_start, $y_start, 40, 18, True)
+Func getBuilders($x_start, $y_start, $bWideCrop = False, $bBuilderBase = False) ;  -> Gets the free/total builder count
+	Local $iWidth = $bWideCrop ? 55 : 40
+	Local $iHeight = $bBuilderBase ? 24 : ($bWideCrop ? 24 : 20)
+	Local $sResult = getOcrAndCapture("coc-Builders", $x_start, $y_start, $iWidth, $iHeight, True)
+	If _NormalizeBuilderCount($sResult) <> "" Then Return $sResult
+	Local $sRetry = getOcrAndCapture("coc-BBAttackAvail", $x_start, $y_start, $iWidth, $iHeight, True)
+	If _NormalizeBuilderCount($sRetry) <> "" Then Return $sRetry
+	If $bBuilderBase Then
+		$sRetry = getOcrAndCapture("coc-t-b", $x_start, $y_start, $iWidth, $iHeight, True)
+		If _NormalizeBuilderCount($sRetry) <> "" Then Return $sRetry
+		Local $sBuilderDigits = StringRegExpReplace($sRetry, "\D", "")
+		If StringLen($sBuilderDigits) = 2 And Number(StringLeft($sBuilderDigits, 1)) <= Number(StringRight($sBuilderDigits, 1)) And Number(StringRight($sBuilderDigits, 1)) > 0 Then
+			Return StringLeft($sBuilderDigits, 1) & "#" & StringRight($sBuilderDigits, 1)
+		EndIf
+	EndIf
+	Return $sResult
 EndFunc   ;==>getBuilders
 
 Func getProfile($x_start, $y_start) ;  -> Gets Attack Win/Defense Win/Donated/Received values - profile screen --> getProfile(160,268)  troops donation
@@ -180,19 +252,94 @@ Func getPetsLevel($x_start, $y_start, $bDebugImageSave = $g_bDebugImageSave) ;  
 	Return $Result
 EndFunc   ;==>getPetsLevel
 
-Func getSiegeLevel($x_start, $y_start, $bDebugImageSave = $g_bDebugImageSave) ;  -> Gets Siege level on Attack Screen
-	Local $Result = StringReplace(getOcrAndCapture("coc-siegelevel", $x_start, $y_start, 20, 14, True), "b", "")
+Func getSiegeLevel($x_center, $y_center, $bDebugImageSave = $g_bDebugImageSave) ;  -> Gets Siege level on Attack Screen (x_center/y_center = center of the level digit)
+	Local $Result = "", $sRaw = "", $sDigits = ""
+	Local $iBestCandidate = 0, $sBestRaw = "", $sBestDigits = ""
+	Local Const $iCaptureWidth = 20, $iCaptureHeight = 18
+	; Compute top-left corner from digit center so the capture box is centered on the digit
+	Local $x_start = $x_center - Int($iCaptureWidth / 2)
+	Local $y_start = $y_center - Int($iCaptureHeight / 2)
+	Local $iUsedX = $x_start, $iUsedY = $y_start
+
+	; Try at base coords first, then small Y nudges in case of sub-pixel misalignment
+	Local $aTryY[3] = [0, -3, 3]
+	For $i = 0 To UBound($aTryY) - 1
+		$sRaw = StringReplace(getOcrAndCapture("coc-siegelevel", $x_start, $y_start + $aTryY[$i], $iCaptureWidth, $iCaptureHeight, True), "b", "")
+		$sDigits = StringRegExpReplace($sRaw, "[^0-9]", "")
+		If $sDigits <> "" Then
+			Local $iCandidate = Number(StringLeft($sDigits, 1)) ; leftmost digit is the level glyph
+			If $iCandidate >= 1 And $iCandidate <= 6 Then
+				; Keep first valid read, but prefer a non-1 level if found in later attempts.
+				If $iBestCandidate = 0 Or ($iBestCandidate = 1 And $iCandidate > 1) Then
+					$iBestCandidate = $iCandidate
+					$iUsedY = $y_start + $aTryY[$i]
+					$sBestRaw = $sRaw
+					$sBestDigits = $sDigits
+				EndIf
+
+				; Highest possible level, no need to continue.
+				If $iBestCandidate = 6 Then ExitLoop
+			EndIf
+		EndIf
+	Next
+
+	If $iBestCandidate > 0 Then
+		$Result = String($iBestCandidate)
+		$sRaw = $sBestRaw
+		$sDigits = $sBestDigits
+	EndIf
+
+	If $g_bDebugSetLog Then SetDebugLog("getSiegeLevel raw='" & $sRaw & "' digits='" & $sDigits & "' -> " & ($Result = "" ? "?" : $Result) & " @ " & $iUsedX & "|" & $iUsedY)
+
 	If $bDebugImageSave Then
-		Local $sArea = $x_start & "," & $y_start & "," & $x_start + 20 & "," & $y_start + 14
+		Local $sArea = $iUsedX & "," & $iUsedY & "," & $iUsedX + $iCaptureWidth & "," & $iUsedY + $iCaptureHeight
 		SaveDebugRectImage("SiegeOCR" & $Result, $sArea)
 	EndIf
 	Return $Result
 EndFunc   ;==>getSiegeLevel
 
 Func getArmyCampCap($x_start, $y_start, $bNeedCapture = True) ;  -> Gets army camp capacity --> train.au3, and used to read CC request time remaining
-	Local $Result = StringRegExpReplace(getOcrAndCapture("coc-camps", $x_start, $y_start, 55, 12, True, False, $bNeedCapture), "[a-z]", "")
-	Return $Result
+	Local $sRawResult = getOcrAndCapture("coc-camps", $x_start, $y_start, 55, 12, True, False, $bNeedCapture)
+	Return __NormalizeArmyCampCapacity($sRawResult)
 EndFunc   ;==>getArmyCampCap
+
+Func __NormalizeArmyCampCapacity($sResult)
+	$sResult = StringReplace($sResult, "/", "#")
+	$sResult = StringRegExpReplace($sResult, "[^0-9#]", "")
+
+	Local $aCapacity = StringSplit($sResult, "#")
+	If IsArray($aCapacity) And $aCapacity[0] = 2 Then
+		If $g_iTotalCampSpace > 0 Then
+			Local $sProfileTotal = String($g_iTotalCampSpace)
+			If StringLen($aCapacity[2]) > StringLen($sProfileTotal) And StringLeft($aCapacity[2], StringLen($sProfileTotal)) = $sProfileTotal Then $aCapacity[2] = $sProfileTotal
+		ElseIf StringLen($aCapacity[2]) > 3 Then
+			$aCapacity[2] = StringLeft($aCapacity[2], 3)
+		EndIf
+		If $aCapacity[1] <> "" And $aCapacity[2] <> "" And Number($aCapacity[2]) >= 10 And Number($aCapacity[2]) <= 999 And Number($aCapacity[1]) <= Number($aCapacity[2]) Then Return Number($aCapacity[1]) & "#" & Number($aCapacity[2])
+	EndIf
+
+	; Restores a missing separator without Town Hall limits.
+	Local $sDigits = StringReplace($sResult, "#", "")
+	Local $iLength = StringLen($sDigits), $iTotalDigits
+	If $g_iTotalCampSpace > 0 Then
+		Local $sKnownTotal = String($g_iTotalCampSpace)
+		If $iLength > StringLen($sKnownTotal) And StringRight($sDigits, StringLen($sKnownTotal)) = $sKnownTotal Then
+			Local $sKnownCurrent = StringTrimRight($sDigits, StringLen($sKnownTotal))
+			; Removes one warning-icon digit only when capacity becomes invalid.
+			If Number($sKnownCurrent) > $g_iTotalCampSpace And StringLen($sKnownCurrent) > 1 Then $sKnownCurrent = StringTrimRight($sKnownCurrent, 1)
+			If Number($sKnownCurrent) <= $g_iTotalCampSpace Then Return Number($sKnownCurrent) & "#" & $g_iTotalCampSpace
+		EndIf
+	EndIf
+	For $iTotalDigits = 3 To 2 Step -1
+		If $iLength <= $iTotalDigits Then ContinueLoop
+		Local $sCurrent = StringLeft($sDigits, $iLength - $iTotalDigits)
+		Local $sTotal = StringRight($sDigits, $iTotalDigits)
+		If StringLeft($sTotal, 1) = "0" Then ContinueLoop
+		If Number($sTotal) >= 10 And Number($sTotal) <= 999 And Number($sCurrent) <= Number($sTotal) Then Return Number($sCurrent) & "#" & Number($sTotal)
+	Next
+
+	Return $sResult
+EndFunc   ;==>__NormalizeArmyCampCapacity
 
 Func getSpellsCap($x_start, $y_start, $bNeedCapture = True) ;  -> Gets army camp capacity --> train.au3, and used to read CC request time remaining
 	Local $Result = StringRegExpReplace(getOcrAndCapture("coc-camps", $x_start, $y_start, 35, 12, True, False, $bNeedCapture), "[a-z]", "")
@@ -231,6 +378,18 @@ Func getOcrSpaceCastleDonateShort($x_start, $y_start) ;  -> Get the number of tr
 	Local $Result = StringReplace(getOcrAndCapture("coc-totalreq", $x_start, $y_start, 35, 14, True), "b", "")
 	Return $Result
 EndFunc   ;==>getOcrSpaceCastleDonateShort
+
+; #FUNCTION# ===========================================================================================================
+; Name ..........: getOcrSpaceCastleDonateSpell
+; Description ...: Reads spell donated and total capacity using the donation request digit profile.
+; Remarks .......: Excludes the spell icon from the crop; falls back to coc-totalreq when validation fails.
+; ======================================================================================================================
+
+Func getOcrSpaceCastleDonateSpell($x_start, $y_start)
+	Local $sResult = StringRegExpReplace(getOcrAndCapture("coc-NewSysDonate", $x_start + 10, $y_start, 28, 14, True), "[^0-9]", "")
+	If StringRegExp($sResult, "^[0-9]{2}$") Then Return StringLeft($sResult, 1) & "#" & StringRight($sResult, 1)
+	Return StringReplace(getOcrAndCapture("coc-totalreq", $x_start + 10, $y_start, 28, 14, True), "b", "")
+EndFunc   ;==>getOcrSpaceCastleDonateSpell
 
 Func getOcrOverAllDamage($x_start, $y_start) ;  -> Get the Overall Damage %
 	Return getOcrAndCapture("coc-overalldamage", $x_start, $y_start, 50, 20, True)
@@ -390,7 +549,7 @@ Func getOcrTimeGameTime($x_start, $y_start) ;  -> Get the guard/shield time left
 EndFunc   ;==>getOcrTimeGameTime
 
 Func getOcrYourScore($x_start, $y_start) ; -> Gets CheckValuesCost on Train Window
-	Return getOcrAndCapture("coc-events", $x_start, $y_start, 110, 16, True)
+	Return getOcrAndCapture("coc-events", $x_start, $y_start, 120, 16, True)
 EndFunc   ;==>getOcrYourScore
 
 Func getOcrEventTime($x_start, $y_start) ; -> Gets CheckValuesCost on Train Window
@@ -398,7 +557,7 @@ Func getOcrEventTime($x_start, $y_start) ; -> Gets CheckValuesCost on Train Wind
 EndFunc   ;==>getOcrEventTime
 
 Func getOcrEventPoints($x_start, $y_start) ; -> Gets CheckValuesCost on Train Window
-	Return getOcrAndCapture("coc-events", $x_start, $y_start, 50, 17, True)
+	Return getOcrAndCapture("coc-events", $x_start, $y_start, 68, 19, True)
 EndFunc   ;==>getOcrEventPoints
 
 Func getOcrRateCoc($x_start, $y_start, $sLogText = Default, $LogTextColor = Default, $bSilentSetLog = Default)
@@ -422,12 +581,89 @@ Func getRemainTLaboratory($x_start, $y_start) ; read actual time remaining in La
 	Return getOcrAndCapture("coc-RemainLaboratory", $x_start, $y_start, 260, 28, True)
 EndFunc   ;==>getRemainTLaboratory
 
+Func _CleanRemainTLaboratoryOCR($sResult)
+	$sResult = StringRegExpReplace(StringLower($sResult), "^[^0-9]*", "")
+	Return StringRegExpReplace($sResult, "[^0-9dhms]", "")
+EndFunc   ;==>_CleanRemainTLaboratoryOCR
+
+Func _IsRemainTLaboratoryOCRValid($sResult)
+	Return _RemainTLaboratoryOCRToMinutes($sResult) > 0
+EndFunc   ;==>_IsRemainTLaboratoryOCRValid
+
+Func _RemainTLaboratoryOCRToMinutes($sResult)
+	If $sResult = "" Then Return -1
+
+	Local $sTime = $sResult, $avResult, $iDay = 0, $iHour = 0, $iMinute = 0, $iSecond = 0
+
+	If StringInStr($sTime, "d") > 1 Then
+		$avResult = StringSplit($sTime, "d", $STR_NOCOUNT)
+		$iDay = Number($avResult[0])
+		$sTime = $avResult[1]
+	EndIf
+	If StringInStr($sTime, "h") > 1 Then
+		$avResult = StringSplit($sTime, "h", $STR_NOCOUNT)
+		$iHour = Number($avResult[0])
+		$sTime = $avResult[1]
+	EndIf
+	If StringInStr($sTime, "m") > 1 Then
+		$avResult = StringSplit($sTime, "m", $STR_NOCOUNT)
+		$iMinute = Number($avResult[0])
+		$sTime = $avResult[1]
+	EndIf
+	If StringInStr($sTime, "s") > 1 Then
+		$avResult = StringSplit($sTime, "s", $STR_NOCOUNT)
+		$iSecond = Number($avResult[0])
+		$sTime = ""
+	EndIf
+
+	If $sTime <> "" And StringRegExp($sTime, "\d") Then Return -1
+	If $iDay > 60 Or $iHour > 23 Or $iMinute > 59 Or $iSecond > 59 Then Return -1
+
+	Return ($iDay * 1440) + ($iHour * 60) + $iMinute + Ceiling($iSecond / 60)
+EndFunc   ;==>_RemainTLaboratoryOCRToMinutes
+
+Func _GetRemainTLaboratoryOCR($sLanguage, $x_start, $y_start, $width, $height)
+	Local $sResult = _CleanRemainTLaboratoryOCR(getOcrAndCapture($sLanguage, $x_start, $y_start, $width, $height, True, Default, True))
+	If _IsRemainTLaboratoryOCRValid($sResult) Then Return $sResult
+	If $sResult <> "" Then SetDebugLog("Rejected Laboratory OCR time: " & $sResult, $COLOR_DEBUG)
+	Return ""
+EndFunc   ;==>_GetRemainTLaboratoryOCR
+
+Func _PickRemainTLaboratoryOCR(ByRef $sBestResult, ByRef $iBestMinutes, $sLanguage, $x_start, $y_start, $width, $height)
+	Local $sResult = _GetRemainTLaboratoryOCR($sLanguage, $x_start - 5, $y_start, $width, $height)
+	Local $iMinutes = _RemainTLaboratoryOCRToMinutes($sResult)
+	If $iMinutes > $iBestMinutes Then
+		$sBestResult = $sResult
+		$iBestMinutes = $iMinutes
+	EndIf
+EndFunc   ;==>_PickRemainTLaboratoryOCR
+
 Func getRemainTLaboratory2($x_start, $y_start) ; read actual time remaining in Lab for current upgrade (336,260), changed CoC v9.24 282,277
-	Return getOcrAndCapture("coc-RemainLaboratory2", $x_start, $y_start, 260, 26, True)
+	Local $sResult = "", $iBestMinutes = -1
+	_PickRemainTLaboratoryOCR($sResult, $iBestMinutes, "coc-RemainLaboratory2", $x_start, $y_start, 180, 40)
+	_PickRemainTLaboratoryOCR($sResult, $iBestMinutes, "coc-RemainLaboratory", $x_start, $y_start, 180, 40)
+	_PickRemainTLaboratoryOCR($sResult, $iBestMinutes, "coc-uptime2", $x_start, $y_start, 180, 40)
+	_PickRemainTLaboratoryOCR($sResult, $iBestMinutes, "coc-uptime", $x_start, $y_start, 180, 40)
+	If $iBestMinutes <= 0 Then
+		_PickRemainTLaboratoryOCR($sResult, $iBestMinutes, "coc-RemainLaboratory2", $x_start, $y_start, 260, 40)
+		_PickRemainTLaboratoryOCR($sResult, $iBestMinutes, "coc-RemainLaboratory", $x_start, $y_start, 260, 40)
+		_PickRemainTLaboratoryOCR($sResult, $iBestMinutes, "coc-uptime2", $x_start, $y_start, 260, 40)
+		_PickRemainTLaboratoryOCR($sResult, $iBestMinutes, "coc-uptime", $x_start, $y_start, 260, 40)
+	EndIf
+	Return $sResult
 EndFunc   ;==>getRemainTLaboratory2
 
 Func getRemainTLaboratoryGob($x_start, $y_start) ; read actual time remaining in Lab for current upgrade (336,260), changed CoC v9.24 282,277
-	Return getOcrAndCapture("coc-RemainLabGob", $x_start, $y_start, 130, 18, True)
+	Local $sResult = "", $iBestMinutes = -1
+	_PickRemainTLaboratoryOCR($sResult, $iBestMinutes, "coc-RemainLabGob", $x_start - 30, $y_start - 12, 130, 25)
+	_PickRemainTLaboratoryOCR($sResult, $iBestMinutes, "coc-RemainLaboratory2", $x_start - 30, $y_start - 12, 130, 25)
+	_PickRemainTLaboratoryOCR($sResult, $iBestMinutes, "coc-uptime2", $x_start - 30, $y_start - 12, 130, 25)
+	_PickRemainTLaboratoryOCR($sResult, $iBestMinutes, "coc-uptime", $x_start - 30, $y_start - 12, 130, 25)
+	_PickRemainTLaboratoryOCR($sResult, $iBestMinutes, "coc-RemainLabGob", $x_start, $y_start, 180, 40)
+	_PickRemainTLaboratoryOCR($sResult, $iBestMinutes, "coc-RemainLaboratory2", $x_start, $y_start, 180, 40)
+	_PickRemainTLaboratoryOCR($sResult, $iBestMinutes, "coc-uptime2", $x_start, $y_start, 180, 40)
+	_PickRemainTLaboratoryOCR($sResult, $iBestMinutes, "coc-uptime", $x_start, $y_start, 180, 40)
+	Return $sResult
 EndFunc   ;==>getRemainTLaboratoryGob
 
 Func getRemainTHero($x_start, $y_start, $bNeedCapture = True) ; Get time remaining for hero to be ready for attack from train window
@@ -645,3 +881,28 @@ Func getOcrImgLoc(ByRef Const $_hHBitmap, $sLanguage)
 		Return ""
 	EndIf
 EndFunc   ;==>getOcrImgLoc
+
+Func getMatchRemain($x_start = 397, $y_start = 503) ; Gets complete ranked battle match remain
+	Local $aRet[0]
+	Local $aLanguages[3] = ["coc-BBAttackAvail", "coc-Builders", "coc-t-b"]
+	Local $aOffsets[3] = [0, -2, 2]
+	If $g_bDebugOcr Then
+		_CaptureRegion2($x_start, $y_start, $x_start + 70, $y_start + 22)
+		SaveDebugImage("RankedMatchesOCR", False)
+	EndIf
+	Local $sRet = StringStripWS(StringReplace(getOcrAndCapture("coc-tournament", $x_start, $y_start, 70, 22, True), "/", "#"), $STR_STRIPALL)
+	If StringRegExp($sRet, "^\d+#\d+$") Then
+		$aRet = StringSplit($sRet, "#", $STR_NOCOUNT)
+		If Number($aRet[1]) > 0 And Number($aRet[0]) <= Number($aRet[1]) Then Return $aRet
+	EndIf
+	For $i = 0 To UBound($aOffsets) - 1
+		For $j = 0 To UBound($aLanguages) - 1
+			$sRet = StringStripWS(StringReplace(getOcrAndCapture($aLanguages[$j], $x_start, $y_start + $aOffsets[$i], 70, 24, True), "/", "#"), $STR_STRIPALL)
+			If StringRegExp($sRet, "^\d+#\d+$") Then
+				$aRet = StringSplit($sRet, "#", $STR_NOCOUNT)
+				If Number($aRet[1]) > 0 And Number($aRet[0]) <= Number($aRet[1]) Then Return $aRet
+			EndIf
+		Next
+	Next
+	Return $aRet
+EndFunc   ;==>getMatchRemain

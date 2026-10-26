@@ -121,7 +121,9 @@ EndFunc   ;==>IsMainPage
 
 Func IsMainPageBuilderBase($iLoop = 30)
 
-	If IsPageLoop($aIsOnBuilderBase, $iLoop) Then
+	Local $bBuilderBaseVisible = IsPageLoop($aIsOnBuilderBase, $iLoop)
+	If Not $bBuilderBaseVisible Then $bBuilderBaseVisible = isOnBuilderBase(True)
+	If $bBuilderBaseVisible Then
 		$g_bMainWindowOk = True
 		If $g_bDebugSetLog Or $g_bDebugClick Then SetLog("**Main Window Builder Base OK**", $COLOR_ACTION)
 		Return True
@@ -224,18 +226,13 @@ Func IsReturnHomeBattlePage($useReturnValue = False, $makeDebugImageScreenshot =
 	;    for goldelixirchange and activate heroes
 
 	If IsPageLoop($aReturnHomeButton, 1) Then
-		If _ColorCheck(_GetPixelColor($aReturnHomeButton[0], 545 + $g_iMidOffsetY, True), Hex(0xFFFFFF, 6), 10) Then ; White Color From Button (Double Check)
+		If _ColorCheck(_GetPixelColor($aReturnHomeButton[0], 559 + $g_iMidOffsetY, True), Hex(0xFFFFFF, 6), 15) Then ; White text from August 2026 button (double check)
 			If $g_bDebugSetLog Or $g_bDebugClick Then SetLog("**Return Home Battle Window OK**", $COLOR_ACTION)
 			Return True
 		EndIf
 	EndIf
 
-	If IsPageLoop($aRewardButton, 1) Then
-		If _ColorCheck(_GetPixelColor($aRewardButton[0] + 8, 548 + $g_iMidOffsetY, True), Hex(0xFFFFFF, 6), 10) Then ; White Color From Button (Double Check)
-			If $g_bDebugSetLog Or $g_bDebugClick Then SetLog("**Claim Reward Battle Window OK**", $COLOR_ACTION)
-			Return True
-		EndIf
-	EndIf
+	If IsReturnHomeChestPage(False, False) Then Return True
 
 	If ($g_bDebugSetLog Or $g_bDebugClick) And ($makeDebugImageScreenshot = True) Then SetLog("**Return Home Battle Window FAIL**", $COLOR_ACTION)
 	If $g_bDebugImageSave And $makeDebugImageScreenshot Then SaveDebugImage("IsReturnHomeBattlePage")
@@ -246,6 +243,59 @@ Func IsReturnHomeBattlePage($useReturnValue = False, $makeDebugImageScreenshot =
 	EndIf
 
 EndFunc   ;==>IsReturnHomeBattlePage
+
+Func IsReturnHomeChestPage($bAction = True, $bUseImageSearch = True)
+	Local $bRet = False
+	Local $bChestFound = False
+	Local $iChestX = $aReturnHomeChest[0], $iChestY = $aReturnHomeChest[1]
+	If $bUseImageSearch Then
+		$bChestFound = QuickMIS("BC1", $g_sImgReturnHomeChest, 320, 530, 525, 595)
+		If $bChestFound Then
+			$iChestX = $g_iQuickMISX
+			$iChestY = $g_iQuickMISY
+		EndIf
+	Else
+		$bChestFound = IsReturnHomeChestButtonVisible()
+	EndIf
+	If $bChestFound Then
+		SetDebugLog("**Return Home Chest Window OK**", $COLOR_ACTION)
+		If IsAttackPage(False) Then Return False
+		If Not $bAction Then Return True
+
+		Click($iChestX, $iChestY, 1, 120, "Claim Reward")
+		If _Sleep(1000) Then Return
+		$bRet = True
+	EndIf
+
+	If $g_bDebugSetLog Or $g_bDebugClick Then SetLog("**Return Home Chest Window FAIL**", $COLOR_ACTION)
+	Return $bRet
+EndFunc   ;==>IsReturnHomeChestPage
+
+Func IsReturnHomeChestButtonVisible()
+	Return _ColorCheck(_GetPixelColor(430, 592, True), Hex(0x84CD2C, 6), 15, Default, "ReturnHomeChestGreen") And _
+			_ColorCheck(_GetPixelColor(438, 592, True), Hex(0xFFFFFF, 6), 10, Default, "ReturnHomeChestText")
+EndFunc   ;==>IsReturnHomeChestButtonVisible
+
+Func ClickChestContinueButton($iDelay = 500, $sDebugText = "Chest Continue")
+	Local $iClickX = 0, $iClickY = 0
+	If _ColorCheck(_GetPixelColor(480, 550, True), Hex(0xBFEA8E, 6), 15, Default, "ChestContinueTop") And _
+			_ColorCheck(_GetPixelColor(480, 575, True), Hex(0x7EC336, 6), 15, Default, "ChestContinueBottom") Then
+		$iClickX = 436
+		$iClickY = 560
+	ElseIf _ColorCheck(_GetPixelColor(430, 482, True), Hex(0xBFEA8E, 6), 20, Default, "ChestContinue") Then
+		$iClickX = 430
+		$iClickY = 495
+	ElseIf _ColorCheck(_GetPixelColor(440, 500, True), Hex(0xBFEB8E, 6), 20, Default, "CardContinue") Then
+		$iClickX = 440
+		$iClickY = 520
+	Else
+		Return False
+	EndIf
+
+	If _Sleep($iDelay) Then Return False
+	Click($iClickX, $iClickY, 1, 120, $sDebugText)
+	Return True
+EndFunc   ;==>ClickChestContinueButton
 
 Func IsOKCancelPage($bWriteLog = True)
 
@@ -270,7 +320,9 @@ Func IsPostDefenseSummaryPage($bCapture = True)
 	Local $GoldSpot = _GetPixelColor(330, 201 + $g_iMidOffsetY, $bCapture) ; Gold Emblem
 	Local $ElixirSpot = _GetPixelColor(334, 233 + $g_iMidOffsetY, $bCapture) ; Elixir Emblem
 
-	$result = _ColorCheck($GoldSpot, Hex(0xE4DB4F, 6), 20) And _ColorCheck($ElixirSpot, Hex(0xDA38D1, 6), 20)
+	Local $bGoldFound = _ColorCheck($GoldSpot, Hex(0xE4DB4F, 6), 20) Or _ColorCheck($GoldSpot, Hex(0xFFE948, 6), 20)
+	Local $bElixirFound = _ColorCheck($ElixirSpot, Hex(0xDA38D1, 6), 20) Or _ColorCheck($ElixirSpot, Hex(0xE93DE7, 6), 20)
+	$result = $bGoldFound And $bElixirFound
 
 	If $result Then
 		If $g_bDebugSetLog Or $g_bDebugClick Then SetLog("**Post Defense Page visible**", $COLOR_ACTION)
@@ -299,7 +351,7 @@ Func IsPetHousePage($bSetLog = True, $iLoop = 30)
 EndFunc   ;==>IsPetHousePage
 
 Func IsBlacksmithPage($bSetLog = True, $iLoop = 30)
-	Local $aIsBlacksmithPage[4] = [769, 116 + $g_iMidOffsetY, 0xFF8D95, 20] ; Pink red top of close button
+	Local $aIsBlacksmithPage[4] = [805, 145 + $g_iMidOffsetY, 0xFF8D95, 20] ; Pink red top of close button
 
 	If IsPageLoop($aIsBlacksmithPage, $iLoop) Then
 		If ($g_bDebugSetLog Or $g_bDebugClick) And $bSetLog Then SetLog("**Blacksmith Window OK**", $COLOR_ACTION)

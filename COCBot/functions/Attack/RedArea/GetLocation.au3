@@ -179,6 +179,7 @@ EndFunc   ;==>GetLocationDarkElixirWithLevel
 ; ===============================================================================================================================
 Func GetLocationBuilding($iBuildingType, $iAttackingTH = $g_iMaxTHLevel, $bForceCaptureRegion = True)
 
+	If $iBuildingType < 0 Or $iBuildingType >= UBound($g_sBldgNames) Then Return SetError(3, 0, -1)
 	If $g_bDebugSetLog Then SetDebugLog("Begin GetLocationBuilding: " & $g_sBldgNames[$iBuildingType], $COLOR_DEBUG1)
 	Local $hTimer = __TimerInit() ; timer to track image detection time
 
@@ -192,29 +193,32 @@ Func GetLocationBuilding($iBuildingType, $iAttackingTH = $g_iMaxTHLevel, $bForce
 
 	; error proof TH level
 	If $iAttackingTH = "-" Then $iAttackingTH = $g_iMaxTHLevel
+	$iAttackingTH = _Max(1, _Min($g_iMaxTHLevel, Int($iAttackingTH)))
 
 	; Get path to image file
 	If _ObjSearch($g_oBldgImages, $iBuildingType & "_" & $g_iDetectedImageType) = True Then ; check if image exists to prevent error when snow images are not avialable for building type
 		$directory = _ObjGetValue($g_oBldgImages, $iBuildingType & "_" & $g_iDetectedImageType)
 		If @error Then
 			_ObjErrMsg("_ObjGetValue $g_oBldgImages " & $g_sBldgNames[$iBuildingType] & ($g_iDetectedImageType = 1 ? "Snow " : " "), @error) ; Log COM error prevented
-			SetError(1, 0, -1) ; unknown image, must exit find
-			Return
+			Return SetError(1, 0, -1) ; unknown image, must exit find
 		EndIf
 	Else
 		$directory = _ObjGetValue($g_oBldgImages, $iBuildingType & "_0") ; fall back to regular non-snow image if needed
 		If @error Then
 			_ObjErrMsg("_ObjGetValue $g_oBldgImages" & $g_sBldgNames[$iBuildingType], @error) ; Log COM error prevented
-			SetError(1, 0, -1) ; unknown image, must exit find
-			Return
+			Return SetError(1, 0, -1) ; unknown image, must exit find
 		EndIf
+	EndIf
+	If $iBuildingType = $eBldgTownHall And $g_iDetectedImageType = 1 Then
+		Local $aTownHallImages = _FileListToArray($directory, "*_" & $iAttackingTH & "*.xml", $FLTA_FILES)
+		If @error Then $directory = _ObjGetValue($g_oBldgImages, $iBuildingType & "_0")
 	EndIf
 
 	; Get max number of buildings available for TH level
-	Local $maxReturnPoints = _ObjGetValue($g_oBldgMaxQty, $iBuildingType)[$iAttackingTH - 1]
-	If @error Then
-		_ObjErrMsg("_ObjGetValue $g_oBldgMaxQty", @error) ; Log COM error prevented
-		$maxReturnPoints = 20 ; unknown number of buildings, then set equal to 20 and keep going
+	Local $maxReturnPoints = 20
+	If _ObjSearch($g_oBldgMaxQty, $iBuildingType) Then
+		Local $aMaxQty = _ObjGetValue($g_oBldgMaxQty, $iBuildingType)
+		If IsArray($aMaxQty) Then $maxReturnPoints = $aMaxQty[$iAttackingTH - 1]
 	EndIf
 
 	; Get redline data
@@ -238,10 +242,10 @@ Func GetLocationBuilding($iBuildingType, $iAttackingTH = $g_iMaxTHLevel, $bForce
 	EndIf
 
 	; get max building level available for TH
-	Local $maxLevel = _ObjGetValue($g_oBldgLevels, $iBuildingType)[$iAttackingTH - 1]
-	If @error Then
-		_ObjErrMsg("_ObjGetValue $g_oBldgLevels", @error) ; Log COM error prevented
-		$maxLevel = 20 ; unknown number of building levels, then set equal to 20
+	Local $maxLevel = 20
+	If _ObjSearch($g_oBldgLevels, $iBuildingType) Then
+		Local $aMaxLevel = _ObjGetValue($g_oBldgLevels, $iBuildingType)
+		If IsArray($aMaxLevel) Then $maxLevel = $aMaxLevel[$iAttackingTH - 1]
 	EndIf
 
 	If $bForceCaptureRegion = True Then _CaptureRegion2()
@@ -250,8 +254,7 @@ Func GetLocationBuilding($iBuildingType, $iAttackingTH = $g_iMaxTHLevel, $bForce
 	Local $res = DllCallMyBot("SearchMultipleTilesBetweenLevels", "handle", $g_hHBitmap2, "str", $directory, "str", $fullCocAreas, "Int", $maxReturnPoints, "str", $redLines, "Int", $minLevel, "Int", $maxLevel)
 	If @error Then _logErrorDLLCall($g_sLibMyBotPath, @error)
 	If checkImglocError($res, "SearchMultipleTilesBetweenLevels", $directory) = True Then ; check for bad values returned from DLL
-		SetError(2, 1, 1) ; set return = 1 when no building found
-		Return
+		Return SetError(2, 1, 1) ; set return = 1 when no building found
 	EndIf
 
 	;	Get the redline data
@@ -283,11 +286,12 @@ Func GetLocationBuilding($iBuildingType, $iAttackingTH = $g_iMaxTHLevel, $bForce
 			; Object level retrieval
 			$tempNewLevel = Int(RetrieveImglocProperty($aKeys[$i], "objectlevel"))
 
-			; Munber of objects found retrieval
+			; Number of objects found retrieval
 			$tmpNumFound = Int(RetrieveImglocProperty($aKeys[$i], "totalobjects"))
 
 			; Location string retrieval
 			$sTempCoord = RetrieveImglocProperty($aKeys[$i], "objectpoints") ; get location points
+			If $g_bDebugBuildingPos Then SetLog(RetrieveImglocProperty($aKeys[$i], "filename"), $COLOR_INFO)
 
 			; Check for duplicate locations from DLL when more than 1 location returned?
 			If $i = 0 And StringLen($sTempCoord) > 7 Then
@@ -342,6 +346,8 @@ Func GetLocationBuilding($iBuildingType, $iAttackingTH = $g_iMaxTHLevel, $bForce
 		SetLog("Bldg Loc Coord String: " & $sLocCoord, $COLOR_DEBUG)
 		Local $sText
 		Select
+			Case Not IsArray($aBldgCoord) Or UBound($aBldgCoord) = 0
+				$sText = "No coordinates"
 			Case UBound($aBldgCoord, 1) > 1 And IsArray($aBldgCoord[1]) ; if we have array of arrays, separate and list
 				$sText = PixelArrayToString($aBldgCoord, ",")
 			Case IsArray($aBldgCoord[0]) ; single row with array
@@ -355,25 +361,31 @@ Func GetLocationBuilding($iBuildingType, $iAttackingTH = $g_iMaxTHLevel, $bForce
 		SetLog($g_sBldgNames[$iBuildingType] & " $aBldgCoord Array Contents: " & $sText, $COLOR_DEBUG)
 	EndIf
 
-	If IsArray($aBldgCoord) Then ; string and array location(s) save to dictionary
-		_ObjAdd($g_oBldgAttackInfo, $iBuildingType & "_OBJECTPOINTS", $sLocCoord) ; save string of locations
-		If @error Then _ObjErrMsg("_ObjAdd " & $g_sBldgNames[$iBuildingType] & " _OBJECTPOINTS", @error) ; Log errors
-		_ObjAdd($g_oBldgAttackInfo, $iBuildingType & "_LOCATION", $aBldgCoord) ; save array of locations
-		If @error Then _ObjErrMsg("_ObjAdd " & $g_sBldgNames[$iBuildingType] & " _LOCATION", @error) ; Log errors
+	If IsArray($aBldgCoord) And UBound($aBldgCoord) > 0 Then ; string and array location(s) save to dictionary
+		_ObjPutValue($g_oBldgAttackInfo, $iBuildingType & "_OBJECTPOINTS", $sLocCoord) ; save string of locations
+		If @error Then _ObjErrMsg("_ObjPutValue " & $g_sBldgNames[$iBuildingType] & " _OBJECTPOINTS", @error) ; Log errors
+		_ObjPutValue($g_oBldgAttackInfo, $iBuildingType & "_LOCATION", $aBldgCoord) ; save array of locations
+		If @error Then _ObjErrMsg("_ObjPutValue " & $g_sBldgNames[$iBuildingType] & " _LOCATION", @error) ; Log errors
+	Else
+		If _ObjSearch($g_oBldgAttackInfo, $iBuildingType & "_OBJECTPOINTS") Then _ObjDeleteKey($g_oBldgAttackInfo, $iBuildingType & "_OBJECTPOINTS")
+		If _ObjSearch($g_oBldgAttackInfo, $iBuildingType & "_LOCATION") Then _ObjDeleteKey($g_oBldgAttackInfo, $iBuildingType & "_LOCATION")
 	EndIf
 
 	If $TotalBuildings <> 0 Then ; building count save to dictionary
-		_ObjAdd($g_oBldgAttackInfo, $iBuildingType & "_COUNT", $TotalBuildings)
-		If @error Then _ObjErrMsg("_ObjAdd " & $g_sBldgNames[$iBuildingType] & " _COUNT", @error) ; Log errors
+		_ObjPutValue($g_oBldgAttackInfo, $iBuildingType & "_COUNT", $TotalBuildings)
+		If @error Then _ObjErrMsg("_ObjPutValue " & $g_sBldgNames[$iBuildingType] & " _COUNT", @error) ; Log errors
+	ElseIf _ObjSearch($g_oBldgAttackInfo, $iBuildingType & "_COUNT") Then
+		_ObjDeleteKey($g_oBldgAttackInfo, $iBuildingType & "_COUNT")
 	EndIf
-	SetLog("Total " & $g_sBldgNames[$iBuildingType] & " Buildings: " & $TotalBuildings)
+	If $iBuildingType = $eBldgRevengeTower Then
+		If $TotalBuildings > 0 Then SetLog("> Revenge Tower Detected", $COLOR_INFO)
+	EndIf
 
 	Local $iTime = __TimerDiff($hTimer) * 0.001 ; Image search time saved to dictionary in seconds
-	_ObjAdd($g_oBldgAttackInfo, $iBuildingType & "_FINDTIME", $iTime)
-	If @error Then _ObjErrMsg("_ObjAdd" & $g_sBldgNames[$iBuildingType] & " _FINDTIME", @error) ; Log errors
+	_ObjPutValue($g_oBldgAttackInfo, $iBuildingType & "_FINDTIME", $iTime)
+	If @error Then _ObjErrMsg("_ObjPutValue " & $g_sBldgNames[$iBuildingType] & " _FINDTIME", @error) ; Log errors
 
 	If $g_bDebugBuildingPos Then SetLog("  - Location(s) found in: " & Round($iTime, 2) & " seconds ", $COLOR_DEBUG)
-
 EndFunc   ;==>GetLocationBuilding
 
 Func DebugImageGetLocation($sVector, $sType, $iBuildingENUM = "")

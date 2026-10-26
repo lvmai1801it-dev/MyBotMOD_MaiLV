@@ -1,4 +1,4 @@
-; #FUNCTION# ====================================================================================================================
+﻿; #FUNCTION# ====================================================================================================================
 ; Name ..........: MBR GUI Control
 ; Description ...: This file Includes all functions to current GUI
 ; Syntax ........:
@@ -19,19 +19,35 @@ Func chkRequestCCHours()
 
 	If GUICtrlRead($g_hChkRequestTroopsEnable) = $GUI_CHECKED Then
 		GUICtrlSetState($g_hTxtRequestCC, $GUI_SHOW + $GUI_ENABLE)
-		For $i = $g_hLblRequestType To $g_hLblRequestCCHoursPM
+		GUICtrlSetState($g_hChkCakeCCEnable, $GUI_ENABLE)
+		chkCakeCC()
+		GUICtrlSetState($g_hChkRequestTroopsGoldPassEnable, $GUI_ENABLE)
+		GUICtrlSetState($g_hCmbRequestTroopsGoldPassTime, $GUI_ENABLE)
+		chkRequestTroopsGoldPass()
+		For $i = $g_hLblRequestCChour To $g_hLblRequestCCHoursPM
 			GUICtrlSetState($i, $GUI_ENABLE)
 		Next
-		chkRequestCountCC()
 	Else
 		GUICtrlSetState($g_hTxtRequestCC, $GUI_SHOW + $GUI_DISABLE)
-		For $i = $g_hLblRequestType To $g_hLblRequestCCHoursPM
+		GUICtrlSetState($g_hChkCakeCCEnable, $GUI_DISABLE)
+		GUICtrlSetState($g_hChkCakeCCOnly, BitOR($GUI_UNCHECKED, $GUI_DISABLE))
+		GUICtrlSetState($g_hChkRequestTroopsGoldPassEnable, $GUI_DISABLE)
+		GUICtrlSetState($g_hCmbRequestTroopsGoldPassTime, $GUI_DISABLE)
+		For $i = $g_hLblRequestCChour To $g_hLblRequestCCHoursPM
 			GUICtrlSetState($i, $GUI_DISABLE)
 		Next
 	EndIf
 
 	SetRedrawBotWindowControls($bWasRedraw, $g_hGrpRequestCC, "chkRequestCCHours")
 EndFunc   ;==>chkRequestCCHours
+
+Func chkCakeCC()
+	If GUICtrlRead($g_hChkCakeCCEnable) = $GUI_CHECKED Then
+		GUICtrlSetState($g_hChkCakeCCOnly, $GUI_ENABLE)
+	Else
+		GUICtrlSetState($g_hChkCakeCCOnly, BitOR($GUI_UNCHECKED, $GUI_DISABLE))
+	EndIf
+EndFunc   ;==>chkCakeCC
 
 Func chkRequestCountCC()
 	If GUICtrlRead($g_hChkRequestType_Troops) = $GUI_CHECKED Then
@@ -48,15 +64,15 @@ Func chkRequestCountCC()
 	EndIf
 	If GUICtrlRead($g_hChkRequestType_Spells) = $GUI_CHECKED Then
 		GUICtrlSetState($g_hTxtRequestCountCCSpell, $GUI_ENABLE)
-		GUICtrlSetState($g_ahCmbClanCastleSpell[0], $GUI_ENABLE)
-		GUICtrlSetState($g_ahCmbClanCastleSpell[1], $GUI_ENABLE)
-		GUICtrlSetState($g_ahCmbClanCastleSpell[2], $GUI_ENABLE)
+		For $i = 0 To UBound($g_ahCmbClanCastleSpell) - 1
+			GUICtrlSetState($g_ahCmbClanCastleSpell[$i], $GUI_ENABLE)
+		Next
 		CmbClanCastleSpell()
 	Else
 		GUICtrlSetState($g_hTxtRequestCountCCSpell, $GUI_DISABLE)
-		GUICtrlSetState($g_ahCmbClanCastleSpell[0], $GUI_DISABLE)
-		GUICtrlSetState($g_ahCmbClanCastleSpell[1], $GUI_DISABLE)
-		GUICtrlSetState($g_ahCmbClanCastleSpell[2], $GUI_DISABLE)
+		For $i = 0 To UBound($g_ahCmbClanCastleSpell) - 1
+			GUICtrlSetState($g_ahCmbClanCastleSpell[$i], $GUI_DISABLE)
+		Next
 	EndIf
 	If GUICtrlRead($g_hChkRequestType_Siege) = $GUI_CHECKED Then
 		GUICtrlSetState($g_ahCmbClanCastleSiege[0], $GUI_ENABLE)
@@ -80,6 +96,14 @@ EndFunc   ;==>CmbClanCastleTroop
 Func CmbClanCastleSpell()
 
 EndFunc   ;==>CmbClanCastleSpell
+
+Func chkRequestTroopsGoldPass()
+	If GUICtrlRead($g_hChkRequestTroopsGoldPassEnable) = $GUI_CHECKED Then
+		GUICtrlSetState($g_hCmbRequestTroopsGoldPassTime, $GUI_ENABLE)
+	Else
+		GUICtrlSetState($g_hCmbRequestTroopsGoldPassTime, $GUI_DISABLE)
+	EndIf
+EndFunc   ;==>chkRequestTroopsGoldPass
 
 Func chkRequestCCHoursE1()
 	If GUICtrlRead($g_hChkRequestCCHoursE1) = $GUI_CHECKED And GUICtrlRead($g_ahChkRequestCCHours[0]) = $GUI_CHECKED Then

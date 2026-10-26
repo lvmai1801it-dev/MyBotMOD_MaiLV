@@ -19,18 +19,37 @@ Func MBRFunc($Start = True)
 			RemoveZoneIdentifiers()
 			$g_hLibMyBot = DllOpen($g_sLibMyBotPath)
 			If $g_hLibMyBot = -1 Then
-				SetLog($g_sMBRLib & " not found.", $COLOR_ERROR)
+				SetLog($g_sMBRLib & " not found", $COLOR_ERROR)
 				Return False
 			EndIf
-			SetDebugLog($g_sMBRLib & " opened.")
+			$g_bVillageOffsetReady = False
+			SetDebugLog($g_sMBRLib & " opened")
 			; set processing pool size immediately
 			setProcessingPoolSize($g_iGlobalThreads)
 			setMaxDegreeOfParallelism($g_iThreads)
+			Return True
 		Case False
-			DllClose($g_hLibMyBot)
-			SetDebugLog($g_sMBRLib & " closed.")
+			If $g_hLibMyBot <> -1 Then DllClose($g_hLibMyBot)
+			$g_hLibMyBot = -1
+			$g_bVillageOffsetReady = False
+			SetDebugLog($g_sMBRLib & " closed")
+			Return True
 	EndSwitch
+	Return False
 EndFunc   ;==>MBRFunc
+
+Func RestartMBRFunc($sReason = "")
+	If $g_bLibMyBotActive Then
+		SetDebugLog($g_sMBRLib & " restart skipped, DLL call is active")
+		Return False
+	EndIf
+
+	SetDebugLog("Restarting " & $g_sMBRLib & ($sReason <> "" ? " after " & $sReason : ""))
+
+	If Not MBRFunc(False) Then Return False
+
+	Return MBRFunc(True)
+EndFunc   ;==>RestartMBRFunc
 
 ; Private DllCall MyBot.run.dll function call
 Func _DllCallMyBot($sFunc, $sType1 = Default, $vParam1 = Default, $sType2 = Default, $vParam2 = Default, $sType3 = Default, $vParam3 = Default, $sType4 = Default, $vParam4 = Default, $sType5 = Default, $vParam5 = Default _
@@ -71,7 +90,12 @@ Func DllCallMyBot($sFunc, $sType1 = Default, $vParam1 = Default, $sType2 = Defau
 	$aResult = _DllCallMyBot($sFunc, $sType1, $vParam1, $sType2, $vParam2, $sType3, $vParam3, $sType4, $vParam4, $sType5, $vParam5, $sType6, $vParam6, $sType7, $vParam7, $sType8, $vParam8, $sType9, $vParam9, $sType10, $vParam10)
 	Local $error = @error
 	Local $i = 1
-	While Not $error And $aResult[0] = "<GetAsyncResult>"
+	While Not $error
+		If Not IsArray($aResult) Or UBound($aResult) = 0 Then
+			$error = 1
+			ExitLoop
+		EndIf
+		If $aResult[0] <> "<GetAsyncResult>" Then ExitLoop
 		; when receiving "<GetAsyncResult>", dll waited already 100ms, and android should be resumed after 500ms for 100ms
 		If Mod($i + 5, 10) = 0 Then
 			SetDebugLog("Waiting for DLL async function " & $sFunc & " ...")
@@ -105,9 +129,9 @@ Func debugMBRFunctions($iDebugSearchArea = 0, $iDebugRedArea = 0, $iDebugOcr = 0
 	EndIf
 	;dll return 0 on success, -1 on error
 	If IsArray($result) Then
-		If $g_bDebugSetLog And $result[0] = -1 Then SetLog($g_sMBRLib & " error setting Global vars.", $COLOR_DEBUG)
+		If $g_bDebugSetLog And $result[0] = -1 Then SetLog($g_sMBRLib & " error setting Global vars", $COLOR_DEBUG)
 	Else
-		SetDebugLog($g_sMBRLib & " not found.", $COLOR_ERROR)
+		SetDebugLog($g_sMBRLib & " not found", $COLOR_ERROR)
 	EndIf
 	WinActivate($activeHWnD) ; restore current active window
 EndFunc   ;==>debugMBRFunctions
@@ -123,13 +147,13 @@ Func setAndroidPID($pid = GetAndroidPid())
 	;dll return 0 on success, -1 on error
 	If IsArray($result) Then
 		If $result[0] = "" Then
-			SetDebugLog($g_sMBRLib & " error setting Android PID.")
+			SetDebugLog($g_sMBRLib & " error setting Android PID")
 		Else
 			SetDebugLog("Android PID=" & $pid & " initialized: " & $result[0])
 			debugMBRFunctions(0, $g_bDebugRedArea ? 1 : 0, $g_bDebugOcr ? 1 : 0) ; set debug levels
 		EndIf
 	Else
-		SetDebugLog($g_sMBRLib & " not found.", $COLOR_ERROR)
+		SetDebugLog($g_sMBRLib & " not found", $COLOR_ERROR)
 	EndIf
 EndFunc   ;==>setAndroidPID
 
@@ -144,13 +168,13 @@ Func SetBotGuiPID($pid = $g_iGuiPID)
 	;dll return 0 on success, -1 on error
 	If IsArray($result) Then
 		If $result[0] = "" Then
-			SetDebugLog($g_sMBRLib & " error setting Android PID.")
+			SetDebugLog($g_sMBRLib & " error setting Android PID")
 		Else
 			SetDebugLog("Bot GUI PID=" & $pid & " initialized: " & $result[0])
 			;debugMBRFunctions($g_iDebugSearchArea, $g_iDebugRedArea, $g_iDebugOcr) ; set debug levels
 		EndIf
 	Else
-		SetDebugLog($g_sMBRLib & " not found.", $COLOR_ERROR)
+		SetDebugLog($g_sMBRLib & " not found", $COLOR_ERROR)
 	EndIf
 EndFunc   ;==>SetBotGuiPID
 
@@ -178,7 +202,7 @@ Func CheckForumAuthentication()
 			EndIf
 		EndIf
 	Else
-		SetDebugLog($g_sMBRLib & " not found.", $COLOR_ERROR)
+		SetDebugLog($g_sMBRLib & " not found", $COLOR_ERROR)
 	EndIf
 	Return $iAuthenticated
 EndFunc   ;==>CheckForumAuthentication
@@ -200,16 +224,37 @@ Func ForumLogin($sUsername, $sPassword)
 			Return $result[0]
 		EndIf
 	Else
-		SetDebugLog($g_sMBRLib & " not found.", $COLOR_ERROR)
+		SetDebugLog($g_sMBRLib & " not found", $COLOR_ERROR)
 	EndIf
 EndFunc   ;==>ForumLogin
 
 Func setVillageOffset($x, $y, $z)
-	DllCall($g_hLibMyBot, "str", "setVillageOffset", "int", $x, "int", $y, "float", $z)
+	If Not IsNumber($x) Or Not IsNumber($y) Or Not IsNumber($z) Or $z <= 0 Then
+		$g_bVillageOffsetReady = False
+		If $g_bDebugSetLog Then SetDebugLog("Invalid village offset", $COLOR_ERROR)
+		Return False
+	EndIf
 	$g_iVILLAGE_OFFSET[0] = $x
 	$g_iVILLAGE_OFFSET[1] = $y
 	$g_iVILLAGE_OFFSET[2] = $z
+	If $g_hLibMyBot = -1 Then
+		$g_bVillageOffsetReady = False
+		Return False
+	EndIf
+	Local $result = DllCall($g_hLibMyBot, "str", "setVillageOffset", "int", $x, "int", $y, "float", $z)
+	If @error Or Not IsArray($result) Then
+		$g_bVillageOffsetReady = False
+		If $g_bDebugSetLog Then SetDebugLog("setVillageOffset result error", $COLOR_ERROR)
+		Return False
+	EndIf
+	$g_bVillageOffsetReady = True
+	Return True
 EndFunc   ;==>setVillageOffset
+
+Func EnsureVillageOffset()
+	If $g_bVillageOffsetReady Then Return True
+	Return setVillageOffset($g_iVILLAGE_OFFSET[0], $g_iVILLAGE_OFFSET[1], $g_iVILLAGE_OFFSET[2])
+EndFunc   ;==>EnsureVillageOffset
 
 Func setMaxDegreeOfParallelism($iMaxDegreeOfParallelism = 0)
 	Local $i = Int($iMaxDegreeOfParallelism)
@@ -232,48 +277,77 @@ Func setGcCollectTotalMemoryPreasure($iGcCollectTotalMemoryPreasure = 0)
 EndFunc   ;==>setGcCollectTotalMemoryPreasure
 
 Func ConvertVillagePos(ByRef $x, ByRef $y, $zoomfactor = 0)
-	If $g_hLibMyBot = -1 Then Return ; Bot didn't finish launch yet
+	If $g_hLibMyBot = -1 Then Return False ; Bot didn't finish launch yet
+	If Not EnsureVillageOffset() Then Return False
 	Local $result = DllCall($g_hLibMyBot, "str", "ConvertVillagePos", "int", $x, "int", $y, "float", $zoomfactor)
-	If IsArray($result) = False Then
+	If @error Or Not IsArray($result) Then
+		$g_bVillageOffsetReady = False
 		If $g_bDebugSetLog Then SetDebugLog("ConvertVillagePos result error", $COLOR_ERROR)
-		Return ;exit if
+		Return False
 	EndIf
 	Local $a = StringSplit($result[0], "|")
-	If UBound($a) < 3 Then Return
+	If UBound($a) < 3 Then
+		$g_bVillageOffsetReady = False
+		Return False
+	EndIf
+	If Not StringIsInt($a[1]) Or Not StringIsInt($a[2]) Then
+		$g_bVillageOffsetReady = False
+		Return False
+	EndIf
 	$x = Int($a[1])
 	$y = Int($a[2])
+	Return True
 EndFunc   ;==>ConvertVillagePos
 
 Func ConvertToVillagePos(ByRef $x, ByRef $y, $zoomfactor = 0)
-	If $g_hLibMyBot = -1 Then Return ; Bot didn't finish launch yet
+	If $g_hLibMyBot = -1 Then Return False ; Bot didn't finish launch yet
+	If Not EnsureVillageOffset() Then Return False
 	Local $result = DllCall($g_hLibMyBot, "str", "ConvertToVillagePos", "int", $x, "int", $y, "float", $zoomfactor)
-	If IsArray($result) = False Then
+	If @error Or Not IsArray($result) Then
+		$g_bVillageOffsetReady = False
 		If $g_bDebugSetLog Then SetDebugLog("ConvertToVillagePos result error", $COLOR_ERROR)
-		Return ;exit if
+		Return False
 	EndIf
 	Local $a = StringSplit($result[0], "|")
-	If UBound($a) < 3 Then Return
+	If UBound($a) < 3 Then
+		$g_bVillageOffsetReady = False
+		Return False
+	EndIf
+	If Not StringIsInt($a[1]) Or Not StringIsInt($a[2]) Then
+		$g_bVillageOffsetReady = False
+		Return False
+	EndIf
 	$x = Int($a[1])
 	$y = Int($a[2])
+	Return True
 EndFunc   ;==>ConvertToVillagePos
 
 Func ConvertFromVillagePos(ByRef $x, ByRef $y)
-	If $g_hLibMyBot = -1 Then Return ; Bot didn't finish launch yet
+	If $g_hLibMyBot = -1 Then Return False ; Bot didn't finish launch yet
+	If Not EnsureVillageOffset() Then Return False
 	Local $result = DllCall($g_hLibMyBot, "str", "ConvertFromVillagePos", "int", $x, "int", $y)
-	If IsArray($result) = False Then
-		If $g_bDebugSetLog Then SetDebugLog("ConvertVillagePos result error", $COLOR_ERROR)
-		Return ;exit if
+	If @error Or Not IsArray($result) Then
+		$g_bVillageOffsetReady = False
+		If $g_bDebugSetLog Then SetDebugLog("ConvertFromVillagePos result error", $COLOR_ERROR)
+		Return False
 	EndIf
 	Local $a = StringSplit($result[0], "|")
-	If UBound($a) < 3 Then Return
+	If UBound($a) < 3 Then
+		$g_bVillageOffsetReady = False
+		Return False
+	EndIf
+	If Not StringIsInt($a[1]) Or Not StringIsInt($a[2]) Then
+		$g_bVillageOffsetReady = False
+		Return False
+	EndIf
 	$x = Int($a[1])
 	$y = Int($a[2])
+	Return True
 EndFunc   ;==>ConvertFromVillagePos
 
 Func ReduceBotMemory($bDisposeCaptures = True)
 	If $bDisposeCaptures = True Then _CaptureDispose()
 	If $g_iEmptyWorkingSetBot > 0 Then _WinAPI_EmptyWorkingSet(@AutoItPID) ; Reduce Working Set of Bot
-	;DllCall($g_hLibMyBot, "none", "gc") ; run .net garbage collection
 EndFunc   ;==>ReduceBotMemory
 
 Func RemoveZoneIdentifiers()

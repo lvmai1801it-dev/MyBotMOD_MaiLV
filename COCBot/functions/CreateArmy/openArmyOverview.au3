@@ -13,26 +13,52 @@
 ; Example .......: No
 ; ===============================================================================================================================
 Func OpenArmyOverview($bCheckMain = True, $sWhereFrom = "Undefined")
+	If IsTrainPage(False, 1) Then
+		Return True
+	EndIf
 
 	If $bCheckMain Then
 		If Not IsMainPage() Then ; check for main page, avoid random troop drop
-			SetLog("Cannot open Army Overview window", $COLOR_ERROR)
-			SetError(1)
-			Return False
+			checkMainScreen(False)
+			If Not IsMainPage() Then
+				SetLog("Cannot open army overview window", $COLOR_ERROR)
+				SetError(1)
+				Return False
+			EndIf
 		EndIf
 	EndIf
 
-	If WaitforPixel(23, 505 + $g_iBottomOffsetY, 53, 507 + $g_iBottomOffsetY, Hex(0xEEB344, 6), 20, 10) Then
-		If $g_bDebugSetLogTrain Then SetLog("Click $aArmyTrainButton" & " (Called from " & $sWhereFrom & ")", $COLOR_SUCCESS)
-		ClickP($aArmyTrainButton, 1, 120, "#0293") ; Button Army Overview
-	EndIf
+	For $i = 0 To 1
+		If IsTrainPage(False, 1) Then ExitLoop
+		Local $aBattleButton = FindButton("AttackButton")
+		If IsArray($aBattleButton) And UBound($aBattleButton) = 2 Then
+			If $g_bDebugSetLogTrain Then SetLog("Click Battle" & " (Called from " & $sWhereFrom & ")", $COLOR_SUCCESS)
+			ClickP($aBattleButton, 1, 120, "#0293") ; Open attack selection screen
+		Else
+			If $g_bDebugSetLogTrain Then SetLog("Cannot find Battle button", $COLOR_WARNING)
+			ContinueLoop
+		EndIf
+		If _Sleep(1000) Then Return
 
-	If _Sleep($DELAYRUNBOT6) Then Return ; wait for window to open
+		Local $aEditArmy
+		For $iSearch = 0 To 2
+			$aEditArmy = FindButton("EditArmy")
+			If IsArray($aEditArmy) And UBound($aEditArmy) = 2 Then ExitLoop
+			If _Sleep(500) Then Return
+		Next
+		If IsArray($aEditArmy) And UBound($aEditArmy) = 2 Then
+			If $g_bDebugSetLogTrain Then SetLog("Click Edit Army" & " (Called from " & $sWhereFrom & ")", $COLOR_SUCCESS)
+			ClickP($aEditArmy, 1, 120, "#0293")
+		EndIf
+		If _Sleep($DELAYRUNBOT6) Then Return ; wait for window to open
+		If IsTrainPage(False, 1) Then ExitLoop
+		If $i = 0 Then
+			If _Sleep(500) Then Return
+		EndIf
+	Next
 	If Not IsTrainPage() Then
 		SetError(1)
 		Return False ; exit if I'm not in train page
-	Else
-		CheckHeroOrder()
 	EndIf
 	Return True
 
@@ -56,7 +82,7 @@ EndFunc   ;==>OpenSpellsTab
 
 Func OpenSiegeMachinesTab($bSetLog = True, $sWhereFrom = "Undefined")
 	Click(Random(680, 790, 1), Random(360 + $g_iMidOffsetY, 380 + $g_iMidOffsetY, 1), 1, 120)
-	If _Sleep(250) Then Return
+	If _Sleep(750) Then Return
 	Return True
 EndFunc   ;==>OpenSiegeMachinesTab
 

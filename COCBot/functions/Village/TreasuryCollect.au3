@@ -75,7 +75,7 @@ Func TreasuryCollect()
 			ClickP($aCollectButton, 1, 130, "#0330")
 			If _Sleep($DELAYTREASURY2) Then Return
 			If ClickOkay("ConfirmCollectTreasury") Then ; Click Okay to confirm collect treasury loot
-				SetLog("Treasury collected successfully.", $COLOR_SUCCESS)
+				SetLog("Treasury Collected Successfully", $COLOR_SUCCESS)
 			Else
 				SetLog("Cannot Click Okay Button on Treasury Collect screen", $COLOR_ERROR)
 				CloseWindow2()

@@ -16,7 +16,7 @@
 
 Global $g_hGUI_ABOUT = 0
 Global $g_hLblCreditsBckGrnd = 0, $g_hLblMyBotURL = 0, $g_hLblForumURL = 0
-Global $g_hGUI_CommandLineHelp = 0
+Global $g_hGUI_CommandLineHelp = 0, $g_hRichEditNotifyHelp = 0
 
 Func CreateAboutTab()
 	$g_hGUI_ABOUT = _GUICreate("", $g_iSizeWGrpTab1, $g_iSizeHGrpTab1, $_GUI_CHILD_LEFT, $_GUI_CHILD_TOP, BitOR($WS_CHILD, $WS_TABSTOP), -1, $g_hFrmBotEx)
@@ -125,7 +125,7 @@ Func ShowHelp($Source = Default)
 		Case $g_lblHelpBot; Bot/Android/Help Handle
 			$PathHelp = "CommandLineParameter"
 		Case $g_lblHepNotify
-			$PathHelp = "NotifyHelp"
+			Return ShowNotifyHelp()
 	EndSwitch
 
 	UpdateBotTitle()
@@ -159,3 +159,52 @@ Func ShowHelp($Source = Default)
 	GUIDelete($g_hGUI_CommandLineHelp)
 	Opt("GUIOnEventMode", $iOpt)
 EndFunc   ;==>ShowHelp
+
+Func ShowNotifyHelp()
+	If $g_hGUI_CommandLineHelp And WinExists($g_hGUI_CommandLineHelp) Then
+		WinActivate($g_hGUI_CommandLineHelp)
+		Return
+	EndIf
+
+	UpdateBotTitle()
+	Local Const $iWidth = 700, $iHeight = 600
+	$g_hGUI_CommandLineHelp = GUICreate($g_sBotTitle & " - Telegram Help", $iWidth, $iHeight, -1, -1, _
+			BitOR($WS_CAPTION, $WS_POPUPWINDOW, $WS_SIZEBOX), $WS_EX_TOPMOST, $g_hFrmBot)
+	GUISetIcon($g_sLibIconPath, $eIcnGUI, $g_hGUI_CommandLineHelp)
+	GUISetBkColor(0xF4F6F8, $g_hGUI_CommandLineHelp)
+	GUISetOnEvent($GUI_EVENT_CLOSE, "CloseNotifyHelp", $g_hGUI_CommandLineHelp)
+
+	_GUICtrlCreateIcon($g_sLibIconPath, $eIcnTelegram, 20, 16, 32, 32)
+	GUICtrlCreateLabel("Telegram Remote Commands", 65, 14, 600, 24)
+	GUICtrlSetFont(-1, 12, $FW_BOLD, Default, "Arial")
+	GUICtrlSetColor(-1, $COLOR_NAVY)
+	GUICtrlCreateLabel(GetTranslatedFileIni("MBR GUI Design Child Village - Notify", "LblNotifyHelp_Info_01", _
+			"Click here to get Help about Notify Remote commands to Telegram"), 65, 38, 600, 18)
+	GUICtrlSetColor(-1, 0x555555)
+
+	$g_hRichEditNotifyHelp = _GUICtrlRichEdit_Create($g_hGUI_CommandLineHelp, "", 20, 70, 660, 470, _
+			BitOR($WS_VSCROLL, $ES_MULTILINE), $WS_EX_CLIENTEDGE)
+	_GUICtrlRichEdit_SetBkColor($g_hRichEditNotifyHelp, 0xFFFFFF)
+	_GUICtrlRichEdit_StreamFromFile($g_hRichEditNotifyHelp, @ScriptDir & "\Help\NotifyHelp.rtf")
+	_GUICtrlRichEdit_SetReadOnly($g_hRichEditNotifyHelp)
+	_GUICtrlRichEdit_SetScrollPos($g_hRichEditNotifyHelp, 0, 0)
+
+	Local $hClose = GUICtrlCreateButton("Close", 580, 552, 100, 30)
+	GUICtrlSetFont(-1, 9, $FW_BOLD)
+	GUICtrlSetOnEvent($hClose, "CloseNotifyHelp")
+
+	GUISetState(@SW_SHOW, $g_hGUI_CommandLineHelp)
+	GUISwitch($g_hFrmBotEx)
+EndFunc   ;==>ShowNotifyHelp
+
+Func CloseNotifyHelp()
+	If $g_hRichEditNotifyHelp Then
+		_GUICtrlRichEdit_Destroy($g_hRichEditNotifyHelp)
+		$g_hRichEditNotifyHelp = 0
+	EndIf
+	If $g_hGUI_CommandLineHelp Then
+		GUIDelete($g_hGUI_CommandLineHelp)
+		$g_hGUI_CommandLineHelp = 0
+	EndIf
+	GUISwitch($g_hFrmBotEx)
+EndFunc   ;==>CloseNotifyHelp

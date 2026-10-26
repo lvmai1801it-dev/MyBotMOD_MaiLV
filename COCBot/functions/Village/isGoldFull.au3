@@ -13,17 +13,16 @@
 ; Example .......: No
 ; ===============================================================================================================================
 
-Func isGoldFull()
-	Local $aGoldFull = _FullResPixelSearch($aIsGoldFull[0], $aIsGoldFull[0] + 4, $aIsGoldFull[1], 1, Hex(0x0D0D0D, 6), $aIsGoldFull[2], $aIsGoldFull[3])
-	If IsArray($aGoldFull) Then
-		SetLog("Gold Storages are full!", $COLOR_SUCCESS)
+Func isGoldFull($bLog = True)
+	If _CheckPixel($aMainStorageGoldFullLight, $g_bCapturePixel) And _CheckPixel($aMainStorageGoldFull, $g_bCapturePixel) Then
+		If $bLog Then SetLog("Gold Storages: Full", $COLOR_SUCCESS)
 		$g_abFullStorage[$eLootGold] = True
 	ElseIf $g_abFullStorage[$eLootGold] Then
 		If Number($g_aiCurrentLoot[$eLootGold]) >= Number($g_aiResumeAttackLoot[$eLootGold]) Then
-			SetLog("Gold Storages is relatively full: " & $g_aiCurrentLoot[$eLootGold], $COLOR_SUCCESS)
+			If $bLog Then SetLog("Gold Storages Almost Full: " & $g_aiCurrentLoot[$eLootGold], $COLOR_SUCCESS)
 			$g_abFullStorage[$eLootGold] = True
 		Else
-			SetLog("Switching back to normal when Gold drops below " & $g_aiResumeAttackLoot[$eLootGold], $COLOR_SUCCESS)
+			If $bLog Then SetLog("Resume Normal Mode: Gold < " & $g_aiResumeAttackLoot[$eLootGold], $COLOR_SUCCESS)
 			$g_abFullStorage[$eLootGold] = False
 		EndIf
 	EndIf

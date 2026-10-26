@@ -86,8 +86,8 @@ Func BtnRemoveDropOrder()
 	Next
 	For $i = 0 To $eDropOrderCount - 1
 		$g_aiCmbCustomDropOrder[$i] = -1
-		_GUICtrlComboBox_ResetContent($g_aiCmbCustomDropOrder[$i])
-		GUICtrlSetData($g_ahCmbDropOrder[$i], $sComboData, "")
+		_GUICtrlComboBox_ResetContent($g_ahCmbDropOrder[$i])
+		GUICtrlSetData($g_ahCmbDropOrder[$i], $sComboData, -1)
 		_GUICtrlSetImage($g_ahImgDropOrder[$i], $g_sLibIconPath, $eIcnOptions)
 	Next
 	_GUICtrlSetImage($g_ahImgDropOrderSet, $g_sLibIconPath, $eIcnSilverStar)
@@ -205,7 +205,7 @@ Func ChangeDropOrder()
 		Local $sComboText = GUICtrlRead($g_ahCmbDropOrder[$i])
 		For $j = 0 To UBound($g_asDropOrderList) - 1
 			If $sComboText = $g_asDropOrderList[$j] Then
-				$NewDropOrder[$i] = $j - 1
+				$NewDropOrder[$i] = $j
 				$iUpdateCount += 1
 				ExitLoop
 			EndIf

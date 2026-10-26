@@ -16,9 +16,8 @@
 
 Func SmartPause($iTestSeconds = Default)
 	If Not $g_bRunState Then Return
-
 	If Not $g_bCloseWhileTrainingEnable Then Return False ; Skip if not enabled
-
+	
 	Local $MinimumTimeClose = Random($g_iCloseMinimumTimeMin * 60, $g_iCloseMinimumTimeMax * 60, 1) ; Minimum time required to close
 	If $g_bDebugSetLog Then SetDebugLog("$MinimumTimeClose = " & $MinimumTimeClose & "s", $COLOR_DEBUG)
 
@@ -31,35 +30,42 @@ Func SmartPause($iTestSeconds = Default)
 	If $g_bSuspendComputer Then $bSuspendComputer = True
 	Local $iDelayToReCheck = 30 ; seconds
 
+	If $MaxConsecutiveAttacks <= 0 Then $MaxConsecutiveAttacks = Random($g_iAttackconsecutiveMin, $g_iAttackconsecutiveMax, 1)
+	If $MaxConsecutiveAttacks <= 0 Then Return False ; No smart pause if set to 0 or negative
+
 	If $g_aiAttackedCount - $g_aiAttackedCountPause >= $MaxConsecutiveAttacks Then
 		$g_aiAttackedCountPause = $g_aiAttackedCount
 		If $MaxConsecutiveAttacks = 1 Then
-			SetLog("This account just had an attack.", $COLOR_ACTION)
+			SetLog("This account just had an attack", $COLOR_ACTION)
 		Else
-			SetLog("This account just did " & $MaxConsecutiveAttacks & " attacks in a row.", $COLOR_ACTION)
+			SetLog("This account just did " & $MaxConsecutiveAttacks & " attacks in a row", $COLOR_ACTION)
 		EndIf
-		SetLog("Lets do a pause like an human !", $COLOR_INFO)
+		
+		SetLog("Let's do a pause like a human", $COLOR_INFO)
 		SetLog("Smart Pause = " & StringFormat("%.2f", $MinimumTimeClose / 60) & " Minutes", $COLOR_INFO)
-		UniversalCloseWaitOpenCoC($MinimumTimeClose * 1000, "PauseLikeHuman", $StopEmulator, $bFullRestart, $bSuspendComputer)
+		
 		$g_bRestart = True
+		UniversalCloseWaitOpenCoC($MinimumTimeClose * 1000, "PauseLikeHuman", $StopEmulator, $bFullRestart, $bSuspendComputer)
 		$MaxConsecutiveAttacks = Random($g_iAttackconsecutiveMin, $g_iAttackconsecutiveMax, 1)
+		
+		If $g_bRestart Then $g_bRestart = False
 		Return True
 	EndIf
 
+	
+
 	If Not _DateIsValid($iBreakerLastTimeChecked) Then
 		Local $RemainingAttacks = $MaxConsecutiveAttacks - ($g_aiAttackedCount - $g_aiAttackedCountPause)
-		SetLog($RemainingAttacks & " attack" & ($RemainingAttacks > 1 ? "s" : "") & " remaining on this account before doing a break.", $COLOR_ACTION)
+		SetLog($RemainingAttacks & " Attack" & ($RemainingAttacks > 1 ? "s" : "") & " remaining on this account before doing a break", $COLOR_ACTION)
 		$iBreakerLastTimeChecked = _NowCalc()
 	Else
 		Local $iLastCheck = _DateDiff('s', $iBreakerLastTimeChecked, _NowCalc()) ; elapse time from last check (seconds)
 		If $iLastCheck > $iDelayToReCheck Then
 			Local $RemainingAttacks = $MaxConsecutiveAttacks - ($g_aiAttackedCount - $g_aiAttackedCountPause)
-			SetLog($RemainingAttacks & " attack" & ($RemainingAttacks > 1 ? "s" : "") & " remaining on this account before doing a break.", $COLOR_ACTION)
+			SetLog($RemainingAttacks & " Attack" & ($RemainingAttacks > 1 ? "s" : "") & " remaining on this account before doing a break", $COLOR_ACTION)
 			$iBreakerLastTimeChecked = _NowCalc()
 		EndIf
 	EndIf
 
 	Return False
-
 EndFunc   ;==>SmartPause
-

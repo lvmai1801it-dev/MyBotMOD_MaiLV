@@ -155,6 +155,46 @@ Func WM_MYBOTRUN_API_CLIENT($hWind, $iMsg, $wParam, $lParam)
 			EndIf
 			$wParam += BitShift($wParamHi, -16)
 
+		Case 0x1070 ; direct attack
+			$lParam = $g_hFrmBot
+			$wParam = $wParamLo + 1
+			$wParamHi = 0
+			If $g_bRunState = True Then $wParamHi += 1
+			If $g_bBotPaused = True Then $wParamHi += 2
+			If IsBotLaunched() Then $wParamHi += 4 ; bot launched
+			DirectAttack()
+			$wParam += BitShift($wParamHi, -16)
+
+		Case 0x1080 ; toggle BB Spam
+			$lParam = $g_hFrmBot
+			$wParam = $wParamLo + 1
+			$wParamHi = 0
+			If $g_bRunState = True Then $wParamHi += 1
+			If $g_bBotPaused = True Then $wParamHi += 2
+			If IsBotLaunched() Then $wParamHi += 4 ; bot launched
+			ToggleBBSpam()
+			$wParam += BitShift($wParamHi, -16)
+
+		Case 0x1090 ; toggle CC Spam
+			$lParam = $g_hFrmBot
+			$wParam = $wParamLo + 1
+			$wParamHi = 0
+			If $g_bRunState = True Then $wParamHi += 1
+			If $g_bBotPaused = True Then $wParamHi += 2
+			If IsBotLaunched() Then $wParamHi += 4 ; bot launched
+			ToggleCCSpam()
+			$wParam += BitShift($wParamHi, -16)
+
+		Case 0x10A0 ; toggle Rush Attack
+			$lParam = $g_hFrmBot
+			$wParam = $wParamLo + 1
+			$wParamHi = 0
+			If $g_bRunState = True Then $wParamHi += 1
+			If $g_bBotPaused = True Then $wParamHi += 2
+			If IsBotLaunched() Then $wParamHi += 4
+			ToggleRushAttack()
+			$wParam += BitShift($wParamHi, -16)
+
 		Case Else ; do nothing
 			$hWind = 0
 	EndSwitch
@@ -227,9 +267,9 @@ Func LaunchWatchdog()
 		Return 0
 	EndIf
 	If $g_bDebugSetLog Then
-		SetDebugLog("Watchdog launched, PID = " & $pid)
+		SetDebugLog("Watchdog Launched, PID = " & $pid, $COLOR_DEBUG)
 	Else
-		SetLog("Watchdog launched")
+		SetLog("Watchdog Launched", $COLOR_ACTION)
 	EndIf
 	Return $pid
 EndFunc   ;==>LaunchWatchdog

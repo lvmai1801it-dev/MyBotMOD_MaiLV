@@ -16,25 +16,21 @@
 
 ; Start search if
 Global $g_hChkDBActivateSearches = 0, $g_hTxtDBSearchesMin = 0, $g_hTxtDBSearchesMax = 0  ; Search count limit
-Global $g_hChkDBActivateTropies = 0, $g_hTxtDBTropiesMin = 0, $g_hTxtDBTropiesMax = 0  ; Trophy limit
 Global $g_hChkDBActivateCamps = 0, $g_hTxtDBArmyCamps = 0 ; Camp limit
-Global $g_hChkDBKingWait = 0, $g_hChkDBQueenWait = 0, $g_hChkDBWardenWait = 0, $g_hChkDBChampionWait = 0, $g_hChkNotWaitHeros = 0, $g_hChkDBNotWaitHeroes = 0
+Global $g_hChkDBKingWait = 0, $g_hChkDBQueenWait = 0, $g_hChkDBWardenWait = 0, $g_hChkDBChampionWait = 0
 Global $g_hChkDBPrinceWait = 0, $g_hPicDBPrinceWait = 0, $g_hPicDBPrinceSleepWait = 0
-Global $g_hChkDBSpellsWait = 0, $g_hChkDBMachineWait = 0, $g_hChkDBWaitForCastle = 0
+Global $g_hChkDBWaitForCastle = 0
 
-Global $g_hLblDBSearches = 0, $g_hLblDBTropies = 0, $g_hLblDBArmyCamps = 0
+Global $g_hLblDBSearches = 0, $g_hLblDBArmyCamps = 0
 Global $g_hPicDBHeroesWait = 0, $g_hTxtDBHeroesWait = 0, $g_hPicDBKingWait = 0, $g_hPicDBKingSleepWait = 0, $g_hPicDBQueenWait = 0, $g_hPicDBQueenSleepWait = 0, _
 		$g_hPicDBWardenWait = 0, $g_hPicDBWardenSleepWait = 0, $g_hPicDBChampionWait = 0, $g_hPicDBChampionSleepWait = 0
-Global $g_hPicDBLightSpellWait = 0, $g_hPicDBHealSpellWait = 0, $g_hPicDBRageSpellWait = 0, $g_hPicDBJumpSpellWait = 0, $g_hPicDBFreezeSpellWait = 0, _
-		$g_hPicDBPoisonSpellWait = 0, $g_hPicDBEarthquakeSpellWait = 0, $g_hPicDBHasteSpellWait = 0
 
 ; Filters
 Global $g_hCmbDBMeetGE = 0, $g_hTxtDBMinGold = 0, $g_hTxtDBMinElixir = 0, $g_hTxtDBMinGoldPlusElixir = 0
 Global $g_hChkDBMeetDE = 0, $g_hTxtDBMinDarkElixir = 0
-Global $g_hChkDBMeetTrophy = 0, $g_hTxtDBMinTrophy = 0, $g_hTxtDBMaxTrophy = 0
 Global $g_hChkDBMeetTH = 0, $g_hCmbDBTH = 0, $g_hChkDBMeetTHO = 0, $g_hChkDBMeetDeadEagle = 0, $g_hTxtDeadEagleSearch = 0
 
-Global $g_hGrpDBFilter = 0, $g_hPicDBMinGold = 0, $g_hPicDBMinElixir = 0, $g_hPicDBMinGPEGold = 0, $g_hPicDBMinDarkElixir = 0, $g_hPicDBMinTrophies = 0
+Global $g_hGrpDBFilter = 0, $g_hPicDBMinGold = 0, $g_hPicDBMinElixir = 0, $g_hPicDBMinGPEGold = 0, $g_hPicDBMinDarkElixir = 0
 Global $g_ahPicDBMaxTH[17]
 
 Func CreateAttackSearchDeadBaseSearch()
@@ -50,7 +46,7 @@ Func CreateAttackSearchDeadBaseSearch()
 
 	Local $sTxtTip = ""
 	Local $x = 25, $y = 45
-	GUICtrlCreateGroup(GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "Group_01", "Start Search IF"), $x - 20, $y - 20, 190, $g_iSizeHGrpTab4)
+	GUICtrlCreateGroup(GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "Group_01", "Search Conditions"), $x - 20, $y - 20, 190, 64)
 	$x -= 15
 	$g_hChkDBActivateSearches = GUICtrlCreateCheckbox(GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "ChkActivateSearches", "Search"), $x, $y, 68, 18)
 	_GUICtrlSetTip(-1, GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "ChkActivateSearches_Info_01", "Note - enables SEARCH range for this attack type ONLY.") & @CRLF & _
@@ -71,25 +67,6 @@ Func CreateAttackSearchDeadBaseSearch()
 	_GUICtrlCreateIcon($g_sLibIconPath, $eIcnMagnifier, $x + 163, $y + 1, 16, 16)
 
 	$y += 21
-	$g_hChkDBActivateTropies = GUICtrlCreateCheckbox(GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "ChkActivateTropies", "Trophies"), $x, $y, 68, 18)
-	_GUICtrlSetTip(-1, GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "ChkActivateTropies_Info_01", "Set the trophy range where this attack will be used") & @CRLF & _
-			GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "ChkActivateTropies_Info_02", "Note: - This option will NOT adjust trophies to stay in range entered!"))
-	GUICtrlSetOnEvent(-1, "chkDBActivateTropies")
-	$g_hTxtDBTropiesMin = GUICtrlCreateInput("0", $x + 70, $y, 40, 18, BitOR($GUI_SS_DEFAULT_INPUT, $ES_CENTER, $ES_NUMBER))
-	GUICtrlSetState(-1, $GUI_DISABLE)
-	_GUICtrlSetTip(-1, GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "LblActivateMinTropies_Info_01", "Set the Min. number of trophies where this attack will be used") & @CRLF & @CRLF & _
-			GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "ChkActivateTropies_Info_02", -1))
-	GUICtrlSetLimit(-1, 6)
-	$g_hLblDBTropies = GUICtrlCreateLabel("-", $x + 113, $y + 2, -1, -1)
-	GUICtrlSetState(-1, $GUI_DISABLE)
-	$g_hTxtDBTropiesMax = GUICtrlCreateInput("6000", $x + 120, $y, 40, 18, BitOR($GUI_SS_DEFAULT_INPUT, $ES_CENTER, $ES_NUMBER))
-	GUICtrlSetState(-1, $GUI_DISABLE)
-	_GUICtrlSetTip(-1, GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "LblActivateMaxTropies_Info_01", "Set the Max number of trophies where this attack will be used") & @CRLF & @CRLF & _
-			GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "ChkActivateTropies_Info_02", -1))
-	GUICtrlSetLimit(-1, 6)
-	_GUICtrlCreateIcon($g_sLibIconPath, $eIcnTrophy, $x + 163, $y + 1, 16, 16)
-
-	$y += 21
 	$g_hChkDBActivateCamps = GUICtrlCreateCheckbox(GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "ChkActivateCamps", "Army Camps"), $x, $y, 110, 18)
 	$sTxtTip = GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "ChkActivateCamps_Info_01", "Set the % Army camps required to enable this attack option while searching")
 	_GUICtrlSetTip(-1, $sTxtTip)
@@ -104,95 +81,10 @@ Func CreateAttackSearchDeadBaseSearch()
 	GUICtrlCreateLabel("%", $x + 163 + 3, $y + 4, -1, -1)
 	GUICtrlSetState(-1, $GUI_DISABLE)
 
-	$y += 25
-	$g_hPicDBHeroesWait = _GUICtrlCreateIcon($g_sLibIconPath, $eIcnHourGlass, $x - 1, $y + 3, 16, 16)
-	$g_hTxtDBHeroesWait = GUICtrlCreateLabel(GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "TxtHeroesWait", "Wait for Heroes to be Ready") & ":", $x + 20, $y + 4, 180, 18)
-
-	$y += 20
-	$x += 23
-	$g_hChkDBKingWait = GUICtrlCreateCheckbox("", $x - 9, $y + 35, 16, 16)
-	$sTxtTip = GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "TxtKingWait_Info_01", "Wait for King to be ready before attacking...") & @CRLF & _
-			GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "TxtKingWait_Info_02", "Enabled with TownHall 7 and higher")
-	_GUICtrlSetTip(-1, $sTxtTip)
-	$g_hPicDBKingWait = _GUICtrlCreateIcon($g_sLibIconPath, $eIcnKing, $x - 15, $y + 5, 25, 25)
-	_GUICtrlSetTip(-1, $sTxtTip)
-	$g_hPicDBKingSleepWait = _GUICtrlCreateIcon($g_sLibIconPath, $eIcnSleepingKing, $x - 15, $y + 5, 25, 25)
-	GUICtrlSetState(-1, $GUI_HIDE)
-
-	$x += 35
-	$g_hChkDBQueenWait = GUICtrlCreateCheckbox("", $x - 9, $y + 35, 16, 16)
-	$sTxtTip = GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "TxtQueenWait_Info_01", "Wait for Queen to be ready before attacking...") & @CRLF & _
-			GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "TxtQueenWait_Info_02", "Enabled with TownHall 8 and higher")
-	_GUICtrlSetTip(-1, $sTxtTip)
-	$g_hPicDBQueenWait = _GUICtrlCreateIcon($g_sLibIconPath, $eIcnQueen, $x - 15, $y + 5, 25, 25)
-	_GUICtrlSetTip(-1, $sTxtTip)
-	$g_hPicDBQueenSleepWait = _GUICtrlCreateIcon($g_sLibIconPath, $eIcnSleepingQueen, $x - 15, $y + 5, 25, 25)
-	GUICtrlSetState(-1, $GUI_HIDE)
-
-	$x += 35
-	$g_hChkDBPrinceWait = GUICtrlCreateCheckbox("", $x - 9, $y + 35, 16, 16)
-	$sTxtTip = GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "TxtPrinceWait_Info_01", "Wait for Prince to be ready before attacking...") & @CRLF & _
-			GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "TxtPrinceWait_Info_02", "Enabled with TownHall 9 and higher")
-	_GUICtrlSetTip(-1, $sTxtTip)
-	$g_hPicDBPrinceWait = _GUICtrlCreateIcon($g_sLibIconPath, $eIcnPrince, $x - 15, $y + 5, 25, 25)
-	_GUICtrlSetTip(-1, $sTxtTip)
-	$g_hPicDBPrinceSleepWait = _GUICtrlCreateIcon($g_sLibIconPath, $eIcnSleepingPrince, $x - 15, $y + 5, 25, 25)
-	GUICtrlSetState(-1, $GUI_HIDE)
-
-	$x += 35
-	$g_hChkDBWardenWait = GUICtrlCreateCheckbox("", $x - 9, $y + 35, 16, 16)
-	$sTxtTip = GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "TxtWardenWait_Info_01", "Wait for Warden to be ready before attacking...") & @CRLF & _
-			GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "TxtWardenWait_Info_02", "Enabled with TownHall 11")
-	_GUICtrlSetTip(-1, $sTxtTip)
-	$g_hPicDBWardenWait = _GUICtrlCreateIcon($g_sLibIconPath, $eIcnWarden, $x - 15, $y + 5, 25, 25)
-	_GUICtrlSetTip(-1, $sTxtTip)
-	$g_hPicDBWardenSleepWait = _GUICtrlCreateIcon($g_sLibIconPath, $eIcnSleepingWarden, $x - 15, $y + 5, 25, 25)
-	GUICtrlSetState(-1, $GUI_HIDE)
-
-	$x += 35
-	$g_hChkDBChampionWait = GUICtrlCreateCheckbox("", $x - 9, $y + 35, 16, 16)
-	$sTxtTip = GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "TxtChampionWait_Info_01", "Wait for Champion to be ready before attacking...") & @CRLF & _
-			GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "TxtChampionWait_Info_02", "Enabled with TownHall 13")
-	_GUICtrlSetTip(-1, $sTxtTip)
-	$g_hPicDBChampionWait = _GUICtrlCreateIcon($g_sLibIconPath, $eIcnChampion, $x - 15, $y + 5, 25, 25)
-	_GUICtrlSetTip(-1, $sTxtTip)
-	$g_hPicDBChampionSleepWait = _GUICtrlCreateIcon($g_sLibIconPath, $eIcnSleepingChampion, $x - 15, $y + 5, 25, 25)
-	GUICtrlSetState(-1, $GUI_HIDE)
-
-	$y += 58
-	$x = 10
-	$g_hChkDBNotWaitHeroes = GUICtrlCreateCheckbox(GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "ChkNotWaitHeroes", "Not wait for Heroes when upgrade"), $x, $y, -1, -1)
-	_GUICtrlSetTip(-1, GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "ChkNotWaitHeroes_Info_01", "Continue to attack, when Upgrade heroes and enable Wait for heroes."))
-	GUICtrlSetOnEvent(-1, "chkNotWaitHeroes")
-
-	$y += 22
-	$x = 8
-	$g_hPicDBLightSpellWait = _GUICtrlCreateIcon($g_sLibIconPath, $eIcnLightSpell, $x, $y, 22, 22)
-	$g_hPicDBHealSpellWait = _GUICtrlCreateIcon($g_sLibIconPath, $eIcnHealSpell, $x + 23, $y, 22, 22)
-	$g_hPicDBRageSpellWait = _GUICtrlCreateIcon($g_sLibIconPath, $eIcnRageSpell, $x + 46, $y, 22, 22)
-	$g_hPicDBJumpSpellWait = _GUICtrlCreateIcon($g_sLibIconPath, $eIcnJumpSpell, $x + 69, $y, 22, 22)
-	$g_hPicDBFreezeSpellWait = _GUICtrlCreateIcon($g_sLibIconPath, $eIcnFreezeSpell, $x + 92, $y, 22, 22)
-	$g_hPicDBPoisonSpellWait = _GUICtrlCreateIcon($g_sLibIconPath, $eIcnPoisonSpell, $x + 115, $y, 22, 22)
-	$g_hPicDBEarthquakeSpellWait = _GUICtrlCreateIcon($g_sLibIconPath, $eIcnEarthquakeSpell, $x + 138, $y, 22, 22)
-	$g_hPicDBHasteSpellWait = _GUICtrlCreateIcon($g_sLibIconPath, $eIcnHasteSpell, $x + 161, $y, 22, 22)
-
-	$y += 25
-	$x = 10
-	$g_hChkDBSpellsWait = GUICtrlCreateCheckbox(GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "ChkSpellsWait", "Wait for Spells to be Ready"), $x, $y, -1, -1)
-	_GUICtrlSetTip(-1, GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "ChkSpellsWait_Info_01", "Stop searching for this attack type when Spells are not ready.") & @CRLF & _
-			GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "ChkSpellsWait_Info_02", "Warning: Do not enable unless you have spell factory or bot will not attack!"))
-	GUICtrlSetOnEvent(-1, "chkDBSpellsWait")
-
-	$g_hChkDBMachineWait = GUICtrlCreateCheckbox(GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "ChkDBMachineWait", "Wait for Siege to be Ready"), $x, $y + 20, -1, -1)
-	_GUICtrlSetTip(-1, GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "ChkDBMachineWait_Info_01", "Stop searching for this attack type when Siege is not ready.") & @CRLF & _
-			GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "ChkDBMachineWait_Info_02", "Warning: Do not enable unless you have Workshop or bot will not attack!"))
-
-	$g_hChkDBWaitForCastle = GUICtrlCreateCheckbox(GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "ChkWaitForCastle", "Wait for Clan Castle"), $x, $y + 40, -1, -1)
-	_GUICtrlSetTip(-1, GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "ChkWaitForCastle_Info_01", "Wait until your Clan Castle is filled, as requested."))
 	GUICtrlCreateGroup("", -99, -99, 1, 1)
 
 	Local $x = 220, $y = 45
-	$g_hGrpDBFilter = GUICtrlCreateGroup(GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "Group_02", "Filters"), $x - 20, $y - 20, 225, $g_iSizeHGrpTab4)
+	$g_hGrpDBFilter = GUICtrlCreateGroup(GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "Group_02", "Filters"), $x - 20, $y - 20, 225, 286)
 	$x -= 15
 	$g_hCmbDBMeetGE = GUICtrlCreateCombo("", $x, $y + 10, 65, -1, BitOR($CBS_DROPDOWNLIST, $CBS_AUTOHSCROLL))
 	GUICtrlSetData(-1, GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "CmbMeetGE_Item_01", "G And E") & "|" & _
@@ -238,24 +130,6 @@ Func CreateAttackSearchDeadBaseSearch()
 	GUICtrlSetLimit(-1, 5)
 	_GUICtrlEdit_SetReadOnly(-1, True)
 	$g_hPicDBMinDarkElixir = _GUICtrlCreateIcon($g_sLibIconPath, $eIcnDark, $x + 140, $y, 16, 16)
-	_GUICtrlSetTip(-1, $sTxtTip)
-
-	$y += 24
-	$g_hChkDBMeetTrophy = GUICtrlCreateCheckbox(GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "ChkActivateTropies", -1), $x, $y, -1, -1)
-	GUICtrlSetOnEvent(-1, "chkDBMeetTrophy")
-	_GUICtrlSetTip(-1, GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "ChkMeetTrophy_Info_01", "Search for a base that meets the value set for Min. Trophies."))
-	$g_hTxtDBMinTrophy = GUICtrlCreateInput("0", $x + 85, $y, 20, 18, BitOR($GUI_SS_DEFAULT_INPUT, $ES_CENTER, $ES_NUMBER))
-	$sTxtTip = GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "ChkMeetTrophy_Info_02", "Set the Min. amount of Trophies to search for on a village to attack.")
-	_GUICtrlSetTip(-1, $sTxtTip)
-	_GUICtrlEdit_SetReadOnly(-1, True)
-	GUICtrlSetLimit(-1, 2)
-	GUICtrlCreateLabel("-", $x + 109, $y + 2, -1, -1)
-	$g_hTxtDBMaxTrophy = GUICtrlCreateInput("0", $x + 115, $y, 20, 18, BitOR($GUI_SS_DEFAULT_INPUT, $ES_CENTER, $ES_NUMBER))
-	$sTxtTip = GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "ChkMeetTrophy_Info_03", "Set the Max. amount of Trophies to search for on a village to attack.")
-	_GUICtrlSetTip(-1, $sTxtTip)
-	_GUICtrlEdit_SetReadOnly(-1, True)
-	GUICtrlSetLimit(-1, 2)
-	$g_hPicDBMinTrophies = _GUICtrlCreateIcon($g_sLibIconPath, $eIcnTrophy, $x + 140, $y, 16, 16)
 	_GUICtrlSetTip(-1, $sTxtTip)
 
 	$y += 24
@@ -308,13 +182,18 @@ Func CreateAttackSearchDeadBaseSearch()
 	GUICtrlSetOnEvent(-1, "chkDBMeetDeadEagle")
 
 	$g_hTxtDeadEagleSearch = GUICtrlCreateInput("50", $x + 115, $y, 20, 18)
-	;$sTxtTip = GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "ChkMeetTrophy_Info_03", "Set the Max. amount of Trophies to search for on a village to attack.")
 	;_GUICtrlSetTip(-1, $sTxtTip)
 	;_GUICtrlEdit_SetReadOnly(-1, True)
 	;GUICtrlSetLimit(-1, 2)
 
 	$y += 24
-	GUICtrlCreateGroup(GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "Group_03", "Weak base | max defenses"), $x, $y, 215, 120)
+	$g_ahChkMeetOne[$DB] = GUICtrlCreateCheckbox(GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "ChkMeetOne", "Meet One Then Attack"), $x, $y, -1, -1)
+	_GUICtrlSetTip(-1, GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "ChkMeetOne_Info_01", "Just meet only ONE of the above conditions, then Attack."))
+
+	GUICtrlCreateGroup("", -99, -99, 1, 1)
+
+	$y += 23
+	GUICtrlCreateGroup(GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "Group_03", "Weak Base | Max Defense Level"), $x, $y, 215, 120)
 	$x += 5
 	$y += 20
 	Local $xStartColumn = $x, $yStartColumn = $y
@@ -417,8 +296,6 @@ Func CreateAttackSearchDeadBaseSearch()
 	$y += 20
 	$y += 24
 	$x = $xStartColumn
-	$g_ahChkMeetOne[$DB] = GUICtrlCreateCheckbox(GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "ChkMeetOne", "Meet One Then Attack"), $x, $y, -1, -1)
-	_GUICtrlSetTip(-1, GetTranslatedFileIni("MBR GUI Design Child Attack - Search", "ChkMeetOne_Info_01", "Just meet only ONE of the above conditions, then Attack."))
 	GUICtrlCreateGroup("", -99, -99, 1, 1)
 
 EndFunc   ;==>CreateAttackSearchDeadBaseSearch

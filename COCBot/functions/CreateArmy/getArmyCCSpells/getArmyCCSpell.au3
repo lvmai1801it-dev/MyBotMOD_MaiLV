@@ -35,11 +35,11 @@ Func getArmyCCSpells($bOpenArmyWindow = False, $bCloseArmyWindow = False, $bChec
 	Local $aCurrentCCSpells = CCSpellsArray($bNeedCapture)
 
 	Local $aTempSpellArray
-	Local $sSpellName = ""
-	Local $iSpellIndex = -1
-	Local $aCurrentCCSpellsEmpty[$eSpellCount] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] ; Local Copy to reset Spells Array
-
-	$g_aiCurrentCCSpells = $aCurrentCCSpellsEmpty ; Reset Current Spells Array
+ 	Local $sSpellName = ""
+ 	Local $iSpellIndex = -1
+	Local $aCurrentCCSpellsEmpty[$eSpellCount] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] ; Local Copy to reset Spells Array
+ 
+ 	$g_aiCurrentCCSpells = $aCurrentCCSpellsEmpty ; Reset Current Spells Array
 
 	If IsArray($aCurrentCCSpells) And UBound($aCurrentCCSpells, 1) >= 1 Then
 
@@ -76,7 +76,7 @@ EndFunc   ;==>getArmyCCSpells
 
 Func CCSpellsArray($bNeedCapture = True)
 	Local $TempQty = 0
-	Local $b_XRemoveClick[3] = [515, 495, 527]
+	Local $b_XRemoveClick[4] = [515, 495, 527, 527]
 	If IsArray(_PixelSearch(453, 490 + $g_iMidOffsetY, 457, 490 + $g_iMidOffsetY, Hex(0xCFCFC8, 6), 20, True)) Then
 		Local $sCCSpellDiamond = GetDiamondFromRect2(462, 454 + $g_iMidOffsetY, 522, 530 + $g_iMidOffsetY)
 		Local $aCurrentCCSpells = findMultiple(@ScriptDir & "\imgxml\ArmyOverview\Spells", $sCCSpellDiamond, $sCCSpellDiamond, 0, 1000, 0, "objectname,objectpoints", $bNeedCapture)
@@ -125,7 +125,21 @@ Func CCSpellsArray($bNeedCapture = True)
 					ReDim $aCurrentCCSpells[UBound($aCurrentCCSpells) + 1]
 					$aCurrentCCSpells[2] = $aCurrentCCSpells2[0]
 				EndIf
-				ClickDrag(455, 495 + $g_iMidOffsetY, 570, 495 + $g_iMidOffsetY, 300)
+				If Not IsArray(_PixelSearch(539, 490 + $g_iMidOffsetY, 543, 490 + $g_iMidOffsetY, Hex(0xCFCFC8, 6), 20, True)) Then ; Fourth spell slot
+					ClickDrag(527, 495 + $g_iMidOffsetY, 475, 495 + $g_iMidOffsetY, 300)
+					If _Sleep(2000) Then Return
+					$sCCSpellDiamond = GetDiamondFromRect2(475, 454 + $g_iMidOffsetY, 540, 530 + $g_iMidOffsetY)
+					$aCurrentCCSpells2 = findMultiple(@ScriptDir & "\imgxml\ArmyOverview\Spells", $sCCSpellDiamond, $sCCSpellDiamond, 0, 1000, 0, "objectname,objectpoints", $bNeedCapture)
+					If IsArray($aCurrentCCSpells2) And IsArray($aCurrentCCSpells) Then
+						$TempQty = Number(getBarracksNewTroopQuantity(485, 454 + $g_iMidOffsetY))
+						_ArrayAdd($aCurrentCCSpells2[0], 4 & "|" & $TempQty & "|" & $b_XRemoveClick[3]) ; Page 4
+						ReDim $aCurrentCCSpells[UBound($aCurrentCCSpells) + 1]
+						$aCurrentCCSpells[3] = $aCurrentCCSpells2[0]
+					EndIf
+					ClickDrag(455, 495 + $g_iMidOffsetY, 622, 495 + $g_iMidOffsetY, 300)
+				Else
+					ClickDrag(455, 495 + $g_iMidOffsetY, 570, 495 + $g_iMidOffsetY, 300)
+				EndIf
 				If _Sleep(1000) Then Return
 			EndIf
 		EndIf

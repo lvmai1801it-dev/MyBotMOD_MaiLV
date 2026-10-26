@@ -1,4 +1,4 @@
-; #FUNCTION# ====================================================================================================================
+﻿; #FUNCTION# ====================================================================================================================
 ; Name ..........: _Sleep
 ; Description ...:
 ; Syntax ........: _Sleep($iDelay[, $iSleep = True])
@@ -25,6 +25,7 @@ Func _Sleep($iDelay, $iSleep = True, $CheckRunState = True, $SleepWhenPaused = T
 	Static $b_Sleep_Active = False
 
 	Local $iBegin = __TimerInit()
+	Local $iTagTeamPauseStart = GetTagTeamPauseTime()
 
 	If $b_Sleep_Active = True Then
 		; ups, prevent bad recursion
@@ -47,11 +48,13 @@ Func _Sleep($iDelay, $iSleep = True, $CheckRunState = True, $SleepWhenPaused = T
 	EndIf
 
 	$b_Sleep_Active = True
+	If $g_bAttackActive Then CheckTagTeam()
 
 	debugGdiHandle("_Sleep")
 	CheckBotRequests() ; check if bot window should be moved, minized etc.
 
 	If SetCriticalMessageProcessing() = False Then
+		AutoAlignWindowsCheck()
 
 		If $g_bMoveDivider Then
 			MoveDivider()
@@ -92,19 +95,23 @@ Func _Sleep($iDelay, $iSleep = True, $CheckRunState = True, $SleepWhenPaused = T
 		EndIf
 	EndIf
 
+	If $g_bDirectAttackRunning Then CheckDirectAttackCancelClick()
 	If $CheckRunState And Not $g_bRunState Then
 		ResumeAndroid()
 		$b_Sleep_Active = False
 		Return True
 	EndIf
-	Local $iRemaining = $iDelay - __TimerDiff($iBegin)
+	Local $iRemaining = $iDelay - (__TimerDiff($iBegin) - (GetTagTeamPauseTime() - $iTagTeamPauseStart))
 	While $iRemaining > 0
 		DllCall($g_hLibNTDLL, "dword", "ZwYieldExecution")
+		If $g_bDirectAttackRunning Then CheckDirectAttackCancelClick()
 		If $CheckRunState = True And $g_bRunState = False Then
 			ResumeAndroid()
 			$b_Sleep_Active = False
 			Return True
 		EndIf
+		If $g_bAttackActive Then CheckTagTeam()
+		If $g_bRunState And Not $g_bSearchMode And Not $g_bBotPaused And Not $g_bStayOnBuilderBase Then ActivateBattleSpeedAfterTwoMinutes()
 		If SetCriticalMessageProcessing() = False Then
 			If $g_bBotPaused And $SleepWhenPaused And $g_bTogglePauseAllowed Then TogglePauseSleep() ; Bot is paused
 			If $g_bTogglePauseUpdateState Then TogglePauseUpdateState("_Sleep") ; Update Pause GUI states
@@ -121,11 +128,12 @@ Func _Sleep($iDelay, $iSleep = True, $CheckRunState = True, $SleepWhenPaused = T
 					$hTimer_SetTime = __TimerInit()
 				EndIf
 				AndroidEmbedCheck()
+				AutoAlignWindowsCheck()
 				AndroidShieldCheck()
 				CheckPostponedLog()
 			EndIf
 		EndIf
-		$iRemaining = $iDelay - __TimerDiff($iBegin)
+		$iRemaining = $iDelay - (__TimerDiff($iBegin) - (GetTagTeamPauseTime() - $iTagTeamPauseStart))
 		If $iRemaining >= $DELAYSLEEP Then
 			_SleepMilli($DELAYSLEEP)
 		Else

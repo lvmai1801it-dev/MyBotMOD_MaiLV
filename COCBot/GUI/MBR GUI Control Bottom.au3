@@ -1,4 +1,4 @@
-; #FUNCTION# ====================================================================================================================
+﻿; #FUNCTION# ====================================================================================================================
 ; Name ..........: MBR GUI Control
 ; Description ...: This file Includes all functions to current GUI
 ; Syntax ........:
@@ -14,7 +14,7 @@
 ; ===============================================================================================================================
 #include-once
 
-Global $g_aFrmBotBottomCtrlState, $g_hFrmBotEmbeddedShield = 0, $g_hFrmBotEmbeddedMouse = 0, $g_hFrmBotEmbeddedGraphics = 0
+Global $g_aFrmBotBottomCtrlState[1][2] = [[0, False]], $g_hFrmBotEmbeddedShield = 0, $g_hFrmBotEmbeddedMouse = 0, $g_hFrmBotEmbeddedGraphics = 0
 
 Func Initiate()
 	WinGetAndroidHandle()
@@ -25,15 +25,9 @@ Func Initiate()
 		SetLog($Compiled & " running on " & @OSVersion & " " & @OSServicePack & " " & @OSArch)
 
 		If _Sleep($DELAYRESPOND) Then Return
-		If StringInStr(@OSVersion, "WIN_11", $STR_NOCASESENSEBASIC) Or _
-				StringInStr(@OSVersion, "WIN_2019", $STR_NOCASESENSEBASIC) Or _
-				StringInStr(@OSVersion, "WIN_2022", $STR_NOCASESENSEBASIC) Then
-			SetLog(" Unsupported Windows 11 OS detected!!", $COLOR_ERROR)
-			SetLog(" See MBR forum for more information", $COLOR_ERROR)
-		EndIf
 
 		Local $sGameVersion = GetCoCAppVersion()
-		If Not @error Then SetLog(">>  CoC Game App Version = " & $sGameVersion, $COLOR_DEBUG)
+		If Not @error Then SetLog(">>  Clash of Clans Game App Version = " & $sGameVersion, $COLOR_DEBUG)
 
 		If Not $g_bSearchMode Then
 			SetLogCentered(" Bot Start ", Default, $COLOR_SUCCESS)
@@ -43,14 +37,14 @@ Func Initiate()
 		SetLogCentered("  Current Profile: " & $g_sProfileCurrentName & " ", "-", $COLOR_INFO)
 		If $g_bDebugSetLog Or $g_bDebugOcr Or $g_bDebugRedArea Or $g_bDevMode Or $g_bDebugImageSave Or $g_bDebugBuildingPos Or $g_bDebugOCRdonate Or $g_bDebugAttackCSV Or $g_bDebugAndroid Then
 			SetLogCentered(" Warning Debug Mode Enabled! ", "-", $COLOR_ERROR)
-			SetLog("      SetLog : " & $g_bDebugSetLog, $COLOR_ERROR, "Lucida Console", 8)
-			SetLog("     Android : " & $g_bDebugAndroid, $COLOR_ERROR, "Lucida Console", 8)
-			SetLog("         OCR : " & $g_bDebugOcr, $COLOR_ERROR, "Lucida Console", 8)
-			SetLog("     RedArea : " & $g_bDebugRedArea, $COLOR_ERROR, "Lucida Console", 8)
-			SetLog("   ImageSave : " & $g_bDebugImageSave, $COLOR_ERROR, "Lucida Console", 8)
-			SetLog(" BuildingPos : " & $g_bDebugBuildingPos, $COLOR_ERROR, "Lucida Console", 8)
-			SetLog("   OCRDonate : " & $g_bDebugOCRdonate, $COLOR_ERROR, "Lucida Console", 8)
-			SetLog("   AttackCSV : " & $g_bDebugAttackCSV, $COLOR_ERROR, "Lucida Console", 8)
+			SetLog("      SetLog: " & $g_bDebugSetLog, $COLOR_ERROR, "Lucida Console", 8)
+			SetLog("     Android: " & $g_bDebugAndroid, $COLOR_ERROR, "Lucida Console", 8)
+			SetLog("         OCR: " & $g_bDebugOcr, $COLOR_ERROR, "Lucida Console", 8)
+			SetLog("     RedArea: " & $g_bDebugRedArea, $COLOR_ERROR, "Lucida Console", 8)
+			SetLog("   ImageSave: " & $g_bDebugImageSave, $COLOR_ERROR, "Lucida Console", 8)
+			SetLog(" BuildingPos: " & $g_bDebugBuildingPos, $COLOR_ERROR, "Lucida Console", 8)
+			SetLog("   OCRDonate: " & $g_bDebugOCRdonate, $COLOR_ERROR, "Lucida Console", 8)
+			SetLog("   AttackCSV: " & $g_bDebugAttackCSV, $COLOR_ERROR, "Lucida Console", 8)
 			SetLogCentered(" Warning Debug Mode Enabled! ", "-", $COLOR_ERROR)
 		EndIf
 
@@ -81,23 +75,35 @@ Func Initiate()
 		If Not $g_bRunState Then Return
 
 		AndroidShield("Initiate", True)
-		checkMainScreen()
+		Local $bMainVillageConfirmed = checkMainScreen()
 		If Not $g_bRunState Then Return
 
 		ZoomOut()
 		If Not $g_bRunState Then Return
+		If $g_bBotLaunchOption_HideAndroid And Not $g_bAndroidEmbedded Then
+			$g_bIsHidden = HideAndroidWindow(True, Default, Default, "AutoHideAndroid")
+			If Not $g_bIsHidden Then SetLog("Unable to hide " & $g_sAndroidEmulator & " window", $COLOR_ERROR)
+			updateBtnHideState()
+		EndIf
 
 		If Not $g_bSearchMode Then
+			InitiateSwitchAcc($bMainVillageConfirmed)
+			If Not $g_bRunState Then Return
+
 			BotDetectFirstTime()
 			If Not $g_bRunState Then Return
 
 			If $g_bCheckGameLanguage Then TestLanguage()
 			If Not $g_bRunState Then Return
 
-			runBot()
+			Do
+				$g_bRestartRunBot = False
+				runBot()
+				If $g_bRestartRunBot Then $g_bRestart = False
+			Until Not $g_bRestartRunBot Or Not $g_bRunState
 		EndIf
 	Else
-		SetLog("Not in Game!", $COLOR_ERROR)
+		SetLog("Not In Game!", $COLOR_ERROR)
 		;		$g_bRunState = True
 		btnStop()
 	EndIf
@@ -131,7 +137,7 @@ Func InitiateLayout()
 				EndIf
 			Else
 				SetLog("Cannot use " & $g_sAndroidEmulator & ".", $COLOR_ERROR)
-				SetLog("Please set its screen size manually to " & $g_iAndroidClientWidth & " x " & $g_iAndroidClientHeight, $COLOR_ERROR)
+				SetLog("Please set screen size manually to " & $g_iAndroidClientWidth & " x " & $g_iAndroidClientHeight, $COLOR_ERROR)
 				btnStop()
 				Return False
 			EndIf
@@ -167,6 +173,11 @@ Func UpdateChkBackground()
 	EndIf
 EndFunc   ;==>UpdateChkBackground
 
+Func DisableChkBackground()
+	GUICtrlSetState($g_hChkBackgroundMode, $GUI_UNCHECKED)
+	UpdateChkBackground()
+EndFunc   ;==>DisableChkBackground
+
 Func btnStart()
 	; decide when to run
 	EnableControls($g_hFrmBotBottom, False, $g_aFrmBotBottomCtrlState)
@@ -179,11 +190,17 @@ Func btnStart()
 	$g_iActualTrainSkip = 0
 EndFunc   ;==>btnStart
 
-Func btnStop()
+Func btnStop($bNotifyTelegram = True, $bSilentLog = False)
+	If $bSilentLog Then $g_bSilentBotStopLog = True
 	If $g_bRunState Then
-		; always invoked in MyBot.run.au3!
-		EnableControls($g_hFrmBotBottom, False, $g_aFrmBotBottomCtrlState)
+		; Mark the bot stopped before any network call so re-entrant stop requests
+		; cannot send the same notification more than once.
 		$g_bRunState = False ; Exit BotStart()
+		If $bNotifyTelegram And $g_bNotifyTGEnable And $g_sNotifyTGToken <> "" Then
+			NotifyPushToTelegram($g_sNotifyOrigin & " | Bot Stop")
+		EndIf
+		; Always invoked in MyBot.run.au3
+		EnableControls($g_hFrmBotBottom, False, $g_aFrmBotBottomCtrlState)
 	EndIf
 	$g_iBotAction = $eBotStop
 EndFunc   ;==>btnStop
@@ -204,6 +221,7 @@ Func btnPause($bRunNow = True)
 EndFunc   ;==>btnPause
 
 Func btnResume()
+	If Not $g_bBotPaused Then Return
 	TogglePause()
 EndFunc   ;==>btnResume
 
@@ -211,6 +229,7 @@ Func btnAttackNowDB()
 	If $g_bRunState Then
 		$g_bBtnAttackNowPressed = True
 		$g_iMatchMode = $DB
+		GUICtrlSetState($g_hBtnAttackNowDB, $GUI_DISABLE)
 	EndIf
 EndFunc   ;==>btnAttackNowDB
 
@@ -218,8 +237,50 @@ Func btnAttackNowLB()
 	If $g_bRunState Then
 		$g_bBtnAttackNowPressed = True
 		$g_iMatchMode = $LB
+		GUICtrlSetState($g_hBtnAttackNowLB, $GUI_DISABLE)
 	EndIf
 EndFunc   ;==>btnAttackNowLB
+
+Func DisableBBSpam($sReason = "")
+	$g_bBBSpamEnabled = False
+	$g_bBBSpamRunning = False
+	GUICtrlSetData($g_hbtnBBSpam, "BBSpam")
+	GUICtrlSetBkColor($g_hbtnBBSpam, 0xFFB6C1) ; Light pink/red background
+	
+	If $sReason = "Resources maxed out" Then $g_bBBSpamDisabledDueToFull = True
+	
+	If $sReason <> "" Then
+		SetLog("» BB SPAM DISABLED: " & StringUpper($sReason) & " «", $COLOR_INFO)
+	Else
+		SetLog("» BB SPAM MODE DISABLED «", $COLOR_INFO)
+	EndIf
+EndFunc   ;==>DisableBBSpam
+
+Func DisableCCSpam($sReason = "")
+	$g_bCCSpamEnabled = False
+	$g_bCCSpamRunning = False
+	GUICtrlSetData($g_hbtnCCSpam, "CCSpam")
+	GUICtrlSetBkColor($g_hbtnCCSpam, 0xFFB6C1) ; Light pink/red background
+
+	If $sReason <> "" Then
+		SetLog("» CC SPAM DISABLED: " & StringUpper($sReason) & " «", $COLOR_INFO)
+	Else
+		SetLog("» CC SPAM MODE DISABLED «", $COLOR_INFO)
+	EndIf
+EndFunc   ;==>DisableCCSpam
+
+Func DisableRushAttack($sReason = "")
+	$g_bRushAttackEnabled = False
+	$g_bRushAttackReenableAfterSwitch = ($sReason = "Halt attack condition reached" Or $sReason = "Out of gold")
+	GUICtrlSetData($g_hBtnRushAttack, "Rush")
+	GUICtrlSetBkColor($g_hBtnRushAttack, 0xFFB6C1)
+
+	If $sReason <> "" Then
+		SetLog("» RUSH ATTACK DISABLED: " & StringUpper($sReason) & " «", $COLOR_INFO)
+	Else
+		SetLog("» RUSH ATTACK MODE DISABLED «", $COLOR_INFO)
+	EndIf
+EndFunc   ;==>DisableRushAttack
 
 ;~ Hide Android Window again without overwriting $botPos[0] and [1]
 Func reHide()
@@ -227,6 +288,10 @@ Func reHide()
 	If $g_bIsHidden And $g_hAndroidWindow <> 0 And Not $g_bAndroidEmbedded Then
 		SetDebugLog("Hide " & $g_sAndroidEmulator & " Window after restart")
 		Local $Result = HideAndroidWindow(True, Default, Default, "reHide") ;WinMove($g_hAndroidWindow, "", -32000, -32000)
+		If Not $Result Then
+			$g_bIsHidden = False
+			SetLog("Unable to hide " & $g_sAndroidEmulator & " window", $COLOR_ERROR)
+		EndIf
 		updateBtnHideState()
 		Return $Result
 	EndIf
@@ -251,16 +316,31 @@ Func updateBtnHideState($newState = $GUI_ENABLE)
 EndFunc   ;==>updateBtnHideState
 
 Func btnHide()
-	$g_bIsHidden = Not $g_bIsHidden
-	HideAndroidWindow($g_bIsHidden, Default, Default, "btnHide")
+	If $g_bAndroidEmbedded Then
+		updateBtnHideState($GUI_DISABLE)
+		Return
+	EndIf
+	WinGetAndroidHandle()
+	If Not IsHWnd($g_hAndroidWindow) Then
+		$g_bIsHidden = False
+		updateBtnHideState($GUI_DISABLE)
+		Return
+	EndIf
+	Local $bHide = Not $g_bIsHidden
+	If HideAndroidWindow($bHide, Default, Default, "btnHide") Then
+		$g_bIsHidden = $bHide
+	Else
+		SetLog("Unable to " & ($bHide ? "hide" : "show") & " " & $g_sAndroidEmulator & " window", $COLOR_ERROR)
+	EndIf
 	updateBtnHideState()
 EndFunc   ;==>btnHide
 
 Func updateBtnEmbed()
 	If $g_hBtnEmbed = 0 Then Return False
 	UpdateFrmBotStyle()
+	WinGetAndroidHandle()
 	Local $state = GUICtrlGetState($g_hBtnEmbed)
-	If $g_hAndroidWindow = 0 Or $g_bAndroidBackgroundLaunched = True Or $g_bAndroidEmbed = False Or $g_iGuiMode <> 1 Then
+	If Not IsHWnd($g_hAndroidWindow) Or $g_bAndroidBackgroundLaunched = True Or $g_bAndroidEmbed = False Or $g_iGuiMode <> 1 Then
 		If $state <> $GUI_DISABLE Then GUICtrlSetState($g_hBtnEmbed, $GUI_DISABLE)
 		updateBtnHideState()
 		Return False
@@ -283,6 +363,10 @@ EndFunc   ;==>updateBtnEmbed
 Func btnEmbed()
 	ResumeAndroid()
 	WinGetAndroidHandle()
+	If Not IsHWnd($g_hAndroidWindow) Then
+		updateBtnEmbed()
+		Return SetError(0, 0, 0)
+	EndIf
 	WinGetPos($g_hAndroidWindow)
 	If @error <> 0 Then Return SetError(0, 0, 0)
 	AndroidEmbed(Not $g_bAndroidEmbedded)
@@ -314,68 +398,100 @@ EndFunc   ;==>GetFont
 Func btnVillageStat($source = "")
 
 	If $g_iFirstRun = 0 And $g_bRunState And Not $g_bBotPaused Then SetTime(True)
-
-	If GUICtrlGetState($g_hLblResultGoldNow) = $GUI_ENABLE + $GUI_SHOW Then
-		;hide normal values
-		GUICtrlSetState($g_hLblResultGoldNow, $GUI_ENABLE + $GUI_HIDE)
-		GUICtrlSetState($g_hLblResultElixirNow, $GUI_ENABLE + $GUI_HIDE)
-		GUICtrlSetState($g_hLblResultDENow, $GUI_ENABLE + $GUI_HIDE)
-		GUICtrlSetState($g_hLblResultTrophyNow, $GUI_ENABLE + $GUI_HIDE)
-		GUICtrlSetState($g_hLblResultBuilderNow, $GUI_ENABLE + $GUI_HIDE)
-		GUICtrlSetState($g_hLblResultGemNow, $GUI_ENABLE + $GUI_HIDE)
-		;show stats values
-		GUICtrlSetState($g_hLblResultGoldHourNow, $GUI_ENABLE + $GUI_SHOW)
-		GUICtrlSetState($g_hLblResultElixirHourNow, $GUI_ENABLE + $GUI_SHOW)
-		GUICtrlSetState($g_hLblResultDEHourNow, $GUI_ENABLE + $GUI_SHOW)
-		If $g_iFirstRun = 0 Or $source = "UpdateStats" Then
-			GUICtrlSetState($g_hLblResultRuntimeNow, $GUI_ENABLE + $GUI_SHOW)
-			GUICtrlSetState($g_hLblResultAttackedHourNow, $GUI_ENABLE + $GUI_SHOW)
-			GUICtrlSetState($g_hLblResultSkippedHourNow, $GUI_ENABLE + $GUI_SHOW)
-		EndIf
-		; hide normal pics
-		GUICtrlSetState($g_hPicResultTrophyNow, $GUI_ENABLE + $GUI_HIDE)
-		GUICtrlSetState($g_hPicResultBuilderNow, $GUI_ENABLE + $GUI_HIDE)
-		GUICtrlSetState($g_hPicResultGemNow, $GUI_ENABLE + $GUI_HIDE)
-		;show stats pics
-		GUICtrlSetState($g_hPicResultRuntimeNow, $GUI_ENABLE + $GUI_SHOW)
-		GUICtrlSetState($g_hPicResultAttackedHourNow, $GUI_ENABLE + $GUI_SHOW)
-		GUICtrlSetState($g_hPicResultSkippedHourNow, $GUI_ENABLE + $GUI_SHOW)
+	If $source = "UpdateStats" Then
+		$g_iVillageStatsPage = 0
 	Else
-		;show normal values
-		GUICtrlSetState($g_hLblResultGoldNow, $GUI_ENABLE + $GUI_SHOW)
-		GUICtrlSetState($g_hLblResultElixirNow, $GUI_ENABLE + $GUI_SHOW)
-		GUICtrlSetState($g_hLblResultDENow, $GUI_ENABLE + $GUI_SHOW)
-		GUICtrlSetState($g_hLblResultTrophyNow, $GUI_ENABLE + $GUI_SHOW)
-		GUICtrlSetState($g_hLblResultBuilderNow, $GUI_ENABLE + $GUI_SHOW)
-		GUICtrlSetState($g_hLblResultGemNow, $GUI_ENABLE + $GUI_SHOW)
-		;hide stats values
-		GUICtrlSetState($g_hLblResultGoldHourNow, $GUI_ENABLE + $GUI_HIDE)
-		GUICtrlSetState($g_hLblResultElixirHourNow, $GUI_ENABLE + $GUI_HIDE)
-		GUICtrlSetState($g_hLblResultDEHourNow, $GUI_ENABLE + $GUI_HIDE)
-		GUICtrlSetState($g_hLblResultRuntimeNow, $GUI_ENABLE + $GUI_HIDE)
-		GUICtrlSetState($g_hLblResultAttackedHourNow, $GUI_ENABLE + $GUI_HIDE)
-		GUICtrlSetState($g_hLblResultSkippedHourNow, $GUI_ENABLE + $GUI_HIDE)
-		; show normal pics
-		GUICtrlSetState($g_hPicResultTrophyNow, $GUI_ENABLE + $GUI_SHOW)
-		GUICtrlSetState($g_hPicResultBuilderNow, $GUI_ENABLE + $GUI_SHOW)
-		GUICtrlSetState($g_hPicResultGemNow, $GUI_ENABLE + $GUI_SHOW)
-		;hide stats pics
-		GUICtrlSetState($g_hPicResultRuntimeNow, $GUI_ENABLE + $GUI_HIDE)
-		GUICtrlSetState($g_hPicResultAttackedHourNow, $GUI_ENABLE + $GUI_HIDE)
-		GUICtrlSetState($g_hPicResultSkippedHourNow, $GUI_ENABLE + $GUI_HIDE)
+		$g_iVillageStatsPage = Mod($g_iVillageStatsPage + 1, 3)
 	EndIf
-
+	_SetVillageStatsPage()
 EndFunc   ;==>btnVillageStat
 
-Func EnableGuiControls($bOptimizedRedraw = True)
-	Return ToggleGuiControls(True, $bOptimizedRedraw)
+Func _SetVillageStatsPage()
+	Local $aLabels = [$g_hLblResultGoldNow, $g_hLblResultElixirNow, $g_hLblResultDENow, $g_hLblResultTrophyNow, $g_hLblResultBuilderNow, $g_hLblResultGemNow, _
+			$g_hLblResultGoldHourNow, $g_hLblResultElixirHourNow, $g_hLblResultDEHourNow, $g_hLblResultRuntimeNow, $g_hLblResultAttackedHourNow, $g_hLblResultSkippedHourNow, _
+			$g_hLblResultGoldBBNow, $g_hLblResultElixirBBNow, $g_hLblResultTrophyBBNow, $g_hLblResultBuilderBBNow, $g_hLblResultCCGoldNow, $g_hLblResultCCMedalNow]
+	Local $aIcons = [$g_hPicResultTrophyNow, $g_hPicResultBuilderNow, $g_hPicResultGemNow, $g_hPicResultRuntimeNow, $g_hPicResultAttackedHourNow, $g_hPicResultSkippedHourNow, _
+			$g_hPicResultGoldBBNow, $g_hPicResultElixirBBNow, $g_hPicResultTrophyBBNow, $g_hPicResultBuilderBBNow, $g_hPicResultCCGoldNow, $g_hPicResultCCMedalNow]
+	For $i = 0 To UBound($aLabels) - 1
+		GUICtrlSetState($aLabels[$i], $GUI_HIDE)
+	Next
+	For $i = 0 To UBound($aIcons) - 1
+		GUICtrlSetState($aIcons[$i], $GUI_HIDE)
+	Next
+
+	Switch $g_iVillageStatsPage
+		Case 0
+			For $i = 0 To 5
+				GUICtrlSetState($aLabels[$i], $GUI_SHOW)
+			Next
+			GUICtrlSetState($g_hPicResultTrophyNow, $GUI_SHOW)
+			GUICtrlSetState($g_hPicResultBuilderNow, $GUI_SHOW)
+			GUICtrlSetState($g_hPicResultGemNow, $GUI_SHOW)
+		Case 1
+			For $i = 6 To 11
+				If $i < 9 Or $g_iFirstRun = 0 Then GUICtrlSetState($aLabels[$i], $GUI_SHOW)
+			Next
+			GUICtrlSetState($g_hPicResultRuntimeNow, $GUI_SHOW)
+			GUICtrlSetState($g_hPicResultAttackedHourNow, $GUI_SHOW)
+			GUICtrlSetState($g_hPicResultSkippedHourNow, $GUI_SHOW)
+		Case 2
+			For $i = 12 To UBound($aLabels) - 1
+				GUICtrlSetState($aLabels[$i], $GUI_SHOW)
+			Next
+			For $i = 6 To UBound($aIcons) - 1
+				GUICtrlSetState($aIcons[$i], $GUI_SHOW)
+			Next
+	EndSwitch
+
+	If $g_iVillageStatsPage < 2 Then
+		GUICtrlSetState($g_hPicResultGoldNow, $GUI_SHOW)
+		GUICtrlSetState($g_hPicResultElixirNow, $GUI_SHOW)
+		GUICtrlSetState($g_hPicResultDENow, $GUI_SHOW)
+	Else
+		GUICtrlSetState($g_hPicResultGoldNow, $GUI_HIDE)
+		GUICtrlSetState($g_hPicResultElixirNow, $GUI_HIDE)
+		GUICtrlSetState($g_hPicResultDENow, $GUI_HIDE)
+	EndIf
+EndFunc   ;==>_SetVillageStatsPage
+
+Func _UpdateVillageBuilderBaseStats()
+	GUICtrlSetData($g_hLblResultGoldBBNow, $g_aiCurrentLootBB[$eLootGoldBB] = 0 ? "" : _NumberFormat($g_aiCurrentLootBB[$eLootGoldBB], True))
+	GUICtrlSetData($g_hLblResultElixirBBNow, $g_aiCurrentLootBB[$eLootElixirBB] = 0 ? "" : _NumberFormat($g_aiCurrentLootBB[$eLootElixirBB], True))
+	GUICtrlSetData($g_hLblResultTrophyBBNow, $g_aiCurrentLootBB[$eLootTrophyBB] = 0 ? "" : _NumberFormat($g_aiCurrentLootBB[$eLootTrophyBB], True))
+	GUICtrlSetData($g_hLblResultBuilderBBNow, $g_iTotalBuilderCountBB = 0 ? "" : $g_iFreeBuilderCountBB & "/" & $g_iTotalBuilderCountBB)
+	Local $bCapitalReportAvailable = $g_iLootCCGold > 0 Or $g_iLootCCMedal > 0 Or $g_iCCTrophies > 0
+	GUICtrlSetData($g_hLblResultCCGoldNow, $bCapitalReportAvailable ? _NumberFormat($g_iLootCCGold, True) : "")
+	GUICtrlSetData($g_hLblResultCCMedalNow, $bCapitalReportAvailable ? _NumberFormat($g_iLootCCMedal, True) : "")
+EndFunc   ;==>_UpdateVillageBuilderBaseStats
+
+Func EnableGuiControls($bOptimizedRedraw = True, $bForce = False)
+	Return ToggleGuiControls(True, $bOptimizedRedraw, $bForce)
 EndFunc   ;==>EnableGuiControls
 
-Func DisableGuiControls($bOptimizedRedraw = True)
-	Return ToggleGuiControls(False, $bOptimizedRedraw)
+Func DisableGuiControls($bOptimizedRedraw = True, $bForce = False)
+	If $g_bUnlockMode Then
+		If Not $g_bGuiControlsEnabled Then Return ToggleGuiControls(True, $bOptimizedRedraw, True)
+		Return
+	EndIf
+	Return ToggleGuiControls(False, $bOptimizedRedraw, $bForce)
 EndFunc   ;==>DisableGuiControls
 
-Func ToggleGuiControls($bEnabled, $bOptimizedRedraw = True)
+Func EnforceGuiControlsDisabled($bOptimizedRedraw = True)
+	If $g_bUnlockMode Or $g_bGuiControlsEnabled Or $g_iGuiMode <> 1 Then Return
+	If $bOptimizedRedraw Then Local $bWasRedraw = SetRedrawBotWindow(False, Default, Default, Default, "EnforceGuiControlsDisabled")
+	$g_bGUIControlDisabled = True
+	For $i = $g_hFirstControlToHide To $g_hLastControlToHide
+		If IsAlwaysEnabledControl($i) Then ContinueLoop
+		If $i >= $g_hClanGamesTV And $i < $g_hChkForceBBAttackOnClanGames Then ContinueLoop
+		If BitAND(GUICtrlGetState($i), $GUI_ENABLE) Then GUICtrlSetState($i, $GUI_DISABLE)
+	Next
+	ControlDisable("", "", $g_hCmbGUILanguage)
+	$g_bGUIControlDisabled = False
+	If $bOptimizedRedraw Then SetRedrawBotWindow($bWasRedraw, Default, Default, Default, "EnforceGuiControlsDisabled")
+EndFunc   ;==>EnforceGuiControlsDisabled
+
+Func ToggleGuiControls($bEnabled, $bOptimizedRedraw = True, $bForce = False)
+	If Not $bForce And $g_bGuiControlsEnabled = $bEnabled Then Return
 	$g_bGuiControlsEnabled = $bEnabled
 	If $g_iGuiMode <> 1 Then Return
 	If $bOptimizedRedraw Then Local $bWasRedraw = SetRedrawBotWindow(False, Default, Default, Default, "ToggleGuiControls")
@@ -411,7 +527,7 @@ Func GetCoCAppVersion()
 	Local $sCMD = "dumpsys package " & $g_sAndroidGamePackage & " | grep versionName"  ;Get info from APK and grep version number line from text string
 	Local $sReturn = AndroidAdbSendShellCommand($sCMD) ; Grep return string = versionName=15.352.8
 	If @error Then
-		SetLog("Failed to get CoC vesion, Result= " & $sReturn, $COLOR_ERROR)
+		SetLog("Failed to get Clash of Clans version, Result= " & $sReturn, $COLOR_ERROR)
 		SetError(1)
 		Return
 	EndIf
@@ -419,3 +535,104 @@ Func GetCoCAppVersion()
 	SetDebugLog("Clash of Clans Game App = " & $sCleanReturn)
 	Return StringTrimLeft($sCleanReturn, 12)  ; return version number string
 EndFunc   ;==>GetCoCAppVersion
+
+Func ToggleBBSpam()
+	$g_bBBSpamEnabled = Not $g_bBBSpamEnabled
+	$g_bBBSpamDisabledDueToFull = False
+	$g_bRushAttackReenableAfterSwitch = False
+	
+	If $g_bBBSpamEnabled Then
+		; Mutual exclusion: disable CC Spam if active
+		If $g_bCCSpamEnabled Then
+			$g_bCCSpamEnabled = False
+			$g_bCCSpamRunning = False
+			GUICtrlSetBkColor($g_hbtnCCSpam, 0xFFB6C1)
+		EndIf
+		If $g_bRushAttackEnabled Then
+			$g_bRushAttackEnabled = False
+			GUICtrlSetBkColor($g_hBtnRushAttack, 0xFFB6C1)
+		EndIf
+		; Activate BB Spam mode
+		GUICtrlSetData($g_hbtnBBSpam, "BBSpam")
+		GUICtrlSetBkColor($g_hbtnBBSpam, 0x90EE90) ; Light green background
+		SetLog("» BB SPAM MODE ENABLED «", $COLOR_INFO)
+		$g_iBBSpamCycles = 0
+		$g_bBBSpamRunning = False
+		
+		; Start bot if not already running
+		If Not $g_bRunState Then
+			btnStart()
+		EndIf
+	Else
+		; Deactivate BB Spam mode
+		GUICtrlSetData($g_hbtnBBSpam, "BBSpam")
+		GUICtrlSetBkColor($g_hbtnBBSpam, 0xFFB6C1) ; Light pink/red background
+		SetLog("» BB SPAM MODE DISABLED «", $COLOR_INFO)
+		$g_bBBSpamRunning = False
+	EndIf
+EndFunc   ;==>ToggleBBSpam
+
+Func ToggleCCSpam()
+	$g_bCCSpamEnabled = Not $g_bCCSpamEnabled
+
+	If $g_bCCSpamEnabled Then
+		$g_bBBSpamDisabledDueToFull = False
+		$g_bRushAttackReenableAfterSwitch = False
+		; Mutual exclusion: disable BB Spam if active
+		If $g_bBBSpamEnabled Then
+			$g_bBBSpamEnabled = False
+			$g_bBBSpamRunning = False
+			GUICtrlSetBkColor($g_hbtnBBSpam, 0xFFB6C1)
+		EndIf
+		If $g_bRushAttackEnabled Then
+			$g_bRushAttackEnabled = False
+			GUICtrlSetBkColor($g_hBtnRushAttack, 0xFFB6C1)
+		EndIf
+		; Activate CC Spam mode
+		GUICtrlSetData($g_hbtnCCSpam, "CCSpam")
+		GUICtrlSetBkColor($g_hbtnCCSpam, 0x90EE90) ; Light green background
+		SetLog("» CC SPAM MODE ENABLED «", $COLOR_INFO)
+		$g_bCCSpamRunning = False
+
+		; Start bot if not already running
+		If Not $g_bRunState Then
+			btnStart()
+		EndIf
+	Else
+		; Deactivate CC Spam mode
+		GUICtrlSetData($g_hbtnCCSpam, "CCSpam")
+		GUICtrlSetBkColor($g_hbtnCCSpam, 0xFFB6C1) ; Light pink/red background
+		SetLog("» CC SPAM MODE DISABLED «", $COLOR_INFO)
+		$g_bCCSpamRunning = False
+	EndIf
+EndFunc   ;==>ToggleCCSpam
+
+Func ToggleRushAttack()
+	$g_bRushAttackEnabled = Not $g_bRushAttackEnabled
+	$g_bRushAttackReenableAfterSwitch = False
+
+	If $g_bRushAttackEnabled Then
+		$g_bBBSpamDisabledDueToFull = False
+		If $g_bBBSpamEnabled Then
+			$g_bBBSpamEnabled = False
+			$g_bBBSpamRunning = False
+			GUICtrlSetBkColor($g_hbtnBBSpam, 0xFFB6C1)
+		EndIf
+		If $g_bCCSpamEnabled Then
+			$g_bCCSpamEnabled = False
+			$g_bCCSpamRunning = False
+			GUICtrlSetBkColor($g_hbtnCCSpam, 0xFFB6C1)
+		EndIf
+
+		GUICtrlSetData($g_hBtnRushAttack, "Rush")
+		GUICtrlSetBkColor($g_hBtnRushAttack, 0x90EE90)
+		SetLog("» RUSH ATTACK MODE ENABLED «", $COLOR_INFO)
+		$g_bRushAttackRunning = False
+
+		If Not $g_bRunState Then btnStart()
+	Else
+		GUICtrlSetData($g_hBtnRushAttack, "Rush")
+		GUICtrlSetBkColor($g_hBtnRushAttack, 0xFFB6C1)
+		SetLog("» RUSH ATTACK MODE DISABLED «", $COLOR_INFO)
+	EndIf
+EndFunc   ;==>ToggleRushAttack

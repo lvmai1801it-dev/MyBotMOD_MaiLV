@@ -1,4 +1,4 @@
-; #FUNCTION# ====================================================================================================================
+﻿; #FUNCTION# ====================================================================================================================
 ; Name ..........: MBR GUI Design
 ; Description ...: This file Includes GUI Design
 ; Syntax ........:
@@ -27,7 +27,7 @@ Global $_GUI_MAIN_HEIGHT = 692 ; changed from 690 to 692 for DPI scaling cutting
 Global Const $_NORMALGUI_MAIN_WIDTH = $_GUI_MAIN_WIDTH ; changed from 470 to 472 for DPI scaling cutting off right by 2 pixel
 Global Const $_NORMALGUI_MAIN_HEIGHT = $_GUI_MAIN_HEIGHT ; changed from 690 to 692 for DPI scaling cutting off bottom by 2 pixel
 Global Const $_MINIGUI_MAIN_WIDTH = $_GUI_MAIN_WIDTH ; changed from 470 to 472 for DPI scaling cutting off right by 2 pixel
-Global Const $_MINIGUI_MAIN_HEIGHT = 220 ; changed from 690 to 692 for DPI scaling cutting off bottom by 2 pixel
+Global Const $_MINIGUI_MAIN_HEIGHT = 450
 Global $_GUI_MAIN_TOP = 23 ; Adjusted in CreateMainGUI()
 Global $_GUI_MAIN_BUTTON_SIZE = [25, 17] ; minimize/close button size
 Global $_GUI_MAIN_BUTTON_COUNT = 4
@@ -51,7 +51,7 @@ Global $g_bBotDockedShrinked = False ; Bot is shrinked or not when docked
 Global $g_hFrmBotButtons, $g_hFrmBotLogoUrlSmall, $g_hFrmBotEx = 0, $g_hLblBotTitle, $g_hLblBotShrink = 0, $g_hLblBotExpand = 0, $g_hLblBotMiniGUI = 0, $g_hLblBotNormalGUI = 0 _
 		, $g_hLblBotMinimize = 0, $g_hLblBotClose = 0, $g_hFrmBotBottom = 0, $g_hFrmBotEmbeddedShield = 0, $g_hFrmBotEmbeddedShieldInput = 0, $g_hFrmBotEmbeddedGraphics = 0
 Global $g_hFrmBot_MAIN_PIC = 0, $g_hFrmBot_URL_PIC = 0, $g_hFrmBot_URL_PIC2 = 0
-Global $g_hTabMain = 0, $g_hTabLog = 0, $g_hTabVillage = 0, $g_hTabAttack = 0, $g_hTabBot = 0, $g_hTabAbout = 0
+Global $g_hTabMain = 0, $g_hTabLog = 0, $g_hTabVillage = 0, $g_hTabAttack = 0, $g_hTabBot = 0, $g_hTabStats = 0, $g_hTabAbout = 0
 Global $g_hStatusBar = 0
 Global $g_hTiShow = 0, $g_hTiHide = 0, $g_hTiDonate = 0, $g_hTiAbout = 0, $g_hTiStartStop = 0, $g_hTiPause = 0, $g_hTiExit = 0
 Global $g_aFrmBotPosInit[8] = [0, 0, 0, 0, 0, 0, 0, 0]
@@ -126,6 +126,8 @@ Func CreateMainGUI()
 	Opt("TrayMenuMode", 3)
 	Opt("TrayOnEventMode", 1)
 	Opt("TrayIconHide", 0)
+	TraySetClick($TRAY_CLICK_SECONDARYUP)
+	TraySetOnEvent($TRAY_EVENT_PRIMARYUP, "tiShow")
 
 	; initialize bot title
 	UpdateBotTitle()
@@ -159,6 +161,8 @@ EndFunc   ;==>CreateMainGUI
 
 Func CreateMainGUIControls($bGuiModeUpdate = False)
 
+	$g_bUnlockMode = (Int(IniRead($g_sProfileConfigPath, "general", "UnlockMode", 0)) = 1)
+
 	If Not $bGuiModeUpdate Then
 
 		Local $aBtnSize = $_GUI_MAIN_BUTTON_SIZE
@@ -185,8 +189,10 @@ Func CreateMainGUIControls($bGuiModeUpdate = False)
 		$g_hFrmBotEx = GUICreate("My Bot Controls", $_GUI_MAIN_WIDTH, $_GUI_MAIN_HEIGHT - $_GUI_BOTTOM_HEIGHT + $_GUI_MAIN_TOP, 0, 0, _
 				BitOR($WS_CHILD, $WS_TABSTOP), 0, $g_hFrmBot)
 
-		$g_hToolTip = _GUIToolTip_Create($g_hFrmBot) ; tool tips for URL links etc
-		_GUIToolTip_SetMaxTipWidth($g_hToolTip, $_GUI_MAIN_WIDTH) ; support multiple lines
+		If Not $g_bDisableBotToolTips Then
+			$g_hToolTip = _GUIToolTip_Create($g_hFrmBot) ; tool tips for URL links etc
+			_BotToolTipConfigure()
+		EndIf
 
 		If $g_bCustomTitleBarActive = False Then
 			; Window default title bar
@@ -324,8 +330,11 @@ Func CreateMainGUIControls($bGuiModeUpdate = False)
 	CreateAttackTab()
 
 	SplashStep(GetTranslatedFileIni("MBR GUI Design - Loading", "SplashStep_06", "Loading Bot tab..."))
-	CreateBotTab() ; also creates  $g_hLastControlToHide
+	CreateBotTab()
 	If Not $bGuiModeUpdate Then DistributorsUpdateGUI() ; Now loading Distributors (during GUI switch it must be called outside CreateMainGUIControls()!)
+
+	SplashStep(GetTranslatedFileIni("MBR GUI Design - Loading", "SplashStep_06b", "Loading Stats tab..."))
+	CreateStatsTab()
 
 	SplashStep(GetTranslatedFileIni("MBR GUI Design - Loading", "SplashStep_07", "Loading About Us tab..."))
 	CreateAboutTab()
@@ -348,9 +357,14 @@ Func CreateMainGUIControls($bGuiModeUpdate = False)
 	$g_hTabVillage = GUICtrlCreateTabItem(GetTranslatedFileIni("MBR Main GUI", "Tab_02", "Village"))
 	$g_hTabAttack = GUICtrlCreateTabItem(GetTranslatedFileIni("MBR Main GUI", "Tab_03", "Attack Plan"))
 	$g_hTabBot = GUICtrlCreateTabItem(GetTranslatedFileIni("MBR Main GUI", "Tab_04", "Bot"))
+	$g_hTabStats = GUICtrlCreateTabItem(GetTranslatedFileIni("MBR Main GUI", "Tab_04_STab_05", "Stats"))
 	$g_hTabAbout = GUICtrlCreateTabItem(GetTranslatedFileIni("MBR Main GUI", "Tab_05", "About Us"))
 	GUICtrlCreateTabItem("")
 	GUICtrlSetResizing(-1, $GUI_DOCKBORDERS)
+
+	; Capture the final control ID only after every tab and child control has been created.
+	$g_hLastControlToHide = GUICtrlCreateDummy()
+	ReDim $g_aiControlPrevState[$g_hLastControlToHide + 1]
 
 ;~ -------------------------------------------------------------
 ;~ GUI init

@@ -16,15 +16,22 @@
 Func SwitchAccountVariablesReload($sType = "Load", $iAccount = $g_iCurAccount)
 
 	; Empty arrays
-	Local $aiZero[8] = [0, 0, 0, 0, 0, 0, 0, 0], $aiTrue[8] = [1, 1, 1, 1, 1, 1, 1, 1], $aiMinus[8] = [-1, -1, -1, -1, -1, -1, -1, -1]
-	Local $aiZero83[8][3] = [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]]
-	Local $aiZero84[8][4] = [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]
-	Local $aiZero85[8][5] = [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]]
-	Local $asEmpty[8] = ["", "", "", "", "", "", "", ""]
-	Local $aiZeroTroop[$eTroopCount] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-	Local $aiZeroSpell[$eSpellCount] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-	Local $aiMinusOneTrue[8][2] = [[-1, True], [-1, True], [-1, True], [-1, True], [-1, True], [-1, True], [-1, True], [-1, True]]
-	Local $aiNonAvailable[8] = ["N/A", "N/A", "N/A", "N/A", "N/A", "N/A", "N/A", "N/A"]
+	Local $aiZero[$g_iSwitchAccMaxAccounts], $aiTrue[$g_iSwitchAccMaxAccounts], $aiMinus[$g_iSwitchAccMaxAccounts]
+	Local $aiZero83[$g_iSwitchAccMaxAccounts][3], $aiZero8Hero[$g_iSwitchAccMaxAccounts][$eHeroCount]
+	Local $aiZero84[$g_iSwitchAccMaxAccounts][4]
+ 	Local $asEmpty[$g_iSwitchAccMaxAccounts]
+ 	Local $aiZeroTroop[$eTroopCount] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+	Local $aiZeroSpell[$eSpellCount] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+	Local $abFalsePet[$ePetCount] = [False, False, False, False, False, False, False, False, False, False, False, False]
+ 	Local $aiMinusOneTrue[$g_iSwitchAccMaxAccounts][2]
+ 	Local $aiNonAvailable[$g_iSwitchAccMaxAccounts]
+	For $i = 0 To $g_iSwitchAccMaxAccounts - 1
+		$aiTrue[$i] = 1
+		$aiMinus[$i] = -1
+		$aiMinusOneTrue[$i][0] = -1
+		$aiMinusOneTrue[$i][1] = True
+		$aiNonAvailable[$i] = "N/A"
+	Next
 
 	; FirstRun
 	Static $abFirstStart = $aiTrue
@@ -74,23 +81,37 @@ Func SwitchAccountVariablesReload($sType = "Load", $iAccount = $g_iCurAccount)
 	; Labs time
 	Static $asLabUpgradeTime = $asEmpty, $aiLabStatus = $aiZero, $aiLabElixirCost = $aiZero, $aiLabDElixirCost = $aiZero
 	Static $asPetLabUpgradeTime = $asEmpty, $aiPetStatus = $aiZero, $asiMinDark4PetUpgrade = $aiZero
+	Static $aabPetMaxLevel[$g_iSwitchAccMaxAccounts]
 	Static $asStarLabUpgradeTime = $asEmpty
+	Static $bPetMaxLevelStaticInit = False
+	If Not $bPetMaxLevelStaticInit Then
+		For $i = 0 To $g_iSwitchAccMaxAccounts - 1
+			$aabPetMaxLevel[$i] = $abFalsePet
+		Next
+		$bPetMaxLevelStaticInit = True
+	EndIf
 
 	; BlackSmith
 	Static $asBSmithUpgradeTime = $asEmpty
 
 	; Hero State
-	Static $aiHeroAvailable = $aiZero
 	Static $aiHeroUpgradingBit = $aiZero
-	Static $aiHeroUpgrading = $aiZero83
-	Static $aiFirstStartForHiddenHero = $aiTrue
-	Static $g_aiSHeroUpgradeFinishDate = $aiZero85
-	Static $g_aiSHeroNeededResource = $aiZero85
+	Static $aiHeroUpgrading = $aiZero8Hero
+	Static $aiFirstStartHeroStatus = $aiTrue
+	Static $g_aiSHeroUpgradeFinishDate = $aiZero8Hero
+	Static $g_aiSHeroNeededResource = $aiZero8Hero
 	Static $bSCheckValuesForWarden = $aiZero
 
 	; QuickTrain comp
-	Static $aaArmyQuickTroops[8] = [$aiZeroTroop, $aiZeroTroop, $aiZeroTroop, $aiZeroTroop, $aiZeroTroop, $aiZeroTroop, $aiZeroTroop, $aiZeroTroop]
-	Static $aaArmyQuickSpells[8] = [$aiZeroSpell, $aiZeroSpell, $aiZeroSpell, $aiZeroSpell, $aiZeroSpell, $aiZeroSpell, $aiZeroSpell, $aiZeroSpell]
+	Static $aaArmyQuickTroops[$g_iSwitchAccMaxAccounts], $aaArmyQuickSpells[$g_iSwitchAccMaxAccounts]
+	Static $bQuickTrainStaticInit = False
+	If Not $bQuickTrainStaticInit Then
+		For $i = 0 To $g_iSwitchAccMaxAccounts - 1
+			$aaArmyQuickTroops[$i] = $aiZeroTroop
+			$aaArmyQuickSpells[$i] = $aiZeroSpell
+		Next
+		$bQuickTrainStaticInit = True
+	EndIf
 	Static $aiTotalQuickTroops = $aiZero
 	Static $aiTotalQuickSpells = $aiZero
 	Static $abQuickArmyMixed = $aiZero
@@ -136,10 +157,6 @@ Func SwitchAccountVariablesReload($sType = "Load", $iAccount = $g_iCurAccount)
 			$aiFirstRun = $aiTrue
 
 			$g_asTrainTimeFinish = $asEmpty
-			For $i = 0 To 7
-				GUICtrlSetData($g_ahLblTroopTime[$i], "")
-				GUICtrlSetData($g_ahLblTroopTimeRep[$i], "")
-			Next
 			$g_ahTimerSinceSwitched = $aiZero
 			$g_ahTimerSinceSwitched[$iAccount] = $g_hTimerSinceStarted
 
@@ -205,6 +222,9 @@ Func SwitchAccountVariablesReload($sType = "Load", $iAccount = $g_iCurAccount)
 			$asPetLabUpgradeTime = $asEmpty
 			$aiPetStatus = $aiZero
 			$asiMinDark4PetUpgrade = $asEmpty
+			For $i = 0 To $g_iSwitchAccMaxAccounts - 1
+				$aabPetMaxLevel[$i] = $abFalsePet
+			Next
 			$asStarLabUpgradeTime = $asEmpty
 
 			; BlackSmith
@@ -214,12 +234,11 @@ Func SwitchAccountVariablesReload($sType = "Load", $iAccount = $g_iCurAccount)
 			$SStarBonusReceived = $aiZero
 
 			; Hero State
-			$aiHeroAvailable = $aiZero
 			$aiHeroUpgradingBit = $aiZero
-			$aiHeroUpgrading = $aiZero83
-			$aiFirstStartForHiddenHero = $aiTrue
-			$g_aiSHeroUpgradeFinishDate = $aiZero85
-			$g_aiSHeroNeededResource = $aiZero85
+			$aiHeroUpgrading = $aiZero8Hero
+			$aiFirstStartHeroStatus = $aiTrue
+			$g_aiSHeroUpgradeFinishDate = $aiZero8Hero
+			$g_aiSHeroNeededResource = $aiZero8Hero
 			$bSCheckValuesForWarden = $aiZero
 
 			;Clan Games
@@ -232,7 +251,7 @@ Func SwitchAccountVariablesReload($sType = "Load", $iAccount = $g_iCurAccount)
 			$Sg_hCoolDownTimer = $aiZero
 
 			; QuickTrain comp
-			For $i = 0 To 7
+			For $i = 0 To $g_iSwitchAccMaxAccounts - 1
 				$aaArmyQuickTroops[$i] = $aiZeroTroop
 				$aaArmyQuickSpells[$i] = $aiZeroSpell
 			Next
@@ -377,6 +396,7 @@ Func SwitchAccountVariablesReload($sType = "Load", $iAccount = $g_iCurAccount)
 				$aiPetStatus[$iAccount] = 0
 			EndIf
 			$asiMinDark4PetUpgrade[$iAccount] = $g_iMinDark4PetUpgrade
+			$aabPetMaxLevel[$iAccount] = $g_bPetMaxLevel
 
 			$asStarLabUpgradeTime[$iAccount] = $g_sStarLabUpgradeTime
 
@@ -387,16 +407,15 @@ Func SwitchAccountVariablesReload($sType = "Load", $iAccount = $g_iCurAccount)
 			$SStarBonusReceived[$iAccount] = $StarBonusReceived
 
 			; Hero State
-			$aiHeroAvailable[$iAccount] = $g_iHeroAvailable
 			$aiHeroUpgradingBit[$iAccount] = $g_iHeroUpgradingBit
-			For $i = 0 To 2
+			For $i = 0 To $eHeroCount - 1
 				$aiHeroUpgrading[$iAccount][$i] = $g_iHeroUpgrading[$i]
 			Next
-			$aiFirstStartForHiddenHero[$iAccount] = $g_bFirstStartForHiddenHero
-			For $i = 0 To 4
+			$aiFirstStartHeroStatus[$iAccount] = $g_bFirstStartHeroStatus
+			For $i = 0 To $eHeroCount - 1
 				$g_aiSHeroUpgradeFinishDate[$iAccount][$i] = $g_aiHeroUpgradeFinishDate[$i]
 			Next
-			For $i = 0 To 4
+			For $i = 0 To $eHeroCount - 1
 				$g_aiSHeroNeededResource[$iAccount][$i] = $g_aiHeroNeededResource[$i]
 			Next
 			$bSCheckValuesForWarden[$iAccount] = $bCheckValuesForWarden
@@ -560,6 +579,8 @@ Func SwitchAccountVariablesReload($sType = "Load", $iAccount = $g_iCurAccount)
 				$Counter += 1
 			Next
 			$g_iMinDark4PetUpgrade = $asiMinDark4PetUpgrade[$iAccount]
+			$g_bPetMaxLevel = $aabPetMaxLevel[$iAccount]
+			ApplyMaxLevelPetUpgradeState()
 
 			$g_sStarLabUpgradeTime = $asStarLabUpgradeTime[$iAccount]
 
@@ -581,16 +602,15 @@ Func SwitchAccountVariablesReload($sType = "Load", $iAccount = $g_iCurAccount)
 			$StarBonusReceived = $SStarBonusReceived[$iAccount]
 
 			; Hero State
-			$g_iHeroAvailable = $aiHeroAvailable[$iAccount]
 			$g_iHeroUpgradingBit = $aiHeroUpgradingBit[$iAccount]
-			For $i = 0 To 2
+			For $i = 0 To $eHeroCount - 1
 				$g_iHeroUpgrading[$i] = $aiHeroUpgrading[$iAccount][$i]
 			Next
-			$g_bFirstStartForHiddenHero = $aiFirstStartForHiddenHero[$iAccount]
-			For $i = 0 To 4
+			$g_bFirstStartHeroStatus = $aiFirstStartHeroStatus[$iAccount]
+			For $i = 0 To $eHeroCount - 1
 				$g_aiHeroUpgradeFinishDate[$i] = $g_aiSHeroUpgradeFinishDate[$iAccount][$i]
 			Next
-			For $i = 0 To 4
+			For $i = 0 To $eHeroCount - 1
 				$g_aiHeroNeededResource[$i] = $g_aiSHeroNeededResource[$iAccount][$i]
 			Next
 			$bCheckValuesForWarden = $bSCheckValuesForWarden[$iAccount]
@@ -635,11 +655,14 @@ Func SwitchAccountVariablesReload($sType = "Load", $iAccount = $g_iCurAccount)
 				GUICtrlSetData($g_ahLblStatsStartedWith[$i], _NumberFormat($g_iStatsStartedWith[$i], True))
 				$aiStatsTotalGain[$iAccount][$i] = $g_iStatsTotalGain[$i]
 			Next
-			For $i = 0 To 7
-				GUICtrlSetData($g_ahLblHourlyStatsGoldAcc[$i], _NumberFormat(Round($aiStatsTotalGain[$i][$eLootGold] / (Int(__TimerDiff($g_hTimerSinceStarted) + $g_iTimePassed)) * 3600)) & "k / h")
-				GUICtrlSetData($g_ahLblHourlyStatsElixirAcc[$i], _NumberFormat(Round($aiStatsTotalGain[$i][$eLootElixir] / (Int(__TimerDiff($g_hTimerSinceStarted) + $g_iTimePassed)) * 3600)) & "k / h")
-				GUICtrlSetData($g_ahLblHourlyStatsDarkAcc[$i], _NumberFormat(Round($aiStatsTotalGain[$i][$eLootDarkElixir] / (Int(__TimerDiff($g_hTimerSinceStarted) + $g_iTimePassed)) * 3600 * 1000)) & " / h")
-			Next
+			Local $iElapsed = Int(__TimerDiff($g_hTimerSinceStarted) + $g_iTimePassed)
+			If $iElapsed > 0 Then
+				For $i = 0 To UBound($g_ahLblHourlyStatsGoldAcc) - 1
+					GUICtrlSetData($g_ahLblHourlyStatsGoldAcc[$i], _NumberFormat(Round($aiStatsTotalGain[$i][$eLootGold] / $iElapsed * 3600)) & "k / h")
+					GUICtrlSetData($g_ahLblHourlyStatsElixirAcc[$i], _NumberFormat(Round($aiStatsTotalGain[$i][$eLootElixir] / $iElapsed * 3600)) & "k / h")
+					GUICtrlSetData($g_ahLblHourlyStatsDarkAcc[$i], _NumberFormat(Round($aiStatsTotalGain[$i][$eLootDarkElixir] / $iElapsed * 3600 * 1000)) & " / h")
+				Next
+			EndIf
 
 		Case "SetTime"
 			Local $day, $hour, $min, $sec
@@ -648,7 +671,7 @@ Func SwitchAccountVariablesReload($sType = "Load", $iAccount = $g_iCurAccount)
 					Local $iLabTime = _DateDiff("s", _NowCalc(), $asLabUpgradeTime[$i]) * 1000
 					If $iLabTime > 0 Then
 						_TicksToDay($iLabTime, $day, $hour, $min, $sec)
-						GUICtrlSetData($g_ahLblLabTime[$i], $day > 0 ? StringFormat("%2ud %02i:%02i'", $day, $hour, $min) : StringFormat("%02i:%02i:%02i", $hour, $min, $sec))
+						GUICtrlSetData($g_ahLblLabTime[$i], $day > 0 ? StringFormat("%2ud %02i:%02i", $day, $hour, $min) : StringFormat("%02i:%02i:%02i", $hour, $min, $sec))
 						GUICtrlSetColor($g_ahLblLabTime[$i], $day > 0 ? $COLOR_GREEN : $COLOR_OLIVE)
 					Else
 						GUICtrlSetData($g_ahLblLabTime[$i], "")
@@ -661,7 +684,7 @@ Func SwitchAccountVariablesReload($sType = "Load", $iAccount = $g_iCurAccount)
 					Local $iStarLabTime = _DateDiff("s", _NowCalc(), $asStarLabUpgradeTime[$i]) * 1000
 					If $iStarLabTime > 0 Then
 						_TicksToDay($iStarLabTime, $day, $hour, $min, $sec)
-						GUICtrlSetData($g_ahLbLStarLabTime[$i], $day > 0 ? StringFormat("%2ud %02i:%02i'", $day, $hour, $min) : StringFormat("%02i:%02i:%02i", $hour, $min, $sec))
+						GUICtrlSetData($g_ahLbLStarLabTime[$i], $day > 0 ? StringFormat("%2ud %02i:%02i", $day, $hour, $min) : StringFormat("%02i:%02i:%02i", $hour, $min, $sec))
 						GUICtrlSetColor($g_ahLbLStarLabTime[$i], $day > 0 ? $COLOR_GREEN : $COLOR_OLIVE)
 					Else
 						GUICtrlSetData($g_ahLbLStarLabTime[$i], "")
@@ -674,7 +697,7 @@ Func SwitchAccountVariablesReload($sType = "Load", $iAccount = $g_iCurAccount)
 					Local $iPetHouseTime = _DateDiff("s", _NowCalc(), $asPetLabUpgradeTime[$i]) * 1000
 					If $iPetHouseTime > 0 Then
 						_TicksToDay($iPetHouseTime, $day, $hour, $min, $sec)
-						GUICtrlSetData($g_ahLbLPetTime[$i], $day > 0 ? StringFormat("%2ud %02i:%02i'", $day, $hour, $min) : StringFormat("%02i:%02i:%02i", $hour, $min, $sec))
+						GUICtrlSetData($g_ahLbLPetTime[$i], $day > 0 ? StringFormat("%2ud %02i:%02i", $day, $hour, $min) : StringFormat("%02i:%02i:%02i", $hour, $min, $sec))
 						GUICtrlSetColor($g_ahLbLPetTime[$i], $day > 0 ? $COLOR_GREEN : $COLOR_OLIVE)
 					Else
 						GUICtrlSetData($g_ahLbLPetTime[$i], "")

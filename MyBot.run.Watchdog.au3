@@ -189,7 +189,7 @@ While 1
 WEnd
 
 ReleaseMutex($hMutex_BotTitle)
-DllClose("ntdll.dll")
+DllClose($hNtDll)
 Exit ($iExitCode)
 
 ; Reference function so stripper is not removing it

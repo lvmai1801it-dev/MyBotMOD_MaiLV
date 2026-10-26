@@ -338,9 +338,9 @@ Func SetSwitchAccLog($String, $Color = $COLOR_BLACK, $Font = "Verdana", $FontSiz
 EndFunc   ;==>SetSwitchAccLog
 
 Func AtkLogHead()
-	SetAtkLog(_PadStringCenter(" " & GetTranslatedFileIni("MBR Func_AtkLogHead", "AtkLogHead_Text_01", "ATTACK LOG") & " ", 71, "="), "", $COLOR_BLACK, "MS Shell Dlg", 8.5)
-	SetAtkLog(GetTranslatedFileIni("MBR Func_AtkLogHead", "AtkLogHead_Text_02", '|                       ------- LOOT --------            -- BONUS --   |'), "")
-	SetAtkLog(GetTranslatedFileIni("MBR Func_AtkLogHead", "AtkLogHead_Text_03", '|AC| TIME|TROPHY|SRC|DS|   GOLD| ELIXIR|   DE| TR| *|  %| G & E|  DE|L.|'), "")
+	SetAtkLog("  ============================= ATTACK LOG =============================", "", $COLOR_BLACK, "MS Shell Dlg", 8.5)
+	SetAtkLog("|                     ----------- LOOT ----------           -- BONUS --|", "")
+	SetAtkLog("|AC| TIME|BASE|SEARCH|     GOLD|   ELIXIR|     DE|TR| *|  %|G & E|   DE|", "")
 EndFunc   ;==>AtkLogHead
 
 Func __FileWriteLog($handle, $text)

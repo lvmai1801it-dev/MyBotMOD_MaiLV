@@ -13,7 +13,11 @@
 ; Example .......: No
 ; ===============================================================================================================================
 
-Func RequestCC($bClickPAtEnd = True, $sText = "")
+Func RequestCC($bClickPAtEnd = True, $sText = "", $bSkipOpenArmyOverview = False)
+
+	Static $aRequestButtonPos[2] = [-1, -1]
+
+	If $sText <> "IsFullClanCastle" Then $g_bCakeCCRequestSucceeded = False
 
 	If Not $g_bRequestTroopsEnable Or Not $g_bDonationEnabled Then
 		Return
@@ -21,18 +25,37 @@ Func RequestCC($bClickPAtEnd = True, $sText = "")
 
 	If Not $g_bRunState Then Return
 
-	If $g_bRequestTroopsEnable Then
-		Local $hour = StringSplit(_NowTime(4), ":", $STR_NOCOUNT)
-		If Not $g_abRequestCCHours[$hour[0]] Then
-			SetLog("Request Clan Castle troops not planned, Skipped..", $COLOR_ACTION)
-			Return ; exit func if no planned donate checkmarks
+	; Open army overview only if not skipping
+	If Not $bSkipOpenArmyOverview Then
+		If $sText <> "IsFullClanCastle" And Not OpenArmyOverview(True, "RequestCC()") Then Return
+	EndIf
+
+	; If Cake Request is enabled, try to request cake first
+	If $g_bCakeCCEnable Then
+		If _RequestCC_Cake($aRequestButtonPos, $bClickPAtEnd) Then
+			_RequestCC_CloseArmyOverview($bClickPAtEnd)
+			Return
 		EndIf
+
+		If $g_bCakeCCOnly Then
+			_RequestCC_SkipTroopRequest("Cake request unavailable; skipping normal troop request")
+			_RequestCC_CloseArmyOverview($bClickPAtEnd)
+			Return
+		EndIf
+	EndIf
+
+	; Cake requests are handled above; normal troop requests always respect the schedule.
+	Local $hour = StringSplit(_NowTime(4), ":", $STR_NOCOUNT)
+	If Not $g_abRequestCCHours[$hour[0]] Then
+		SetLog("Clan Castle troop request not planned, skipping", $COLOR_ACTION)
+		_RequestCC_CloseArmyOverview($bClickPAtEnd)
+		Return
 	EndIf
 
 	If _DateIsValid($g_iCCRemainTime) Then
 		Local $TimeDiffCCRemainTime = _DateDiff('s', _NowCalc(), $g_iCCRemainTime)
 		If $TimeDiffCCRemainTime > 0 Then
-			SetLog("Clan Castle Request has already been made", $COLOR_INFO)
+			SetLog("The request for troops has already been made")
 
 			Local $sWaitTime = ""
 			Local $iMin, $iSec
@@ -43,30 +66,27 @@ Func RequestCC($bClickPAtEnd = True, $sText = "")
 			If $iSec > 0 Then $sWaitTime &= $iSec & " seconds "
 
 			SetLog("Request will be available in " & $sWaitTime, $COLOR_ACTION)
+			_RequestCC_CloseArmyOverview($bClickPAtEnd)
 			Return
 		Else
 			$g_iCCRemainTime = 0
 		EndIf
 	EndIf
 
-	;open army overview
-	If $sText <> "IsFullClanCastle" And Not OpenArmyOverview(True, "RequestCC()") Then Return
-
 	If _Sleep($DELAYREQUESTCC1) Then Return
-	SetLog("Requesting Clan Castle reinforcements", $COLOR_INFO)
+	SetLog("Requesting Troops", $COLOR_INFO)
 	If $bClickPAtEnd Then CheckCCArmy()
 
 	If Not $g_bRunState Then Return
 	If _Sleep(1000) Then Return
 
 	Local $sSearchDiamond = GetDiamondFromRect2(734, 455 + $g_iMidOffsetY, 773, 485 + $g_iMidOffsetY)
-	Local Static $aRequestButtonPos[2] = [-1, -1]
 
 	Local $aRequestButton = findMultiple($g_sImgRequestCCButton, $sSearchDiamond, $sSearchDiamond, 0, 1000, 1, "objectname,objectpoints", True)
 	If Not IsArray($aRequestButton) Then
 		SetLog("Error in RequestCC(): $aRequestButton is no Array")
 		If $g_bDebugImageSave Then SaveDebugImage("RequestButtonStateError")
-		If Not $bClickPAtEnd Then CloseWindow2()
+		_RequestCC_CloseArmyOverview($bClickPAtEnd)
 		Return
 	EndIf
 
@@ -88,12 +108,6 @@ Func RequestCC($bClickPAtEnd = True, $sText = "")
 			ElseIf Not $bClickPAtEnd Then
 				$bNeedRequest = True
 			Else
-				;	For $i = 0 To 2
-				;		If Not IsFullClanCastleType($i) Then
-				;			$bNeedRequest = True
-				;			ExitLoop
-				;		EndIf
-				;	Next
 				$bNeedRequest = True
 			EndIf
 
@@ -102,9 +116,9 @@ Func RequestCC($bClickPAtEnd = True, $sText = "")
 				Local $x = _makerequest($aRequestButtonPos)
 			EndIf
 		ElseIf StringInStr($sButtonState, "Already", 0) > 0 Then
-			SetLog("Clan Castle Request has already been made", $COLOR_INFO)
+			SetLog("The request for troops has already been made")
 		ElseIf StringInStr($sButtonState, "Full", 0) > 0 Then
-			SetLog("Clan Castle is full", $COLOR_INFO)
+			SetLog("Clan Castle Full", $COLOR_SUCCESS)
 		Else
 			SetDebugLog("Error in RequestCC(): Couldn't detect Request Button State", $COLOR_ERROR)
 		EndIf
@@ -113,10 +127,23 @@ Func RequestCC($bClickPAtEnd = True, $sText = "")
 	EndIf
 
 	;exit from army overview
-	If _Sleep($DELAYREQUESTCC1) Then Return
-	If $bClickPAtEnd Then CloseWindow2()
-
+	_RequestCC_CloseArmyOverview($bClickPAtEnd)
 EndFunc   ;==>RequestCC
+
+Func _RequestCC_CloseArmyOverview($bClickPAtEnd)
+	If Not $bClickPAtEnd Then Return
+	If _Sleep($DELAYREQUESTCC1) Then Return
+	CloseWindow2()
+	If _Sleep(500) Then Return
+	If Not IsMainPage(1) Then
+		Click(Random(730, 800, 1), Random(25, 35, 1), 1, 120, "Return to Main Village")
+		If _Sleep(500) Then Return
+	EndIf
+EndFunc   ;==>_RequestCC_CloseArmyOverview
+
+Func _RequestCC_SkipTroopRequest($sReason)
+	SetLog($sReason, $COLOR_ACTION)
+EndFunc   ;==>_RequestCC_SkipTroopRequest
 
 Func _makerequest($aRequestButtonPos)
 	Local $sSendButtonArea = GetDiamondFromRect("220,150,650,650")
@@ -127,8 +154,8 @@ Func _makerequest($aRequestButtonPos)
 	isGemOpen(True)
 	If _Sleep(500) Then Return
 
-	If Not IsWindowOpen($g_sImgSendRequestButton, 20, 100, $sSendButtonArea) Then
-		SetLog("Request has already been made, or request window not available", $COLOR_INFO)
+	If Not IsWindowOpen($g_sImgSendRequestButton, 10, 100, $sSendButtonArea) Then
+		SetLog("Request has already been made or request window not available", $COLOR_INFO)
 		If _Sleep($DELAYMAKEREQUEST2) Then Return
 	Else
 		If $g_sRequestTroopsText <> "" Then
@@ -144,9 +171,10 @@ Func _makerequest($aRequestButtonPos)
 		EndIf
 		If _Sleep($DELAYMAKEREQUEST2) Then Return ; wait time for text request to complete
 
-		If Not IsWindowOpen($g_sImgSendRequestButton, 20, 100, $sSendButtonArea) Then
+		If Not IsWindowOpen($g_sImgSendRequestButton, 10, 100, $sSendButtonArea) Then
 			SetDebugLog("Send request button not found", $COLOR_DEBUG)
 			CheckMainScreen(False) ;emergency exit
+			Return
 		EndIf
 
 		If Not $g_bChkBackgroundMode And Not $g_bNoFocusTampering Then ControlFocus($g_hAndroidWindow, "", "") ; make sure Android has window focus
@@ -155,7 +183,9 @@ Func _makerequest($aRequestButtonPos)
 		Local $ButtonClickX = Random($CoordsX[0], $CoordsX[1], 1)
 		Local $ButtonClickY = Random($CoordsY[0], $CoordsY[1], 1)
 		Click($ButtonClickX, $ButtonClickY, 1, 100, "#0256")
-		$g_iCCRemainTime = _DateAdd('n', 10, _NowCalc())
+		Local $iCooldownMinutes = 11
+		If $g_bRequestTroopsGoldPassEnable Then $iCooldownMinutes = $g_iRequestTroopsGoldPassTime
+		$g_iCCRemainTime = _DateAdd('n', $iCooldownMinutes, _NowCalc())
 		$g_bCanRequestCC = False
 	EndIf
 
@@ -234,42 +264,52 @@ EndFunc   ;==>IsFullClanCastleType
 Func IsFullClanCastle()
 	Local $bNeedRequest = False
 	Local $sSearchDiamond = GetDiamondFromRect2(734, 455 + $g_iMidOffsetY, 773, 485 + $g_iMidOffsetY)
+
+	If $g_bSearchCastleWaitEnable And $g_bCakeCCRequestSucceeded Then
+		If $g_bDebugSetLog Then SetDebugLog("CakeCC reinforcement succeeded; treating Clan Castle troops as ready", $COLOR_DEBUG)
+		Return True
+	EndIf
+	
+	; Pixel search for "Add" button (dark gray hexagon colors)
+	Local $iButtonColors[12][3] = [ _
+		[0x5C5C5C, 0, 0], [0x5C5C5C, 1, 0], [0x5C5C5C, 0, 1], [0x5C5C5C, 1, 1], _
+		[0x6E6E6E, 0, 0], [0x6E6E6E, 1, 0], [0x6E6E6E, 0, 1], [0x6E6E6E, 1, 1], _
+		[0x4A4A4A, 0, 0], [0x4A4A4A, 1, 0], [0x4A4A4A, 0, 1], [0x4A4A4A, 1, 1] _
+	]
+
+	; Search for dark gray hexagonal "Add" button
+	Local $aPixel = _MultiPixelSearch(655, 485, 720, 510, 1, 1, Hex(0x5C5C5C, 6), $iButtonColors, 50)
+	If IsArray($aPixel) Then
+		Return True ; Button found = CC is full, return True
+	EndIf
+	
 	If Not $g_bRunState Then Return
 
-	If Not $g_abSearchCastleWaitEnable[$DB] And Not $g_abSearchCastleWaitEnable[$LB] Then
+	If Not $g_bSearchCastleWaitEnable Then
 		Return True
 	EndIf
 
-	If ($g_abAttackTypeEnable[$DB] And $g_abSearchCastleWaitEnable[$DB]) Or ($g_abAttackTypeEnable[$LB] And $g_abSearchCastleWaitEnable[$LB]) Then
-		CheckCCArmy()
+	Local $sCCAvailable = @ScriptDir & "\imgxml\ArmyOverview\RequestCC\Available*"
+	Local $aiTileCoord = decodeSingleCoord(findImage("IsFullClanCastle", $sCCAvailable, $sSearchDiamond, 1, True))
+	If IsArray($aiTileCoord) And UBound($aiTileCoord, 1) = 2 Then $bNeedRequest = True
 
-		Local $sCCAvailable = @ScriptDir & "\imgxml\ArmyOverview\RequestCC\Available*"
-		Local $aiTileCoord = decodeSingleCoord(findImage("IsFullClanCastle", $sCCAvailable, $sSearchDiamond, 1, True))
-		If IsArray($aiTileCoord) And UBound($aiTileCoord, 1) = 2 Then $bNeedRequest = True
-
-		;	For $i = 0 To 2
-		;		If Not IsFullClanCastleType($i) Then
-		;			$bNeedRequest = True
-		;			ExitLoop
-		;		EndIf
-		;	Next
-		If $bNeedRequest Then
-			$g_bCanRequestCC = True
-			RequestCC(False, "IsFullClanCastle")
-			Return False
-		EndIf
+	If $bNeedRequest Then
+		$g_bCanRequestCC = True
+		RequestCC(False, "IsFullClanCastle")
+		Return False
 	EndIf
 
 	Local $aRequestButton = findMultiple($g_sImgRequestCCButton, $sSearchDiamond, $sSearchDiamond, 0, 1000, 1, "objectname,objectpoints", True)
-	If UBound($aRequestButton, 1) >= 1 Then
+	If IsArray($aRequestButton) And UBound($aRequestButton, 1) >= 1 Then
 		Local $sButtonState
 		Local $aRequestButtonSubResult = $aRequestButton[0]
 		$sButtonState = $aRequestButtonSubResult[0]
-		If StringInStr($sButtonState, "FullOrUnavail", 0) > 0 Or (StringInStr($sButtonState, "AlreadyMade", 0) > 0 And _ColorCheck(_GetPixelColor(793, 460 + $g_iMidOffsetY, True), Hex(0xD3D3D3, 6), 10)) Then Return True
+		If StringInStr($sButtonState, "FullOrUnavail", 0) > 0 Or _
+				StringInStr($sButtonState, "MadeAndFull", 0) > 0 Or _
+				(StringInStr($sButtonState, "AlreadyMade", 0) > 0 And _ColorCheck(_GetPixelColor(793, 460 + $g_iMidOffsetY, True), Hex(0xD3D3D3, 6), 10)) Then Return True
 	EndIf
 
 	Return False
-
 EndFunc   ;==>IsFullClanCastle
 
 Func CheckCCArmy()
@@ -467,7 +507,109 @@ Func RemoveCastleArmy($aToRemove)
 
 	ClickP($aButtonRemoveTroopsOK2, 1) ; Click on 'Okay' button to Save changes... Last button
 
-	SetLog("Clan Castle army removed", $COLOR_SUCCESS)
+	SetLog("Clan Castle Army Removed", $COLOR_SUCCESS)
 	If _Sleep(200) Then Return
 	Return True
 EndFunc   ;==>RemoveCastleArmy
+
+Func _RequestCC_Cake(ByRef $aRequestButtonPos, $bClickPAtEnd)
+	SetLog("Preparing Reinforcements", $COLOR_INFO)
+
+	; === REQUEST BUTTON DETECTION ===
+	Local $sSearchDiamond = GetDiamondFromRect2(734, 455 + $g_iMidOffsetY, 773, 485 + $g_iMidOffsetY)
+
+	Local $aRequestButton = findMultiple($g_sImgRequestCCButton, $sSearchDiamond, $sSearchDiamond, 0, 1000, 1, "objectname,objectpoints", True)
+	If Not IsArray($aRequestButton) Then
+		SetLog("Cake request button not found, falling back to normal request")
+		If $g_bDebugImageSave Then SaveDebugImage("RequestButtonStateError")
+		Return False
+	EndIf
+
+	If Not $g_bRunState Then Return True
+
+	; === REQUEST LOGIC ===
+	If UBound($aRequestButton, 1) >= 1 Then
+		Local $sButtonState
+		Local $aRequestButtonSubResult = $aRequestButton[0]
+		$sButtonState = $aRequestButtonSubResult[0]
+		If $aRequestButtonPos[0] = -1 Then
+			$aRequestButtonPos = StringSplit($aRequestButtonSubResult[1], ",", $STR_NOCOUNT)
+		EndIf
+
+		If StringInStr($sButtonState, "Available", 0) > 0 Then
+			Local $bNeedRequest = False
+			If Not $g_abRequestType[0] And Not $g_abRequestType[1] And Not $g_abRequestType[2] Then
+				$bNeedRequest = True
+			ElseIf Not $bClickPAtEnd Then
+				$bNeedRequest = True
+			Else
+				$bNeedRequest = True
+			EndIf
+
+			If $bNeedRequest Then
+				If Not $g_bRunState Then Return True
+				
+				; === CAKE BUTTON SEARCH ===
+				Local $sCakeButtonImage = @ScriptDir & "\imgxml\imglocbuttons\Cake_0_92.xml"
+				Local $bCakeButtonFound = False
+				Local $x = 0, $y = 0
+
+				If QuickMIS("BC1", $sCakeButtonImage, 655, 485, 720, 510) Then
+					$x = $g_iQuickMISX + Random(-5, 5, 1)
+					$y = $g_iQuickMISY + Random(-5, 5, 1)
+					$bCakeButtonFound = True
+				EndIf
+
+				; Pixel search fallback for cake button using offsets
+				Local $iCakeButtonColor[8][3] = [ _
+					[0xB98A5A, 0, 0], [0xB98A5A, 1, 0], [0xB98A5A, 0, 1], [0xB98A5A, 1, 1], _
+					[0xEDD9AA, 0, 0], [0xEDD9AA, 1, 0], [0xEDD9AA, 0, 1], [0xEDD9AA, 1, 1] _
+				]
+
+				If Not $bCakeButtonFound Then
+					Local $aCakePixel = _MultiPixelSearch(655, 485, 720, 510, 1, 1, Hex(0xB98A5A, 6), $iCakeButtonColor, 60)
+					If IsArray($aCakePixel) Then
+						$x = 675 + Random(-5, 5, 1)
+						$y = 500 + Random(-5, 5, 1)
+						$bCakeButtonFound = True
+					EndIf
+				EndIf
+
+				If $bCakeButtonFound Then
+					Click($x, $y, 1, 120, "0336") ; Cake Button Request Troops
+					
+					; === POST-REQUEST HANDLING ===
+					isGemOpen(True)
+					If _Sleep($DELAYMAKEREQUEST2) Then Return True ; Wait time for request to complete
+
+					If Not $g_bChkBackgroundMode And Not $g_bNoFocusTampering Then ControlFocus($g_hAndroidWindow, "", "") ; Make sure Android has window focus
+					Local $aConfirmButton = findButton("ConfirmButton", Default, 1, True)
+					If IsArray($aConfirmButton) And UBound($aConfirmButton) = 2 Then
+						Local $ButtonClickX = $aConfirmButton[0] + Random(-5, 5, 1)
+						Local $ButtonClickY = $aConfirmButton[1] + Random(-5, 5, 1)
+					Else
+						Local $ButtonClickX = 485 + Random(-5, 5, 1)
+						Local $ButtonClickY = 460 + Random(-5, 5, 1)
+					EndIf
+					Click($ButtonClickX, $ButtonClickY, 1, 100, "#0256")
+					$g_bCanRequestCC = False
+					$g_bWaitForCCTroopSpell = False
+					$g_bCakeCCRequestSucceeded = True
+					$g_bIsFullArmywithHeroesAndSpells = True
+					Return True ; Success
+				Else
+					; === NORMAL REQUEST FALLBACK ===
+					SetLog("Oops, there's no cake left in the castle")
+				EndIf
+			EndIf
+		ElseIf StringInStr($sButtonState, "Already", 0) > 0 Then
+			SetLog("The request for troops has already been made")
+			Return True
+		ElseIf StringInStr($sButtonState, "Full", 0) > 0 Then
+			SetLog("Clan Castle Full", $COLOR_SUCCESS)
+			Return True
+		EndIf
+	EndIf
+
+	Return False
+EndFunc   ;==>_RequestCC_Cake

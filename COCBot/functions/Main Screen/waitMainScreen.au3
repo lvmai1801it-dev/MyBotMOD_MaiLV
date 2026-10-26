@@ -16,7 +16,7 @@
 Func waitMainScreen() ;Waits for main screen to popup
 	If Not $g_bRunState Then Return
 	Local $iCount
-	SetLog("Waiting for Main Screen")
+	SetDebugLog("Awaiting Main Screen", $COLOR_DEBUG)
 	$iCount = 0
 	Local $aPixelToCheck = $g_bStayOnBuilderBase ? $aIsOnBuilderBase : $aIsMain
 	For $i = 0 To 105 ;105*2000 = 3.5 Minutes
@@ -36,7 +36,9 @@ Func waitMainScreen() ;Waits for main screen to popup
 			getBSPos() ; Update $g_hAndroidWindow and Android Window Positions
 		EndIf
 		_CaptureRegion()
-		If _CheckPixel($aPixelToCheck, $g_bNoCapturePixel, Default, "waitMainScreen") Then ;Checks for Main Screen
+		Local $bMainScreenFound = _CheckPixel($aPixelToCheck, $g_bNoCapturePixel, Default, "waitMainScreen")
+		If Not $bMainScreenFound And Not $g_bStayOnBuilderBase Then $bMainScreenFound = _CheckPixel($aIsOnBuilderBase, $g_bNoCapturePixel, Default, "waitMainScreenBB")
+		If $bMainScreenFound Then ;Checks for Main Screen
 			If $g_bDebugSetLog Then SetDebugLog("Screen cleared, WaitMainScreen exit", $COLOR_DEBUG)
 			Return
 		Else
@@ -63,7 +65,7 @@ Func waitMainScreen() ;Waits for main screen to popup
 	$iCount = 0
 	While 1
 		If Not $g_bRunState Then Return
-		SetLog("Unable to load CoC, attempt to fix it", $COLOR_ERROR)
+		SetLog("Unable to load Clash of Clans, attempt to fix it", $COLOR_ERROR)
 		If $g_bDebugSetLog Then SetDebugLog("Restart Loop = " & $iCount, $COLOR_DEBUG) ; Debug stuck loop data
 		CloseAndroid("waitMainScreen") ; Android must die!
 		If _Sleep(1000) Then Return
@@ -82,35 +84,34 @@ Func waitMainScreen() ;Waits for main screen to popup
 		EndIf
 		If _CheckPixel($aPixelToCheck, $g_bCapturePixel) = True Then ExitLoop
 	WEnd
-
 EndFunc   ;==>waitMainScreen
 
-Func waitMainScreenMini()
+Func waitMainScreenSimple()
 	If Not $g_bRunState Then Return
 	Local $iCount = 0
 	Local $hTimer = __TimerInit()
-	SetDebugLog("waitMainScreenMini")
+	SetDebugLog("waitMainScreenSimple")
 	If TestCapture() = False Then getBSPos() ; Update Android Window Positions
-	SetLog("Waiting for Main Screen after " & $g_sAndroidEmulator & " restart", $COLOR_INFO)
+	SetDebugLog("Awaiting Main Screen", $COLOR_DEBUG)
 	Local $aPixelToCheck = $g_bStayOnBuilderBase ? $aIsOnBuilderBase : $aIsMain
-	For $i = 0 To 60 ;30*2000 = 1 Minutes
+	For $i = 0 To 60
 		If Not $g_bRunState Then Return
-		If Not TestCapture() And WinGetAndroidHandle() = 0 Then ExitLoop ; sets @error to 1
-		If $g_bDebugSetLog Then SetDebugLog("waitMainScreenMini ChkObstl Loop = " & $i & " ExitLoop = " & $iCount, $COLOR_DEBUG) ; Debug stuck loop
+		If Not TestCapture() And WinGetAndroidHandle() = 0 Then ExitLoop
+		If $g_bDebugSetLog Then SetDebugLog("waitMainScreenSimple ChkObstl Loop = " & $i & " ExitLoop = " & $iCount, $COLOR_DEBUG)
 		$iCount += 1
 		_CaptureRegion()
-		If Not _CheckPixel($aPixelToCheck, $g_bNoCapturePixel) Then ;Checks for Main Screen
+		Local $bMainScreenFound = _CheckPixel($aPixelToCheck, $g_bNoCapturePixel)
+		If Not $bMainScreenFound And Not $g_bStayOnBuilderBase Then $bMainScreenFound = _CheckPixel($aIsOnBuilderBase, $g_bNoCapturePixel)
+		If Not $bMainScreenFound Then
 			If Not TestCapture() And _Sleep(1000) Then Return
-			If CheckObstacles() Then $i = 0 ;See if there is anything in the way of mainscreen
+			If CheckObstacles() Then $i = 0
 		Else
-			SetLog("CoC main window took " & Round(__TimerDiff($hTimer) / 1000, 2) & " seconds", $COLOR_SUCCESS)
+			SetLog("Clash of Clans main window took " & Round(__TimerDiff($hTimer) / 1000, 2) & " seconds", $COLOR_SUCCESS)
 			Return
 		EndIf
 		_StatusUpdateTime($hTimer, "Main Screen")
-		If ($i > 60) Or ($iCount > 80) Then ExitLoop ; If CheckObstacles forces reset, limit total time to 6 minute before Force restart BS
-		If TestCapture() Then
-			Return "Main screen not available"
-		EndIf
+		If ($i > 60) Or ($iCount > 80) Then ExitLoop
+		If TestCapture() Then Return "Main screen not available"
 	Next
 	Return SetError(1, 0, -1)
-EndFunc   ;==>waitMainScreenMini
+EndFunc   ;==>waitMainScreenSimple

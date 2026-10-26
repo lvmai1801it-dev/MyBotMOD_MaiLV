@@ -18,18 +18,17 @@
 #include "functions\Other\StopWatch.au3"
 ;#include "functions\Other\Synchronization.au3" ; now included in LaunchConsole.au3
 #include "functions\Other\OnAutoItErrorRegisterBot.au3"
-#Include "functions\Other\Json.au3"
-
-
 #include "functions\Attack\AttackReport.au3"
+#include "functions\Attack\TagTeam.au3"
+
 #include "functions\Attack\AttackStats.au3"
 #include "functions\Attack\BuildingSide.au3"
 #include "functions\Attack\GoldElixirChangeThSnipes.au3"
 #include "functions\Attack\GoldElixirChangeEBO.au3"
 #include "functions\Attack\PrepareAttack.au3"
 #include "functions\Attack\ReturnHome.au3"
-#include "functions\Attack\Unbreakable.au3"
 #include "functions\Attack\GetAttackBar.au3"
+#include "functions\Attack\ScriptRotation.au3"
 
 #include "functions\Attack\Attack Algorithms\algorithm_AllTroops.au3"
 #include "functions\Attack\Attack Algorithms\AttackFromCSV.au3"
@@ -78,9 +77,7 @@
 #include "functions\Attack\Troops\SelectDropTroop.au3"
 #include "functions\Attack\Troops\SetSleep.au3"
 
-#include "functions\Attack\SmartZap\drillSearch.au3"
-#include "functions\Attack\SmartZap\easyPreySearch.au3"
-#include "functions\Attack\SmartZap\smartZap.au3"
+#include "functions\Attack\SmartZap\SmartZap.au3"
 
 ; Builder Base Attack
 #include "functions\Attack\BuilderBase\PrepareAttackBB.au3"
@@ -103,14 +100,11 @@
 #include "functions\CreateArmy\getArmyTroops\getArmyTroopCapacity.au3"
 #include "functions\CreateArmy\getArmyTroops\getArmyTroops.au3"
 
-#include "functions\CreateArmy\getArmyHeroes\getArmyHeroCount.au3"
-#include "functions\CreateArmy\getArmyHeroes\getArmyHeroTime.au3"
+#include "functions\CreateArmy\getArmyHeroes\HeroStatus.au3"
 
 #include "functions\CreateArmy\getArmySpells\getArmySpellTime.au3"
 #include "functions\CreateArmy\getArmySpells\getArmySpells.au3"
 #include "functions\CreateArmy\getArmySpells\getArmySpellCapacity.au3"
-#include "functions\CreateArmy\getArmySpells\getArmySpellCount.au3"
-
 #include "functions\CreateArmy\getArmySiegeMachines\getArmySiegeMachines.au3"
 
 #include "functions\CreateArmy\getArmyCCTroops\getArmyCCStatus.au3"
@@ -140,16 +134,16 @@
 #include "functions\Main Screen\waitMainScreen.au3"
 #include "functions\Main Screen\isOnBuilderBase.au3"
 
-; Android support for MEmu, Nox, BlueStacks
+; Android support for MEmu and BlueStacks
 #include "functions\Android\AndroidMenuShortcuts.au3"
 #include "functions\Android\Close_OpenCoC.au3"
 #include "functions\Android\ZoomOut.au3"
 #include "functions\Android\CheckAndroidTimeLag.au3"
 #include "functions\Android\CheckAndroidPageError.au3"
 #include "functions\Android\CheckAndroidRebootCondition.au3"
+#include "functions\Android\CheckBotRestartCondition.au3"
 #include "functions\Android\AndroidBlueStacks5.au3"
 #include "functions\Android\AndroidMEmu.au3"
-#include "functions\Android\AndroidNox.au3"
 #include "functions\Android\getBSPos.au3"
 #include "functions\Android\UniversalCloseWaitOpenCoC.au3"
 #include "functions\Android\AndroidEmbed.au3"
@@ -181,7 +175,6 @@
 #include "functions\Other\TestLanguage.au3"
 #include "functions\Other\DeleteFiles.au3"
 #include "functions\Other\UpdateStats.au3"
-#include "functions\Other\CheckVersion.au3"
 #include "functions\Other\CloseRunningBot.au3"
 #include "functions\Other\RestartBot.au3"
 #include "functions\Other\WindowSystemMenu.au3"
@@ -192,7 +185,6 @@
 #include "functions\Other\MoveMouseOutBS.au3"
 #include "functions\Other\KillProcess.au3"
 #include "functions\Other\LaunchConsole.au3"
-#include "functions\Other\ADB.au3"
 #include "functions\Other\FindAButton.au3"
 
 #include "functions\Pixels\_CaptureRegion.au3"
@@ -221,20 +213,16 @@
 #include "functions\Search\IsSearchAttackEnabled.au3"
 #include "functions\Search\WaitForClouds.au3"
 
-#include "functions\Village\BoostStructure.au3"
-#include "functions\Village\BoostBarracks.au3"
 #include "functions\Village\BotDetectFirstTime.au3"
 #include "functions\Village\BotCommand.au3"
 #include "functions\Village\BreakPersonalShield.au3"
 #include "functions\Village\CheckImageType.au3"
-#include "functions\Village\CheckBaseQuick.au3"
 #include "functions\Village\chkShieldStatus.au3"
 #include "functions\Village\Collect.au3"
 #include "functions\Village\CollectAchievements.au3"
 #include "functions\Village\TreasuryCollect.au3"
 #include "functions\Village\DonateCC.au3"
 #include "functions\Village\DonateCCWBL.au3"
-#include "functions\Village\DropTrophy.au3"
 #include "functions\Village\GetTownHallLevel.au3"
 #include "functions\Village\isAtkDarkElixirFull.au3"
 #include "functions\Village\isDarkElixirFull.au3"
@@ -250,18 +238,18 @@
 #include "functions\Village\VillageReport.au3"
 #include "functions\Village\UpgradeBuilding.au3"
 #include "functions\Village\Auto Upgrade.au3"
+#include "functions\Village\BuilderBase\AutoUpgradeBB.au3"
 #include "functions\Village\UpgradeWall.au3"
 #include "functions\Village\Notify.au3"
 #include "functions\Village\Laboratory.au3"
 #include "functions\Village\ReplayShare.au3"
-#include "functions\Village\BoostHeroes.au3"
 #include "functions\Village\UpgradeHeroes.au3"
+#include "functions\Attack\ClashOfCards.au3"
 #include "functions\Village\StarBonus.au3"
 #include "functions\Village\AddIdleTime.au3"
 #include "functions\Village\GetVillageSize.au3"
 #include "functions\Village\GainCost.au3"
 #include "functions\Village\ConvertOCRTime.au3"
-#include "functions\Other\ClickZoneR.au3"
 #include "functions\Village\CheckNeedOpenTrain.au3"
 #include "functions\Village\SwitchBetweenBases.au3"
 #include "functions\Village\SwitchAccount.au3"
@@ -281,7 +269,6 @@
 #include "functions\Village\BuilderBase\Collect.au3"
 #include "functions\Village\BuilderBase\StartClockTowerBoost.au3"
 #include "functions\Village\BuilderBase\BuilderBaseReport.au3"
-#include "functions\Village\BuilderBase\SuggestedUpgrades.au3"
 #include "functions\Village\BuilderBase\CleanBBYard.au3"
 #include "functions\Village\BuilderBase\StarLaboratory.au3"
 #include "functions\Village\BuilderBase\UpgradeBattleMachine.au3"
